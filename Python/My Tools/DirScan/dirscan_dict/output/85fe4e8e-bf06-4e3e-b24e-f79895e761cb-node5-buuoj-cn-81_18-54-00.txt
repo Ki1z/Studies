@@ -1,0 +1,5 @@
+http://85fe4e8e-bf06-4e3e-b24e-f79895e761cb.node5.buuoj.cn:81/robots.txt    200 OK
+http://85fe4e8e-bf06-4e3e-b24e-f79895e761cb.node5.buuoj.cn:81/flag.php    200 OK
+http://85fe4e8e-bf06-4e3e-b24e-f79895e761cb.node5.buuoj.cn:81/view.php    200 OK
+http://85fe4e8e-bf06-4e3e-b24e-f79895e761cb.node5.buuoj.cn:81/user.php    200 OK
+http://85fe4e8e-bf06-4e3e-b24e-f79895e761cb.node5.buuoj.cn:81/.css    200 OK

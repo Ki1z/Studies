@@ -1,0 +1,13 @@
+index.php
+robots.txt
+flag.php
+index.html
+index.php.bak
+view.php
+user
+user.php
+user.txt
+user.html
+view.txt
+view.html
+.css
