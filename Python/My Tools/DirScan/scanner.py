@@ -11,7 +11,8 @@ class Scanner:
     def scan(self) -> list[str]:
         pass
 
-    def out(self, result: list[str]) -> None:
+    def out(self) -> None:
+        result = self.result
         if 'http://' in self.url:
             self.url = self.url[7: -1]
         elif 'https://' in self.url:
@@ -39,7 +40,7 @@ class Default(Scanner):
             if response == '<Response [200]>':
                 result.append(self.url + i + '    200 OK')
                 print(f'[{time.time()}]> {i}    200 OK')
-        return result
+        self.result = result
     
 class Length(Scanner):
     def scan(self) -> list[str]:
@@ -60,7 +61,7 @@ class Length(Scanner):
             if not(response == base) and str(code) == '<Response [200]>':
                 result.append(self.url + i + f'    {response}')
                 print(f'[{time.time()}]> {i}    {response}')
-        return result
+        self.result = result
     
 class Cookie(Scanner):
     def scan(self) -> list[str]:
@@ -79,4 +80,4 @@ class Cookie(Scanner):
             if response == '<RequestsCookieJar[]>' and str(code) == '<Response [200]>':
                 result.append(self.url + i)
                 print(f'[{time.time()}]> {i}')
-        return result
+        self.result = result

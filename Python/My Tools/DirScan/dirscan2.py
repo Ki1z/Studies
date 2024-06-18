@@ -24,8 +24,8 @@ def choices(args: object) -> None:
         scanner = Length(args.U, args.D, args.O)
     elif mode == 'Cookie':
         scanner = Cookie(args.U, args.D, args.O)
-    result = scanner.scan()
-    scanner.out(result)
+    scanner.scan()
+    scanner.out()
 
 if __name__ == '__main__':
     args = get_input()
