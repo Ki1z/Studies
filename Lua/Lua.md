@@ -1,6 +1,6 @@
 # Lua
 
-`更新时间：2024-6-18`
+`更新时间：2024-6-19`
 
 ---
 
@@ -359,3 +359,98 @@ lua中的运算符与C基本相同，以下列举lua中独特的运算符
 - `..` ：字符串连接符，用于连接两个字符串
 
 - `#` ：长度运算符，可以获取表或字符串的长度
+
+---
+
+# Lua Medium
+
+## 表
+
+### 表指针
+
+在lua中，表变量保存的只是表的内存地址，如果存在多个变量储存同一表地址的情况下，对任一变量赋值为nil，不影响其他变量，即表变量实质为表指针
+
+```lua
+local table1 = {name = 'kiiz'}
+local table2 = table1
+print(table1, table2)
+table1 = nil
+print(table1, table2)
+```
+
+> <img src="./IMG/Screenshot 2024-06-19 203610.png">
+
+### 常见方法
+
+- `table.concat(table[, sep, start, end])` ：对表中的字符串进行拼接操作， `sep` 为分隔符
+
+- `table.insert(table[, pos], value)` ：插入元素到表中
+
+- `table.remove(table[, pos])` ：移除表元素
+
+- `table.sort(table[, comp])` ：对表进行排序，可以指定排序方式
+
+```lua
+local table1 = {'henrin', 'kiiz'}
+table.insert(table1, 2, 'oceuk')
+table.remove(table1, 1)
+table.sort(table1)
+```
+
+> <img src="./IMG/Screenshot 2024-06-19 205455.png">
+
+### table.sort()高级用法
+
+`table.sort()` 方法中可以自定义排序方式，但是排序方式需要使用一个函数来完成，如果要使排序表达式生效，返回值只能为 `true`
+
+- 逆序排序实现
+
+```lua
+local table1 = {'c', 'd', 'a', 'b'}
+table.sort(table1)
+for k, v in pairs(table1) do
+    print(v)
+end
+print('\n')
+table.sort(table1, function (a, b)
+    if a > b then
+        return true
+    end
+    return false
+end)
+for k, v in pairs(table1) do
+    print(v)
+end
+```
+
+> <img src="./IMG/Screenshot 2024-06-19 210316.png">
+
+- 二维表排序实现
+
+```lua
+local function sort(a, b)
+    if a.level > b.level then
+        return true
+    elseif a.level == b.level then
+        if a.salary > b.salary then
+            return true
+        end
+    end
+    return false
+end
+
+local staff = {
+    {id = 1, name = 'Kiiz', salary = 15000, level = 1},
+    {id = 2, name = 'Oceuk', salary = 14000, level = 1},
+    {id = 3, name = 'Henrin', salary = 23000, level = 2},
+    {id = 4, name = 'Ocean', salary = 17000, level = 1},
+}
+
+table.sort(staff, sort)
+
+for k, v in pairs(staff) do
+    print('id=' .. v.id .. ' name=' .. v.name .. ' salary=' .. v.salary .. ' level=' .. v.level)
+end
+```
+
+> <img src="./IMG/Screenshot 2024-06-19 212009.png">
