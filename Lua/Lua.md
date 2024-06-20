@@ -1,6 +1,6 @@
 # Lua
 
-`更新时间：2024-6-19`
+`更新时间：2024-6-20`
 
 ---
 
@@ -454,3 +454,112 @@ end
 ```
 
 > <img src="./IMG/Screenshot 2024-06-19 212009.png">
+
+## 错误处理
+
+lua中提供了 `assert()` 、 `error()` 、 `pcall()` 、 `xpcall()` 、 `debug()` 来进行错误处理
+
+### assert()
+
+**基本语法**
+
+`assert(<Expression>[, <Massage>])`
+
+当 `<Expression>` 的值为false或nil时，函数报错，若指定了 `[Massage]` ，则先输出 `[Massage]` ，再输出错误信息；若没有指定 `[Massage]` ，先输出 `assertion failed!` ，再输出错误信息。当函数 `assert()` 抛出错误后，程序会被终止
+
+**案例**
+
+```lua
+local function get_input()
+
+    local num1
+    local num2
+
+    print('input num1: ')
+    num1 = io.read('n')
+    assert(type(num1) == 'number', 'num1 isnt a number')
+    print('input num2: ')
+    num2 = io.read('n')
+    assert(type(num2) == 'number')
+
+    return num1, num2
+end
+
+get_input()
+```
+
+> <img src="./IMG/Screenshot 2024-06-20 204134.png">
+
+### error()
+
+**基本语法**
+
+`error(<Massage>[, <Error Level>])`
+
+当 `error()` 函数被调用时，程序会立即终止，并抛出错误信息 `<Massage>` ，如果指定了错误等级 `[Error Level]` ，会按照相应等级来抛出信息，函数没有返回值
+
+**错误等级**
+
+- 0：不添加任何位置信息
+
+- 1：添加 `error()` 函数的所在文件和行号
+
+- 2：添加 `error()` 函数所在函数名
+
+**案例**
+
+```lua
+local function get_input()
+
+    local num1
+    local num2
+
+    print('input num1: ')
+    num1 = io.read('n')
+    if type(num1) ~= 'number' then
+        error('num1 must be a number', 0)
+    end
+    print('input num2: ')
+    num2 = io.read('n')
+    if type(num2) ~= 'number' then
+        error('num2 must be a number', 2)
+    end
+
+    return num1, num2
+end
+
+get_input()
+```
+
+> <img src="./IMG/Screenshot 2024-06-20 205227.png">
+
+### pcall()
+
+**基本语法**
+
+`pcall(<Debug Function>[, <parameters...>])`
+
+`pcall()` 函数会执行传入的函数，如果传入的函数有参数，应在 `[parameters]` 处指定。如果传入的函数执行成功，会返回true和函数的返回值，执行失败则会返回false和错误信息
+
+**案例**
+
+```lua
+local function sum(a, b)
+
+    return a + b
+end
+
+local function input()
+
+    local a = io.read()
+    local b = io.read()
+
+    return a, b
+end
+
+local a, b = input()
+local code, reason = pcall(sum, a, b)
+print(code, reason)
+```
+
+> <img src="./IMG/Screenshot 2024-06-20 211851.png">
