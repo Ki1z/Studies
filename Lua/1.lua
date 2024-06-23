@@ -1,16 +1,14 @@
-local function sum(a, b)
+local cities = {capital = 'Chengdu', 'Bazhong', 'Yaan', 'Panzhihua'}
+local str1 = ''
+local str2 = ''
 
-    return a + b
+for k, v in pairs(cities) do
+    str1 = str1 .. v .. ' '
 end
 
-local function input()
-
-    local a = io.read()
-    local b = io.read()
-
-    return a, b
+for k, v in ipairs(cities) do
+    str2 = str2 .. v .. ' '
 end
 
-local a, b = input()
-local code, reason = pcall(sum, a, b)
-print(code, reason)
+print(str1)
+print(str2)

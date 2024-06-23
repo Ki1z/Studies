@@ -382,7 +382,7 @@ print(table1, table2)
 
 ### 常见方法
 
-- `table.concat(table[, sep, start, end])` ：对表中的字符串进行拼接操作， `sep` 为分隔符
+- `table.concat(table[, sep, start, end])` ：对表中的字符串进行拼接操作， `sep` 为分隔符，拼接操作会跳过拥有键的元素
 
 - `table.insert(table[, pos], value)` ：插入元素到表中
 
@@ -454,6 +454,132 @@ end
 ```
 
 > <img src="./IMG/Screenshot 2024-06-19 212009.png">
+
+### table.unpack()
+
+`table.unpack(table[, start, end])` 方法根据指定的 `start` 和 `end` 一次性返回表中所有的值，跳过拥有键的值
+
+```lua
+local cities = {capital = 'Chengdu', 'Mianyang', 'Nanchong', 'Guangan'}
+local a, b = table.unpack(cities, 2, 3)
+print(a, b)
+```
+
+> <img src="./IMG/Screenshot 2024-06-23 190450.png">
+
+### table.pack()
+
+`table.pack(...)` 函数可以将参数打包为一个表并返回，同时在返回的表中插入表长度n，可以使用键访问表长度n
+
+```lua
+local cities = table.pack('Chengdu', 'Mianyang', 'Deyang', 'Guangyuan')
+print(table.concat(cities, ' '))
+print(cities.n)
+```
+
+> <img src="./IMG/Screenshot 2024-06-23 191018.png">
+
+### pairs()与ipairs()
+
+`paris()` 与 `ipairs()` 均是lua中的迭代器函数，其区别在于 `pairs()` 遍历表中所有元素， `ipairs()` 仅遍历无键元素
+
+```lua
+local cities = {capital = 'Chengdu', 'Bazhong', 'Yaan', 'Panzhihua'}
+local str1 = ''
+local str2 = ''
+
+for k, v in pairs(cities) do
+    str1 = str1 .. v .. ' '
+end
+
+for k, v in ipairs(cities) do
+    str2 = str2 .. v .. ' '
+end
+
+print(str1)
+print(str2)
+```
+
+> <img src="./IMG/Screenshot 2024-06-23 191947.png">
+
+*从这里也可以看出迭代器的遍历顺序是先无键元素，后有键元素*
+
+## 模块
+
+lua的模块与python中的包类似，可以在内部定义一些变量与函数供其他文件调用。lua模块的创建方式一般是先创建lua脚本文件，然后定义一个与文件同名的表，然后在文件内部使用 `LuaModule.{variable | function}` 的方式定义函数与变量。导入模块使用 `require()` 函数
+
+- circle.lua
+
+```lua
+circle = {}
+
+circle.pi = 3.14
+
+function circle.perimeter(r)
+    return 2 * r * circle.pi
+end
+
+function circle.area(r)
+    return circle.pi * r ^ 2
+end
+```
+
+- calculator.lua
+
+```lua
+require 'circle'
+
+local r = 4
+print(circle.perimeter(r))
+print(circle.area(r))
+```
+
+> <img src="./IMG/Screenshot 2024-06-23 195203.png">
+
+`require()` 函数是有返回值的，如果在模块文件的末尾返回了模块，可以用变量接收该模块，使用 `ModuleVariable.{variable | function}` 来代替模块名
+
+- circle.lua
+
+```lua
+circle = {}
+
+circle.pi = 3.14
+
+return circle
+```
+
+- calculator.lua
+
+```lua
+local c = require 'circle'
+
+print(c.pi)
+```
+
+> <img src="./IMG/Screenshot 2024-06-23 195538.png">
+
+如果只是想以包含的方式导入其他文件的函数和变量，在模块文件中定义正常变量或函数名即可，模块文件中包含 `local` 关键字的函数或变量不会被调用
+
+- circle.lua
+
+```lua
+circle = {}
+
+local pi = 3.14
+r = 4
+
+return circle
+```
+
+- calculator.lua
+
+```lua
+require 'circle'
+
+print(pi, r)
+```
+
+> <img src="./IMG/Screenshot 2024-06-23 200036.png">
 
 ## 错误处理
 
