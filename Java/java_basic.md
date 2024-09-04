@@ -213,6 +213,8 @@ Accessibility behaviorCharacteristic returnedValueType methodName(parameterType 
 
 - `returnedValueType`：返回值类型，表示方法返回的值的类型，如`int`、`String`等。
 
+*无返回值的方法可以使用return关键字立即终止方法*
+
 - `methodName`：方法名，方法名必须以字母开头，可以包含数字、下划线、字母等，不能以数字开头。
 
 - `parameterType`：参数类型，表示方法参数的类型，如`int`、`String`等。
@@ -321,3 +323,570 @@ public class Hello {
 ```
 
 > <img src="./img/5.png">
+
+## 类型转换
+
+### 自动类型转换
+
+在Java中，如果一个变量的值可以转换为另一个变量的类型，那么Java编译器会自动将变量转换为另一个类型。例如，如果一个变量的值为`int`类型，而另一个变量的值为`double`类型，那么Java编译器会将`int`类型的变量转换为`double`类型。
+
+```java
+public class Type {
+    public static void main(String[] args) {
+        int a = 10;
+        automaticTypeConversion(a);
+    }
+
+    // 自动类型转换
+    public static void automaticTypeConversion(double a) {
+        System.out.println(a);
+    }
+}
+```
+
+> <img src="./img/6.png">
+
+### 强制类型转换
+
+在Java中，可以使用强制类型转换将一个变量转换为另一种类型。
+
+```java
+public class Type {
+    public static void main(String[] args) {
+        int a = 10;
+        coerceTypeConversion(a);
+    }
+
+    // 强制类型转换
+    public static void coerceTypeConversion(int a) {
+        System.out.println(a);
+        System.out.println((double)a);
+    }
+}
+```
+
+> <img src="./img/7.png">
+
+但是，强制类型转换可能会导致数据丢失或错误，因此需要谨慎使用。
+
+```java
+public class Type {
+    public static void main(String[] args) {
+        double a = 10.2754;
+        coerceTypeConversion(a);
+    }
+
+    // 损失精度的强制类型转换
+    public static void coerceTypeConversion(double a) {
+        System.out.println(a);
+        System.out.println((int)a);
+    }
+}
+```
+
+> <img src="./img/8.png">
+
+### 表达式自动类型提升
+
+在Java中，如果一个表达式中的两个操作数类型不同，那么Java编译器会自动将较小的类型转换为较大的类型。例如，如果一个表达式中的两个操作数都是`int`类型，那么Java编译器会将`int`类型的操作数转换为`long`类型。
+
+```java
+public class Type {
+    public static void main(String[] args) {
+        calculator(10, 5L, 'a', 3.14);
+    }
+
+    // 参数列表中double为最高级类型，因此结果数据类型为double
+    public static void calculator(int a, long b, char c, double d) {
+        System.out.println(a + b + c + d);
+    }
+}
+```
+
+> <img src="./img/9.png">
+
+*在表达式中，`byte`、`short`、`char`会被提升为`int`，而`int`会被提升为`long`*
+
+## 基础输入输出
+
+在Java中，可以使用`Scanner`类来读取键盘输入，使用`System.out.println()`来输出到控制台。
+
+```java
+// 导包
+import java.util.Scanner;
+
+public class InOut {
+    public static void main(String[] args) {
+        getInput();
+    }
+
+    public static void getInput() {
+        // 定义接受用户输入的变量
+        String input = "";
+
+        // 创建Scanner对象
+        Scanner scanner = new Scanner(System.in);
+
+        // 获取用户输入
+        input = scanner.nextLine();
+
+        // 打印用户输入
+        System.out.println("用户输入：" + input);
+    }
+}
+```
+
+> <img src="./img/10.png">
+
+## 运算符
+
+在Java中，运算符包括算术运算符、自增减运算符、赋值运算符、关系运算符、逻辑运算符、位运算符、三元运算符等。
+
+**算术运算符**
+
+- `+`：加法运算符，用于将两个操作数相加
+
+- `-`：减法运算符，用于将两个操作数相减
+
+- `*`：乘法运算符，用于将两个操作数相乘
+
+- `/`：除法运算符，用于将两个操作数相除
+
+- `%`：取余运算符，用于计算两个操作数的余数
+
+```java
+public class Operator {
+    public static void main(String[] args) {
+        arithmeticOperator();
+    }
+
+    public static void arithmeticOperator() {
+        int a = 10;
+        int b = 7;
+
+        // 加法
+        System.out.println("a + b = " + (a + b));
+
+        // 减法
+        System.out.println("a - b = " + (a - b));
+
+        // 乘法
+        System.out.println("a * b = " + (a * b));
+
+        // 除法
+        System.out.println("a / b = " + (a / b));
+
+        // 取余
+        System.out.println("a % b = " + (a % b));
+    }
+}
+```
+
+> <img src="./img/11.png">
+
+**自增减运算符**
+
+- `++`：自增运算符，将操作数的值加1，并返回操作数的新值
+
+- `--`：自减运算符，将操作数的值减1，并返回操作数的新值
+
+```java
+public static void selfIncrementAndSubtractionOperator() {
+    int a = 10;
+
+    // 自增
+    System.out.println("++a = " + ++a);
+
+    // 自减
+    System.out.println("--a = " + --a);
+    System.out.println("====================");
+
+    // 运算后自减
+    System.out.println(a);
+    a--;
+    System.out.println("a-- = " + a);
+    System.out.println("====================");
+
+    // 运算后自增
+    System.out.println(a);
+    a++;
+    System.out.println("a++ = " + a);
+}
+```
+
+> <img src="./img/12.png">
+
+**赋值运算符**
+
+- `=`：赋值运算符，将右侧操作数的值赋给左侧操作数
+
+- `+=`：自增赋值运算符，将右侧操作数的值加到左侧操作数的值上，并赋给左侧操作数
+
+- `-=`：自减赋值运算符，将右侧操作数的值减到左侧操作数的值上，并赋给左侧操作数
+
+```java
+public static void assignmentOperator() {
+    int a;
+
+    // 赋值运算
+    a = 10;
+    System.out.println(a);
+
+    // 自增赋值运算符
+    a += 5;
+    System.out.println(a);
+
+    // 自减赋值运算符
+    a -= 5;
+    System.out.println(a);
+}
+```
+
+> <img src="./img/13.png">
+
+**关系运算符**
+
+- `==`：等于运算符，判断两个操作数的值是否相等
+
+- `!=`：不等于运算符，判断两个操作数的值是否不相等
+
+- `>`：大于运算符，判断左侧操作数的值是否大于右侧操作数的值
+
+- `>=`：大于等于运算符，判断左侧操作数的值是否大于等于右侧操作数的值
+
+- `<`：小于运算符，判断左侧操作数的值是否小于右侧操作数的值
+
+- `<=`：小于等于运算符，判断左侧操作数的值是否小于等于右侧操作数的值
+
+```java
+public static void comparisonOperator() {
+    int a = 10;
+    int b = 20;
+
+    // 比较运算符
+    System.out.println("a > b = " + (a > b));
+    System.out.println("a < b = " + (a < b));
+    System.out.println("a >= b = " + (a >= b));
+    System.out.println("a <= b = " + (a <= b));
+    System.out.println("a == b = " + (a == b));
+    System.out.println("a != b = " + (a != b));
+}
+```
+
+> <img src="./img/14.png">
+
+**逻辑运算符**
+
+- `&&`：逻辑与运算符，判断两个操作数的布尔值是否都为真，如果都为真，则返回true，否则返回false
+
+- `||`：逻辑或运算符，判断两个操作数的布尔值是否至少有一个为真，如果至少有一个为真，则返回true，否则返回false
+
+- `!`：逻辑非运算符，将操作数的布尔值取反，如果为真，则返回false，如果为假，则返回true
+
+```java
+public static void logicalOperator() {
+    int a = 10;
+    int b = 20;
+
+    // 逻辑运算符
+    System.out.println("a > 10 && b > 10 = " + (a > 10 && b > 10));
+    System.out.println("a > 10 || b > 10 = " + (a > 10 || b > 10));
+    System.out.println("! (a > 10) = " + !(a > 10));
+}
+```
+
+> <img src="./img/15.png">
+
+**位运算符**
+
+- `&`：位与运算符，将两个操作数的对应位进行与运算，如果两个位都为1，则结果为1，否则为0
+
+- `|`：位或运算符，将两个操作数的对应位进行或运算，如果两个位有一个为1，则结果为1，否则为0
+
+- `^`：位异或运算符，将两个操作数的对应位进行异或运算，如果两个位相同，则结果为0，否则为1
+
+- `~`：位取反运算符，将操作数的二进制表示取反，并返回取反后的值
+
+- `<<`：左移运算符，将操作数的二进制表示向左移动指定位数，并返回移动后的值
+
+- `>>`：有符号右移运算符，将操作数的二进制表示向右移动指定位数，并返回移动后的值
+
+```java
+public static void bitOperator() {
+    int a = -3;
+    // 原码 10000011
+    // 反码 11111100
+    // 补码 11111101
+
+    // 按位与
+    // -3 11111101
+    //  5 00000101
+    //  & 00000101(补码) = 5
+    System.out.println("a & 5 = " + (a & 5));
+
+    // 按位或
+    // -3 11111101
+    //  5 00000101
+    //  | 11111101(补码) = -3
+    System.out.println("a | 5 = " + (a | 5));
+
+    // 按位异或
+    // -3 11111101
+    //  5 00000101
+    //  ^ 11111000(补码) = -8
+    System.out.println("a ^ 5 = " + (a ^ 5));
+
+    // 按位取反
+    // -3 11111101
+    //  ~ 00000010(补码) = 2
+    System.out.println("~ a = " + (~a));
+
+    // 按位左移
+    //  -3  11111101
+    // << 2 11110100(补码) = -12
+    System.out.println("a << 2 = " + (a << 2));
+
+    // 按位右移
+    //  -3  11111101
+    // >> 2 11111111(补码) = -1
+    System.out.println("a >> 2 = " + (a >> 2));
+}
+```
+
+> <img src="./img/16.png">
+
+**三元运算符**
+
+`expression1 ? expression2 : expression3`
+
+- `expression1`：条件表达式
+
+- `expression2`：当条件表达式为真时返回的值
+
+- `expression3`：当条件表达式为假时返回的值
+
+```java
+public static void ternaryOperator() {
+    int a = 10;
+    int b = 20;
+
+    // 三元运算符
+    System.out.println(a > b ? "a > b" : "a <= b");
+}
+```
+
+> <img src="./img/17.png">
+
+---
+
+## 综合案例1：健康计算器
+
+开发一个简单的健康计算器应用程序，它可以接受用户输入，如年龄、性别、体重、身高等，并计算出用户的BMI值和BMR值
+
+```java
+import java.util.Scanner;
+
+public class HealthCalculator {
+    public static void main(String[] args) {
+        String[] userInfo = getInput();
+        healthIndex(userInfo);
+    }
+
+    // 接收输入方法
+    // 接收年龄、性别、身高、体重四个指标
+    public static String[] getInput() {
+        String[] userInfo = new String[4];
+        Scanner scanner = new Scanner(System.in);
+
+        System.out.println("请输入年龄：");
+        userInfo[0] = scanner.nextLine().trim();
+        System.out.println("请输入性别（male/female）：");
+        userInfo[1] = scanner.nextLine().trim();
+        System.out.println("请输入身高（单位：cm）：");
+        userInfo[2] = scanner.nextLine().trim();
+        System.out.println("请输入体重（单位：kg）：");
+        userInfo[3] = scanner.nextLine().trim();
+
+        return userInfo;
+    }
+
+    // 健康指数计算方法
+    public static void healthIndex(String[] userInfo) {
+        // bmi = result[0]
+        // bmr = result[1]
+        double[] result = new double[2];
+        int age = Integer.parseInt(userInfo[0]);
+        String gender = userInfo[1];
+        double height = Double.parseDouble(userInfo[2]);
+        double weight = Double.parseDouble(userInfo[3]);
+
+        result[0] = weight / Math.pow(height / 100, 2);
+        if (gender.equals("male")) {
+            result[1] = 66 + (13.7 * weight) + (5 * height) - (6.8 * age);
+        } else {
+            result[1] = 655 + (9.6 * weight) + (1.8 * height) - (4.7 * age);
+        }
+        String BMI = String.format("%.1f", result[0]);
+
+        System.out.println("BMI：" + BMI);
+        System.out.println("BMR：" + result[1]);
+    }
+}
+```
+
+> <img src="./img/18.png">
+
+---
+
+## 程序流程控制
+
+程序流程控制是指程序在运行时按照一定的顺序执行，以实现特定的功能。在Java中，程序流程控制有以下几种方式：
+
+- `顺序执行`：程序按照代码的顺序依次执行，直到遇到return、break、continue、throw等关键字为止
+
+- `分支执行`：程序根据条件判断，执行不同的代码块，如if、switch等
+
+- `循环执行`：程序根据循环条件，重复执行一段代码，如for、while、do-while等
+
+### 分支结构
+
+分支结构是程序流程控制中的重要概念，它允许程序根据条件判断，执行不同的代码块。Java中分支结构有以下几种：
+
+- `if`：判断一个条件是否为真，如果为真，则执行if语句块中的代码，否则不执行。
+
+- `switch`：判断一个变量的值，根据不同的值，执行不同的代码块。
+
+#### if语句
+
+**基本语法**
+
+```java
+if (condition1) {
+    // if condition1 is true
+    code block;
+}else if (condition2) {
+    // if condition1 is false and condition2 is true
+    code block;
+}else {
+    // if all conditions are false
+    code block;
+}
+```
+
+**示例**
+
+```java
+import java.util.Scanner;
+
+public class IfBranch {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("请输入一个整数：");
+        int a = scanner.nextInt();
+
+        if (a % 2 == 0) {
+            System.out.println("输入的整数是偶数");
+        } else {
+            System.out.println("输入的整数是奇数");
+        }
+    }
+}
+```
+
+> <img src="./img/19.png">
+
+#### switch语句
+
+**基本语法**
+
+```java
+switch (expression) {
+    case value1:
+        // if expression equals value1
+        code block;
+        break;
+    case value2:
+        // if expression equals value2
+        code block;
+        break;
+        ...
+    default:
+        // if none of the above conditions are true
+        code block;
+        break;
+}
+```
+
+**示例**
+
+```java
+public class branchStatement {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("请输入一个整数：");
+        int a = scanner.nextInt();
+
+        switch (a % 2) {
+            case 1:
+                System.out.println("奇数");
+                break;
+            case 0:
+                System.out.println("偶数");
+                break;
+            default:
+                System.out.println("这是数字？");
+        }
+    }
+}
+```
+
+> <img src="./img/20.png">
+
+**switch语句的注意点**
+
+1. `switch`语句中的表达式只能是`byte`、`short`、`char`、`int`、`enum`、`String`等类型
+
+2. `case`中的值只能是常量，不能是变量
+
+3. 每条`case`语句后面必须跟一个`break`，否则会继续执行下一条`case`
+
+4. `default`语句是可选的，如果没有`default`语句，当没有匹配的`case`时，程序将不会执行任何操作
+
+**错误案例**
+
+```java
+import java.util.Scanner;
+
+public class branchStatement {
+    public static void main(String[] args) {
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("请输入一个整数：");
+        int a = scanner.nextInt();
+
+        switch (a % 2) {
+            case 1:
+                System.out.println("奇数");
+                // 此处注释break;
+            case 0:
+                System.out.println("偶数");
+                break;
+            default:
+                System.out.println("这是数字？");
+        }
+    }
+}
+```
+
+> <img src="./img/21.png">
+
+### 循环结构
+
+循环结构是程序流程控制的重要概念，它允许程序重复执行一段代码，直到满足条件为止。Java中循环结构有以下几种：
+
+- `for`：循环从初始化表达式开始，然后判断循环条件是否为真，如果是，则执行循环体，然后更新循环变量，重复执行直到循环条件为假。
+
+- `while`：循环从循环条件开始，判断循环条件是否为真，如果是，则执行循环体，然后更新循环变量，重复执行直到循环条件为假。
+
+- `do-while`：循环从循环体开始，执行循环体，然后判断循环条件是否为真，如果是，则重复执行循环体，直到循环条件为假。
+
+
