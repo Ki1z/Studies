@@ -889,4 +889,78 @@ public class branchStatement {
 
 - `do-while`：循环从循环体开始，执行循环体，然后判断循环条件是否为真，如果是，则重复执行循环体，直到循环条件为假。
 
+#### for循环
 
+**基本语法**
+
+```java
+for (initialization; condition; update) {
+    code block;
+}
+```
+
+**示例**
+
+```java
+public static void main(String[] args) {
+    forLoop();
+}
+
+public static void forLoop() {
+    for (int i = 0; i < 10; i++) {
+        System.out.println(i);
+    }
+}
+```
+
+> <img src="./img/22.png">
+
+#### while循环
+
+**基本语法**
+
+```java
+while (condition) {
+    code block;
+}
+```
+
+**示例**
+
+```java
+public static void whileLoop() {
+    int i = 0;
+
+    while (i < 5) {
+        System.out.println(i);
+        i++;
+    }
+}
+```
+
+> <img src="./img/23.png">
+
+#### do-while循环
+
+**基本语法**
+
+```java
+do {
+    code block;
+}while (condition);
+```
+
+**示例**
+
+```java
+public static void doWhileLoop() {
+    int i = 0;
+
+    do {
+        System.out.println(i);
+        i++;
+    } while (i < 7);
+}
+```
+
+> <img src="./img/24.png">
