@@ -14,8 +14,6 @@
 
 ---
 
-# Java基本语法
-
 ## 类
 
 类是Java程序中用来封装数据的代码块，类可以包含属性、方法、构造函数等。
@@ -679,7 +677,7 @@ public static void ternaryOperator() {
 
 ---
 
-## 综合案例1：健康计算器
+## 综合案例：健康计算器
 
 开发一个简单的健康计算器应用程序，它可以接受用户输入，如年龄、性别、体重、身高等，并计算出用户的BMI值和BMR值
 
@@ -964,3 +962,426 @@ public static void doWhileLoop() {
 ```
 
 > <img src="./img/24.png">
+
+---
+
+## 综合案例
+
+### 简单计算器
+
+设计一个可以执行基本数学运算的计算器程序，用户可以输入两个数字和一个运算符，并输出运算结果
+
+```java
+import java.util.Scanner;
+
+/**
+ * 计算器演示类
+ */
+public class CalculatorDemo {
+    /**
+     * 主函数入口
+     * @param args 命令行参数
+     */
+    public static void main(String[] args) {
+        // 创建扫描器对象用于接收用户输入
+        Scanner sc = new Scanner(System.in);
+
+        // 提示并接收第一个数字
+        System.out.println("请输入第一个数字：");
+        double num1 = sc.nextDouble();
+
+        // 提示并接收第二个数字
+        System.out.println("请输入第二个数字：");
+        double num2 = sc.nextDouble();
+
+        // 提示并接收运算符
+        System.out.println("请输入运算符：");
+        String operator = sc.next().trim();
+
+        // 调用计算器方法进行计算
+        calculator(num1, num2, operator);
+    }
+
+    /**
+     * 执行简单的计算器运算
+     * @param num1 第一个数字
+     * @param num2 第二个数字
+     * @param operator 运算符
+     */
+    private static void calculator(double num1, double num2, String operator) {
+        // 根据运算符执行相应的计算
+        switch (operator) {
+            case "+":
+                System.out.println(num1 + num2);
+                break;
+            case "-":
+                System.out.println(num1 - num2);
+                break;
+            case "*":
+                System.out.println(num1 * num2);
+                break;
+            case "/":
+                System.out.println(num1 / num2);
+                break;
+            default:
+                System.out.println("输入的运算符有误！");
+        }
+    }
+}
+```
+
+> <img src="./img/25.png">
+
+### 猜数字游戏
+
+设计一个猜数字游戏，用户需要猜测一个1到100之间的数字，程序会提示用户猜测的数字是否正确，如果猜错，程序会提示用户猜测的数字是否太大或太小，用户可以自行选择尝试次数，如果尝试次数用完，程序会提示用户游戏失败。
+
+```java
+import java.util.Scanner;
+import java.util.Random;
+
+/**
+ * 猜数字游戏主类
+ * 该类负责启动游戏并处理用户输入
+ */
+public class GuessGameDemo {
+    /**
+     * 主方法，用于启动猜数字游戏
+     * 提示用户输入猜测的次数，并调用guessNumber方法进行游戏
+     *
+     * @param args 命令行参数，未使用
+     */
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+
+        System.out.println("请输入要猜测的次数：");
+        int guessTimes = sc.nextInt();
+
+        guessNumber(guessTimes, sc);
+    }
+
+    /**
+     * 用户猜数字的方法
+     * 用户根据猜测次数猜测一个1到100之间的随机数
+     *
+     * @param guessTimes 猜测次数，决定用户可以猜测多少次
+     * @param sc         Scanner对象，用于读取用户输入
+     */
+    public static void guessNumber(int guessTimes, Scanner sc) {
+        Random random = new Random();
+        int randomNumber = random.nextInt(100) + 1;
+
+        System.out.println("请输入你猜测的数字：");
+        for (int i = 0; i < guessTimes; i++) {
+            int num = sc.nextInt();
+            if (num == randomNumber) {
+                System.out.println("恭喜你，猜对了！");
+                return;
+            } else if (num > randomNumber && i < guessTimes - 1) {
+                System.out.println("猜的数字太大了，请重新猜测。");
+            } else if (num < randomNumber && i < guessTimes - 1) {
+                System.out.println("猜的数字太小了，请重新猜测。");
+            }
+        }
+        System.out.println("很遗憾，你没有猜对，游戏结束。");
+    }
+}
+```
+
+> <img src="./img/26.png">
+
+### 验证码生成器
+
+设计一个验证码生成器，生成指定长度的验证码，验证码由数字和字母组成，可以包含大小写字母，数字等
+
+```java
+import java.util.Random;
+import java.util.Scanner;
+
+/**
+ * 验证码演示类
+ */
+public class VerificationCodeDemo {
+    /**
+     * 主函数入口
+     * @param args 命令行参数
+     */
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+
+        System.out.println("输入你要生成验证码的长度：");
+        int length = sc.nextInt();
+
+        String verificationCode = generateVerificationCode(length);
+        System.out.println("生成的验证码为：" + verificationCode);
+    }
+
+    /**
+     * 生成指定长度的验证码
+     * 验证码由数字和字母组成，字母包括大小写
+     * @param length 验证码的长度
+     * @return 生成的验证码字符串
+     */
+    public static String generateVerificationCode(int length) {
+        Random random = new Random();
+        String verificationCode = "";
+
+        while (verificationCode.length() < length) {
+            int codeType = random.nextInt(3);
+
+            switch (codeType) {
+                case 0:
+                    // 生成大写字母
+                    verificationCode += (char)(random.nextInt(65, 91));
+                    break;
+                case 1:
+                    // 生成小写字母
+                    verificationCode += (char)(random.nextInt(97, 123));
+                    break;
+                case 2:
+                    // 生成数字
+                    verificationCode += random.nextInt(10);
+                    break;
+            }
+        }
+
+        return verificationCode;
+    }
+}
+```
+
+> <img src="./img/27.png">
+
+### 素数检测
+
+设计一个程序，判断一个数是否为素数，素数是只被1和自身整除的数字
+
+```java
+import java.util.Scanner;
+
+/**
+ * PrimeNum 类用于判断一个数是否为素数
+ */
+public class PrimeNum {
+    /**
+     * 主函数入口
+     * @param args 命令行参数
+     */
+    public static void main(String[] args) {
+        // 创建 Scanner 对象用于接收用户输入
+        Scanner sc = new Scanner(System.in);
+
+        // 提示用户输入一个整数
+        System.out.println("请输入一个整数：");
+        // 读取用户输入的整数
+        int num = sc.nextInt();
+
+        // 调用 isPrime 方法判断该数是否为素数
+        isPrime(num);
+    }
+
+    /**
+     * 判断一个数是否为素数
+     * @param num 待判断的整数
+     */
+    public static void isPrime(int num) {
+        // 小于2的数不是素数
+        if (num < 2) {
+            System.out.println(num + "不是素数");
+            return;
+        }
+        // 遍历2到num-1的所有数，判断是否能整除num
+        for (int i = 2; i < num; i++) {
+            // 如果能整除，则num不是素数
+            if (num % i == 0) {
+                System.out.println(num + "不是素数");
+                return;
+            }
+        }
+        // 如果没有找到可以整除num的数，则num是素数
+        System.out.println(num + "是素数");
+    }
+}
+```
+
+> <img src="./img/28.png">
+
+## 数组
+
+数组是一种存储相同类型数据的线性表，数组中的元素在内存中是连续存放的
+
+**数组声明**
+
+`int[] arrayName;` 或 `int arrayName[];`
+
+**赋值与调用**
+
+```java
+public class randomRollCall {
+    public static void main(String[] args) {
+        // 定义数组
+        String[] names = {"张三", "李四", "王五", "赵六", "钱七"};
+        // 调用数组
+        System.out.println(names[0]);
+        System.out.println(names[3]);
+    }
+}
+```
+
+> <img src="./img/29.png">
+
+### 案例：随机点名
+
+指定一个班级的5个学生，随机点名一个学生
+
+```java
+public class randomRollCall {
+    public static void main(String[] args) {
+        randomCall();
+    }
+
+    public static void randomCall() {
+        String[] stu = {"张三", "李四", "王五", "赵六", "钱七"};
+        int randomNum = (int) (Math.random() * stu.length);
+
+        System.out.println("本次幸运儿是：" + stu[randomNum]);
+    }
+}
+```
+
+> <img src="./img/30.png">
+
+**数组的动态定义**
+
+在Java中，数组可以在声明时赋值，也可以先声明数组，再赋值，后者被称为动态定义
+
+### 案例：Java成绩录入
+
+输入5个学生的成绩，并计算平均分、最高分、最低分
+
+```java
+import java.util.Scanner;
+
+public class GradeEntry {
+    public static void main(String[] args) {
+        double[] grades = Entry();
+        gradeCalculator(grades);
+    }
+
+    public static double[] Entry() {
+        Scanner sc = new Scanner(System.in);
+        double[] grades = new double[5];
+
+        for (int i = 0; i < grades.length; i++) {
+            System.out.println("请输入第" + (i + 1) + "个同学的分数：");
+            grades[i] = sc.nextDouble();
+        }
+
+        return grades;
+    }
+    
+    public static void gradeCalculator(double[] grades) {
+        int length = grades.length;
+        double sum = 0.0;
+
+        for (double grade : grades) {
+            sum += grade;
+        }
+        System.out.println("平均分：" + sum / length);
+
+        double max = grades[0];
+        double min = grades[0];
+
+        for (double grade : grades) {
+            if (grade > max) {
+                max = grade;
+            } else if (grade < min) {
+                min = grade;
+            }
+        }
+        System.out.println("最高分：" + max);
+        System.out.println("最低分：" + min);
+    }
+}
+```
+
+> <img src="./img/31.png">
+
+## 综合案例：扑克牌生成与洗牌
+
+生成一副扑克牌，并随机洗牌
+
+```java
+/**
+ * 定义一个扑克牌类，用于生成和洗牌一副扑克牌
+ */
+public class PokerCard {
+    /**
+     * 程序入口点
+     * @param args 命令行参数
+     */
+    public static void main(String[] args) {
+        // 生成一副新的扑克牌
+        String[] poker = generateCard();
+        // 对扑克牌进行洗牌
+        String[] shuffledPoker = shuffle(poker);
+
+        // 打印洗牌后的扑克牌
+        for (String card: shuffledPoker) {
+            System.out.println(card);
+        }
+    }
+
+    /**
+     * 生成一副扑克牌
+     * @return 包含所有扑克牌的字符串数组
+     */
+    public static String[] generateCard(){
+        // 创建包含54张牌的字符串数组
+        String[] poker = new String[54];
+        // 定义四种花色
+        String[] colors = {"黑桃", "红桃", "方片", "梅花"};
+        // 定义JQKA
+        String[] others = {"Jack", "Queen", "King", "Ace"};
+        // 用于给扑克牌数组赋值的索引
+        int index = 0;
+
+        // 遍历每种花色
+        for (String color: colors) {
+            // 生成2到10的牌
+            for (int i = 2; i <= 10; i++) {
+                poker[index++] = color + i;
+            }
+            // 生成JQKA的牌
+            for (String other: others) {
+                poker[index++] = color + other;
+            }
+        }
+        // 最后两张牌为小王和大王
+        poker[index++] = "小王";
+        poker[index++] = "大王";
+
+        return poker;
+    }
+
+    /**
+     * 洗牌方法，随机打乱扑克牌顺序
+     * @param poker 待洗牌的扑克牌数组
+     * @return 洗牌后的扑克牌数组
+     */
+    public static String[] shuffle(String[] poker){
+        // 遍历每张牌
+        for (int i = 0; i < poker.length; i++) {
+            // 随机选择一个位置
+            int j = (int)(Math.random() * poker.length);
+            // 交换当前位置的牌与随机位置的牌
+            String temp = poker[i];
+            poker[i] = poker[j];
+            poker[j] = temp;
+        }
+        return poker;
+    }
+}
+```
+
+> <img src="./img/32.png">
