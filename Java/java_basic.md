@@ -1,6 +1,6 @@
 # Java Basic
 
-`更新时间：2024-9-2`
+`更新时间：2024-9-9`
 
 注释解释：
 
@@ -1385,3 +1385,126 @@ public class PokerCard {
 ```
 
 > <img src="./img/32.png">
+
+## 二维数组
+
+二维数组是数组的数组，也叫多维数组，在Java中，二维数组的声明与一维数组类似，只是多了一个方括号，如`int[][] arrayName;` 或 `int arrayName[][];`
+
+**二维数组的定义与赋值**
+
+```java
+public class TwoDimensionalArray {
+    public static void main(String[] args) {
+        // 定义动态二维数组
+        int[][] array = new int[10][10];
+
+        for (int i = 0; i < array.length; i++) {
+            for (int j = 0; j < array[i].length; j++) {
+                array[i][j] = i * j;
+            }
+        }
+
+        // 定义静态二维数组
+        int [][] array2 = {
+                {1,2,3},
+                {4,5,6}
+        };
+    }
+}
+```
+
+## 综合案例：数字迷阵
+
+创建一个指定行列的数字迷阵，打乱其顺序
+
+```java
+import java.util.Scanner;
+
+/**
+ * 石头迷阵类
+ * 用于生成和显示一个随机的石头迷阵
+ */
+public class StoneMaze {
+    /**
+     * 主函数
+     * 获取用户输入的迷阵行和列，生成迷阵并打乱后进行显示
+     * @param args 命令行参数
+     */
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        
+        // 获取用户输入的迷阵行数
+        System.out.println("请输入石头迷阵的行：");
+        int row = sc.nextInt();
+        // 获取用户输入的迷阵列数
+        System.out.println("请输入石头迷阵的列：");
+        int column = sc.nextInt();
+        
+        // 生成初始迷阵
+        int[][] maze = generateMze(row, column);
+        // 打乱迷阵顺序
+        maze = shuffledMaze(maze, row, column);
+        // 显示迷阵
+        printMaze(maze);
+    }
+
+    /**
+     * 生成顺序迷阵
+     * 按照从1依次增加的顺序填充迷阵
+     * @param row 迷阵的行数
+     * @param column 迷阵的列数
+     * @return 顺序填充的二维数组迷阵
+     */
+    public static int[][] generateMze(int row, int column) {
+        int[][] maze = new int[row][column];
+        int currentNum = 1;
+
+        for (int i = 0; i < row; i++) {
+            for (int j = 0; j < column; j++) {
+                maze[i][j] = currentNum++;
+            }
+        }
+
+        return maze;
+    }
+
+    /**
+     * 打乱迷阵
+     * 随机交换每个元素的位置以打乱迷阵顺序
+     * @param maze 迷阵的二维数组
+     * @param row 迷阵的行数
+     * @param column 迷阵的列数
+     * @return 打乱后的二维数组迷阵
+     */
+    public static int[][] shuffledMaze(int[][] maze, int row, int column) {
+        for (int i = 0; i < row; i++) {
+            for (int j = 0; j < column; j++) {
+                int randomRow = (int) (Math.random() * row);
+                int randomColumn = (int) (Math.random() * column);
+
+                int temp = maze[i][j];
+                maze[i][j] = maze[randomRow][randomColumn];
+                maze[randomRow][randomColumn] = temp;
+            }
+        }
+
+        return maze;
+    }
+
+    /**
+     * 显示迷阵
+     * 以表格形式打印迷阵
+     * @param maze 迷阵的二维数组
+     */
+    public static void printMaze(int[][] maze) {
+        for (int[] row: maze) {
+            for (int num: row) {
+                System.out.print(num + "\t");
+            }
+            System.out.println();
+        }
+    }
+}
+```
+
+> <img src="./img/33.png">
