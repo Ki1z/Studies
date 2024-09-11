@@ -428,6 +428,8 @@ public class Main {
 
 static关键字可以修饰变量和函数，static变量和static方法可以直接通过类名访问，而不需要创建对象。对于有static关键字修饰的变量，如果修改了其值，其他对象也会被修改，因为static变量由类所有，类在每次运行时只创建一次，所有由该类创建的对象共享类的属性和方法
 
+### static变量
+
 **示例**
 
 ```java
@@ -460,3 +462,80 @@ class Boat {
 > <img src="./img2/9.png">
 
 *在上面的程序中，先对ford对象的price属性进行了赋值，而后又对Car类的price属性进行了赋值，此时，因为ford对象是Car类的对象，所以在调用ford.price时的值也发生了改变。程序中没有创建Boat类的对象，但是因为Boat类中的purchase()方法被static修饰，所以可以直接通过类名Boat调用该方法*
+
+### static方法
+
+**示例**
+
+```java
+public class StaticKeyword {
+    public static void main(String[] args) {
+        // 调用printOne
+        Printer.printOne();
+
+        // 调用printTwo
+        Printer printer = new Printer();
+        printer.printTwo();
+    }
+}
+
+class Printer {
+    static void printOne() {
+        System.out.println(1);
+    }
+
+    void printTwo() {
+        System.out.println(2);
+    }
+}
+```
+
+> <img src="./img2/10.png">
+
+### 定义工具类
+
+工具类一般只包含静态方法，不包含实例方法，工具类的方法都是公共的，可以直接通过类名调用，而不需要创建对象，工具类的构造器是私有的，不能被实例化
+
+Menu类
+```java
+public class Menu {
+    public static void main(String[] args) {
+        int a = 20;
+        int b = 10;
+
+        System.out.println(Calculator.sum(a, b));
+        System.out.println(Calculator.sub(a, b));
+    }
+}
+```
+
+Calculator类
+```java
+public class Calculator {
+    // 私有化构造器
+    private Calculator() {};
+
+    public static int sum(int a, int b) {
+        return a + b;
+    }
+
+    public static int sub(int a, int b) {
+        return a - b;
+    }
+}
+```
+
+> <img src="./img2/11.png">
+
+### static关键字注意事项
+
+1. 静态方法中可以访问静态成员，不能直接访问实例成员
+
+2. 实例方法中即可以访问静态成员，也可以访问实例成员
+
+3. 静态方法中不能使用this关键字，因为静态方法属于类，而不是对象，所以不能通过this关键字访问对象
+
+## 综合案例：电影信息展示
+
+设计一个电影信息展示的小程序，程序默认展示目前所有的电影信息，用户可以输入id查询指定电影信息
+
