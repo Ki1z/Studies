@@ -539,3 +539,316 @@ public class Calculator {
 
 设计一个电影信息展示的小程序，程序默认展示目前所有的电影信息，用户可以输入id查询指定电影信息
 
+Menu类
+```java
+import java.util.Scanner;
+
+public class Menu {
+    public static void main(String[] args) {
+        Movie[] movies = new Movie[]{
+                new Movie(1, "《罗小黑战记》", "山新", "2019"),
+                new Movie(2, "《让子弹飞》", "姜文", "2010"),
+                new Movie(3, "《坏蛋联盟》", "马克·马龙", "2022"),
+                new Movie(4, "《天气之子》", "醍醐虎汰朗", "2019"),
+                new Movie(5, "《海王》", "杰西卡·罗素", "2013")
+        };
+
+        MovieOperator mo = new MovieOperator(movies);
+
+        while (true) {
+            System.out.println("当前电影列表：");
+            mo.showInfo();
+            System.out.println("-------------------------------");
+            System.out.println("请输入您接下来的操作：");
+            System.out.println("1.查询电影");
+            System.out.println("2.退出");
+            System.out.println("-------------------------------");
+
+            Scanner sc = new Scanner(System.in);
+            int option = sc.nextInt();
+
+            switch (option) {
+                case 1:
+                    System.out.println("请输入您要查询的电影ID：");
+                    int id = sc.nextInt();
+                    mo.queryById(id);
+                    System.out.println("-------------------------------");
+                    break;
+                case 2:
+                    System.out.println("感谢您的使用！");
+                    System.exit(0);
+                    break;
+                default:
+                    System.out.println("输入有误，请重新输入！");
+            }
+        }
+    }
+}
+```
+
+Movie类
+```java
+public class Movie {
+    private int id;
+    private String name;
+    private String actor;
+    private String year;
+
+    public Movie() {}
+
+    public Movie(int id, String name, String actor, String year) {
+        this.id = id;
+        this.name = name;
+        this.actor = actor;
+        this.year = year;
+    }
+
+    public String getYear() {
+        return year;
+    }
+
+    public void setYear(String year) {
+        this.year = year;
+    }
+
+    public String getActor() {
+        return actor;
+    }
+
+    public void setActor(String actor) {
+        this.actor = actor;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+}
+```
+
+MovieOperator类
+```java
+public class MovieOperator {
+
+    private Movie[] movie;
+
+    public MovieOperator() {}
+
+    public MovieOperator(Movie[] movie) {
+        this.movie = movie;
+    }
+
+    public void showInfo() {
+        for (Movie m : this.movie) {
+            System.out.println(m.getId() + " " + m.getName() + " " + m.getActor() + " " + m.getYear());
+        }
+    }
+    public void showInfo(Movie[] movie) {
+        for (Movie m : movie) {
+            System.out.println(m.getId() + " " + m.getName() + " " + m.getActor() + " " + m.getYear());
+        }
+    }
+
+    public void queryById(int id) {
+        for (Movie m : this.movie) {
+            if (m.getId() == id) {
+                System.out.println(m.getId() + " " + m.getName() + " " + m.getActor() + " " + m.getYear());
+                return;
+            }
+        }
+    }
+
+    public void queryById(Movie[] movie, int id) {
+        for (Movie m : movie) {
+            if (m.getId() == id) {
+                System.out.println(m.getId() + " " + m.getName() + " " + m.getActor() + " " + m.getYear());
+                return;
+            }
+        }
+    }
+}
+```
+
+> <img src="./img2/12.png">
+
+## 继承
+
+继承是面向对象编程中一个重要的概念，它允许子类继承父类的属性和方法，并添加新的属性和方法，从而实现代码的重用和扩展。
+
+**基本语法**
+
+`class A extends B`
+
+**示例**
+
+人类都有的属性姓名、年龄、性别，老师和学生属于人类，而老师拥有自己的属性教学科目，学生拥有自己的属性学号、班级等
+
+Human类
+```java
+public class Human {
+    private String name;
+    private int age;
+    private String gender;
+}
+```
+
+Teacher类
+```java
+public class Teacher extends Human{
+    private String subject;
+}
+```
+
+Student类
+```java
+public class Student extends Human{
+    private int id;
+    private int scores;
+}
+```
+
+**继承的注意点**
+
+1. 子类可以继承父类的非私有成员
+
+2. 子类可以访问父类的私有成员，但是不能修改
+
+### 案例
+
+定义一个父类Animal，包含属性：名字，颜色，年龄，性别，还有两个方法：eat()和sleep()。然后派生出子类Dog和Cat，重写父类的方法，使得子类可以输出不同的信息。
+
+Main类
+```java
+public class Main {
+    public static void main(String[] args) {
+        Dog dog = new Dog("旺财", "黄色", 3, "雄性", 9);
+        dog.showInfo();
+        dog.eat();
+        dog.sleep();
+        dog.showLoyalty();
+
+        System.out.println("=======================");
+
+        Cat cat = new Cat("小花", "白色", 2, "雌性", 8);
+        cat.showInfo();
+        cat.eat();
+        cat.sleep();
+        cat.showLikability();
+    }
+}
+```
+
+Animal类
+```java
+public class Animal {
+    private String name;
+    private String color;
+    private int age;
+    private String gender;
+
+    public Animal() {}
+
+    public Animal(String name, String color, int age, String gender) {
+        this.name = name;
+        this.color = color;
+        this.age = age;
+        this.gender = gender;
+    }
+
+    public String getName() {
+        return name;
+    }
+    public void eat() {}
+
+    public void sleep() {}
+
+    public void showInfo() {
+        System.out.printf("%s is %s, %s, %d years old, %s", name, color, gender, age, "");
+        System.out.println();
+    }
+}
+```
+
+Dog类
+```java
+public class Dog extends Animal{
+
+    public Dog() {
+        super();
+    }
+
+    public Dog(String name, String color, int age, String gender, int loyalty) {
+        super(name, color, age, gender);
+        this.loyalty = loyalty;
+    }
+
+    private int loyalty;
+
+    public void eat(){
+        System.out.printf("Dog %s is eating!\n", getName());
+    }
+
+    public void sleep(){
+        System.out.printf("Dog %s is sleeping!\n", getName());
+    }
+
+    public void showLoyalty(){
+        System.out.printf("Dog %s's loyalty is %d\n", getName(), loyalty);
+    }
+}
+```
+
+Cat类
+```java
+public class Cat extends Animal{
+
+    public Cat() {
+        super();
+    }
+
+    public Cat(String name, String color, int age, String gender, int likability) {
+        super(name, color, age, gender);
+        this.likability = likability;
+    }
+
+    private int likability;
+    
+    public void eat(){
+        System.out.printf("Cat %s is eating!\n", getName());
+    }
+
+    public void sleep(){
+        System.out.printf("Cat %s is sleeping!\n", getName());
+    }
+
+    public void showLikability(){
+        System.out.printf("Cat %s's likability is %d\n", getName(), likability);
+    }
+}
+```
+
+> <img src="./img2/13.png">
+
+## 权限修饰符
+
+Java中有四种权限修饰符，分别是public、private、protected和default。
+
+- `public`：公开，表示可以在任意位置访问
+
+- `private`：私有，表示只能在当前类中访问
+
+- `protected`：受保护，表示只能在当前类、子类和同一个包中访问
+
+- `default`：默认，或无，表示只能在当前包中访问
+
