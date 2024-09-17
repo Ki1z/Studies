@@ -840,6 +840,235 @@ public class Cat extends Animal{
 
 > <img src="./img2/13.png">
 
+### 继承的特点
+
+- `单继承`：一个类只能有一个父类，但可以有多个子类
+
+- `多层继承`：子类可以继续被继承
+
+- `祖宗类`：Java中所有类都继承于`Object`类，所以所有类都有一个共同的父类
+
+- `就近原则`：继承关系中，如果子类和父类中存在同名的成员变量或方法，则子类中的成员变量或方法优先访问
+
+### 方法重写
+
+方法重写指的是子类重写父类的方法，使得子类的方法具有和父类方法不同的功能
+
+**注意事项**
+
+1. 在子类中进行方法重写时，应该在方法的声明中添加`@Override`注解，以提醒编译器进行方法重写检查
+
+2. 方法重写时，子类的方法必须与父类中的方法具有相同的返回类型、参数列表和访问权限修饰符
+
+3. 方法重写时，子类的访问权限应该不低于父类的访问权限
+
+4. 重写方法的返回值类型必须小于等于父类
+
+5. 私有方法、静态方法不能被重写
+
+### 方法重写应用场景
+
+- 打印对象：
+
+如果直接打印一个对象，获得的只是对象的地址，如果想要获得对象的详细信息，需要重写`toString()`方法
+
+**未重写**
+
+Main类
+```java
+public class Main {
+    public static void main(String[] args) {
+        Student sc = new Student("小王", 18, "男");
+
+        System.out.println(sc);
+    }
+}
+```
+
+Student类
+```java
+public class Student {
+    private String name;
+    private int age;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
+
+    private String gender;
+
+    public Student() {}
+
+    public Student(String name, int age, String gender) {
+        this.name = name;
+        this.age = age;
+        this.gender = gender;
+    }
+}
+```
+
+> <img src="./img2/14.png">
+
+**重写后**
+
+Main类
+```java
+public class Main {
+    public static void main(String[] args) {
+        Student sc = new Student("小王", 18, "男");
+
+        System.out.println(sc);
+    }
+}
+```
+
+Student类
+```java
+public class Student {
+    private String name;
+    private int age;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
+
+    private String gender;
+
+    public Student() {}
+
+    public Student(String name, int age, String gender) {
+        this.name = name;
+        this.age = age;
+        this.gender = gender;
+    }
+
+    @Override
+    public String toString() {
+        return "姓名：" + name + "，年龄：" + age + "，性别：" + gender;
+    }
+}
+```
+
+> <img src="./img2/15.png">
+
+### 子类构造器的注意事项
+
+1. 子类构造器必须调用父类构造器，否则编译器会报错
+
+2. 子类构造器必须先调用父类构造器，再调用子类构造器
+
+### this()调用兄弟构造器
+
+在创建多个对象时，如果有一个或多个构造器参数一致，可以重载构造器，使用this关键字调用兄弟构造器
+
+Main类
+```java
+public class Main {
+    public static void main(String[] args) {
+        Student sc = new Student("小王", 18, "男");
+        Student sc1 = new Student("小张", 21);
+        Student sc2 = new Student("小李", 19);
+
+        System.out.println(sc);
+        System.out.println(sc1);
+        System.out.println(sc2);
+    }
+}
+```
+
+Student类
+```java
+public class Student {
+    private String name;
+    private int age;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
+
+    private String gender;
+
+    public Student() {}
+
+    public Student(String name, int age) {
+        this(name, age, "男");
+    }
+
+    public Student(String name, int age, String gender) {
+        this.name = name;
+        this.age = age;
+        this.gender = gender;
+    }
+
+    @Override
+    public String toString() {
+        return "姓名：" + name + "，年龄：" + age + "，性别：" + gender;
+    }
+}
+```
+
+> <img src="./img2/16.png">
+
 ## 权限修饰符
 
 Java中有四种权限修饰符，分别是public、private、protected和default。
@@ -852,3 +1081,170 @@ Java中有四种权限修饰符，分别是public、private、protected和defaul
 
 - `default`：默认，或无，表示只能在当前包中访问
 
+## 多态
+
+多态是面向对象编程中一个很重要的概念，它指的是同一个方法可以有不同的实现，根据不同的对象，调用不同的方法。在Java中，多态有对象多态和行为多态
+
+Main类
+```java
+public class Main {
+    public static void main(String[] args) {
+        // 对象多态
+        Animal wolf = new Wolf();
+        Animal turtle = new Turtle();
+
+        // 行为多态
+        wolf.run();
+        turtle.run();
+
+        // 注意：属性没有多态
+        System.out.println(wolf.name);
+        System.out.println(turtle.name);
+    }
+}
+```
+
+Animal类
+```java
+public class Animal {
+    public String name = "动物";
+
+    public void run() {
+        System.out.println("动物跑");
+    }
+}
+```
+
+Wolf类
+```java
+public class Wolf extends Animal{
+    public String name = "狼";
+
+    @Override
+    public void run() {
+        System.out.println("狼跑得很快");
+    }
+}
+```
+
+Turtle类
+```java
+public class Turtle extends Animal{
+    public String name = "乌龟";
+
+    @Override
+    public void run() {
+        System.out.println("乌龟爬得很慢");
+    }
+}
+```
+
+> <img src="./img2/17.png">
+
+### 多态的特点
+
+1. 多态可以解耦合，方便维护和修改
+
+2. 在定义一个方法时，参数可以使用父类的数据类型，这样在调用时，可以传入所有子类对象
+
+3. 多态下不能直接访问子类特有的方法或属性
+
+### 多态下的类型转换
+
+为了解决多态下无法直接访问子类特有的方法或属性的问题，可以使用强制类型转换，将父类转化为子类
+
+Main类
+```java
+public class Main {
+    public static void main(String[] args) {
+        // 多态下的类型转换
+        Animal wolf = new Wolf();
+        System.out.println(wolf.name);
+
+        Wolf wolf2 = (Wolf) wolf;
+        wolf2.eat();
+        System.out.println(wolf2.name);
+    }
+}
+```
+
+Animal类
+```java
+public class Animal {
+    public String name = "动物";
+}
+```
+
+Wolf类
+```java
+public class Wolf extends Animal{
+    public String name = "狼";
+    public void eat() {
+        System.out.println("狼吃肉");
+    }
+}
+```
+
+> <img src="./img2/18.png">
+
+### instanceof 运算符
+
+instanceof运算符用于判断一个对象是否是某个类的实例，或者该对象是否是某个类的子类的实例，Java建议，在对一个对象进行强制转换前，应该进行一次instanceof运算符的判断
+
+Main类
+```java
+public class Main {
+    public static void main(String[] args) {
+        // instanceof 运算符
+        Animal wolf = new Wolf();
+        Animal turtle = new Turtle();
+
+        behavior(wolf);
+        behavior(turtle);
+    }
+
+    public static void behavior(Animal animal) {
+        if (animal instanceof Wolf) {
+            Wolf wolf = (Wolf) animal;
+            wolf.eat();
+        } else if (animal instanceof Turtle) {
+            Turtle turtle = (Turtle) animal;
+            turtle.crawl();
+        }
+    }
+}
+```
+
+Animal类
+```java
+public class Animal {
+    public String name = "动物";
+}
+```
+
+Wolf类
+```java
+public class Wolf extends Animal{
+    public String name = "狼";
+    public void eat() {
+        System.out.println("狼吃肉");
+    }
+}
+```
+
+Turtle类
+```java
+public class Turtle extends Animal{
+    public String name = "乌龟";
+
+    public void crawl() {
+        System.out.println("乌龟爬行");
+    }
+}
+```
+
+> <img src="./img2/19.png">
+
+---
+
+## 综合案例：支付模块
