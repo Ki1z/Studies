@@ -1247,4 +1247,241 @@ public class Turtle extends Animal{
 
 ---
 
-## 综合案例：支付模块
+## 综合案例：加油站支付模块
+
+某加油站为了吸引更过的车主，推出了如下活动，车主可以办理金卡或是银卡，卡片的信息包括车牌号码、车主姓名、电话号码、卡片余额。金卡办理时必须存入5000元及以上，银卡办理时必须存入2000元及以上，金卡支付时享受8折优惠，银卡支付时享受9折优惠，金卡消费满200元可以提供打印免费洗车票服务
+
+Pay类
+```java
+import java.util.Scanner;
+
+public class Pay {
+    public static void main(String[] args) {
+        Scanner sc = new Scanner(System.in);
+        // 创建银卡
+        Card card1 = new SilveryCard("川X·CE530", "张三", "13888888888", 2622);
+        // 创建金卡
+        Card card2 = new GoldenCard("川X·EB238", "李四", "13888888889", 9440);
+
+        while (true) {
+            System.out.println("请输入你要操作的业务：");
+            System.out.println("1. 加油");
+            System.out.println("2. 充值");
+            System.out.println("3. 退出");
+            int choice = sc.nextInt();
+
+            switch (choice) {
+                case 1:
+                    pay(card1);
+                    break;
+                case 2:
+                    deposit(card1);
+                    break;
+                case 3:
+                    System.out.println("谢谢使用！");
+                    return;
+                default:
+                    System.out.println("输入有误，请重新输入！");
+            }
+        }
+    }
+
+    public static void pay(Card card) {
+        Scanner sc = new Scanner(System.in);
+        System.out.println("请输入你要消费的金额：");
+        double amount = sc.nextDouble();
+
+        card.consume(amount);
+    }
+
+    public static void deposit(Card card) {
+        Scanner sc = new Scanner(System.in);
+        System.out.println("请输入你要充值的金额：");
+        double amount = sc.nextDouble();
+
+        card.deposit(amount);
+        System.out.println("充值成功，当前余额" + card.getBalance());
+    }
+}
+```
+
+Card类
+```java
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Card {
+    // 车牌号码
+    private String vehicleLicence;
+    // 车主姓名
+    private String hostName;
+    //电话号码
+    private String phoneNumber;
+    // 余额
+    private double balance;
+
+    // 预存金额
+    public void deposit(double amount) {
+        this.balance += amount;
+    }
+
+    // 消费金额
+    public void consume(double amount) {
+        this.balance -= amount;
+    }
+}
+```
+
+GoldenCard类
+```java
+public class GoldenCard extends Card{
+
+    public GoldenCard(String vehicleLicence, String hostName, String phoneNumber, double balance) {
+        super(vehicleLicence, hostName, phoneNumber, balance);
+    }
+
+    @Override
+    public void consume(double amount) {
+        double discount = 0.8;
+
+        if (getBalance() < amount * discount) {
+            System.out.println("余额不足，请充值！");
+            return;
+        }
+
+        setBalance(getBalance() - amount * discount);
+        System.out.println("您消费 " + amount + " 元，实际支付 " + amount * discount + " 元");
+        System.out.println("剩余余额 " + getBalance());
+
+        if (amount * discount >= 200) {
+            printTicket();
+        } else System.out.println("您消费未满200元。");
+    }
+
+    private void printTicket() {
+        System.out.println("您消费满200元，获得一张洗车票！");
+    }
+}
+```
+
+SilveryCard类
+```java
+public class SilveryCard extends Card{
+
+    public SilveryCard(String vehicleLicence, String hostName, String phoneNumber, double balance) {
+        super(vehicleLicence, hostName, phoneNumber, balance);
+    }
+
+    @Override
+    public void consume(double amount) {
+        double discount = 0.9;
+
+        if (getBalance() < amount * discount) {
+            System.out.println("余额不足，请充值！");
+            return;
+        }
+
+        setBalance(getBalance() - amount * discount);
+        System.out.println("您消费 " + amount + " 元，实际支付 " + amount * discount + " 元");
+        System.out.println("剩余余额 " + getBalance());
+    }
+}
+```
+
+银卡
+> <img src="./img2/20.png">
+
+金卡
+> <img src="./img2/21.png">
+
+---
+
+## final关键字
+
+在Java中，final关键字可以用于修饰类、方法、变量等，其含义如下：
+
+1. 修饰类：表示该类不能被继承，即该类是抽象类
+
+2. 修饰方法：表示该方法不能被重写，即该方法是抽象方法
+
+3. 修饰变量：表示该变量不能被修改，即该变量是常量
+
+### final关键字的注意事项
+
+1. final关键字修饰的变量必须在定义的时候赋值
+
+2. 在方法的参数列表中使用final关键字修饰的参数，该参数的值不能被方法修改
+
+3. final关键字修饰引用类型变量时，记录的是其地址值，其内容仍然可以被修改
+
+**示例**
+
+```java
+public class FinalKeyword {
+    public static void main(String[] args) {
+        final int[] array = {1, 2, 3};
+        // array = new int[]{4, 5, 6}; 报错
+        array[0] = 4;
+    }
+}
+```
+
+## 设计模式
+
+设计模式是指一个问题通常有多种解决方案，但只有一种最高效的解决方案，这种解决方案就称为设计模式，在程序设计语言中，一共有大约20多种设计模式
+
+### 单例类（单例设计模式）
+
+单例类指的是一个类只能创建一个实例的对象，并且该类只能有一个实例
+
+**具体实现**
+
+- 饿汉式单例：
+
+1. 私有化构造函数，防止外部创建实例
+
+2. 定义一个私有静态属性，存储一个类对象
+
+3. 定义一个静态方法，返回私有静态属性
+
+```java
+public class Singleton{
+    private static final Singleton instance = new Singleton();
+
+    private Singleton() {}
+
+    public static Singleton getInstance() {
+        return instance;
+    }
+}
+```
+
+- 懒汉式单例：
+
+1. 私有化构造函数，防止外部创建实例
+
+2. 定义一个私有静态属性
+
+3. 定义一个静态方法，保证返回的是同一个对象
+
+```java
+public class Singleton{
+    private static Singleton instance;
+
+    private Singleton() {}
+
+    public static Singleton getInstance() {
+        if (instance == null) {
+            instance = new Singleton();
+        }
+        return instance;
+    }
+}
+```
+
+### 枚举类
+
