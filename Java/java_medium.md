@@ -1434,7 +1434,7 @@ public class FinalKeyword {
 
 设计模式是指一个问题通常有多种解决方案，但只有一种最高效的解决方案，这种解决方案就称为设计模式，在程序设计语言中，一共有大约20多种设计模式
 
-### 单例类（单例设计模式）
+## 单例类设计模式
 
 单例类指的是一个类只能创建一个实例的对象，并且该类只能有一个实例
 
@@ -1483,5 +1483,236 @@ public class Singleton{
 }
 ```
 
-### 枚举类
+## 枚举类
 
+枚举类是特殊的单例类，它不能被继承，并且枚举类中的每个常量都是枚举类的实例
+
+```java
+Modifiers enum class Name {
+    // 枚举常量
+    Constants;
+    // 其他成员
+    Others;
+}
+```
+
+在枚举常量中，每个常量实际上都是一个枚举对象，并且每个枚举对象只能被实例化一次，如果只存在一个枚举常量，该枚举类可以被认为是一个单例类
+
+原始类
+```java
+public enum Enum1 {
+    X, Y, Z;
+}
+```
+
+反编译
+```java
+public final class Enum1 extends java.lang.Enum<Enum1> {
+  public static final Enum1 X; // = new Enum1();
+  public static final Enum1 Y; // = new Enum1();
+  public static final Enum1 Z; // = new Enum1();
+  public static Enum1[] values();
+  public static Enum1 valueOf(java.lang.String);
+  static {};
+}
+```
+
+从反编译文件可以看出，每个定义的枚举常量，实际上都是枚举类的一个实例，并且每个枚举常量都是静态的，并且每个枚举常量都有final关键字。同时，在编译枚举类的同时，编译器自动生成了两个静态方法，`values()`返回所有的枚举常量，`valueOf(String)`可以将传入的字符串转换为对应的枚举常量
+
+```java
+public enum Enum1 {
+    X, Y, Z;
+}
+
+class Test {
+    public static void main(String[] args) {
+        Enum1[] values = Enum1.values();
+
+        for (Enum1 e : values) {
+            System.out.println(e);
+        }
+    }
+}
+```
+
+> <img src="./img2/22.png">
+
+### 枚举类的常见应用场景
+
+1. 枚举类适合做信息的分类和标志
+
+Test类
+```java
+public class Test {
+    public static void main(String[] args) {
+        // 常量无法限制参数
+        move1(ConstDirection.LEFT);
+        move1(3);
+
+        // 枚举可以限制参数
+        move2(Direction.UP);
+        // move2(3); 报错
+    }
+
+    public static void move1 (int direction) {
+        switch (direction) {
+            case ConstDirection.UP -> System.out.println("UP");
+            case ConstDirection.DOWN -> System.out.println("DOWN");
+            case ConstDirection.LEFT -> System.out.println("LEFT");
+            case ConstDirection.RIGHT -> System.out.println("RIGHT");
+            default -> System.out.println("ERROR");
+        }
+    }
+
+    public static void move2 (Direction direction) {
+        switch (direction) {
+            case UP -> System.out.println("UP");
+            case DOWN -> System.out.println("DOWN");
+            case LEFT -> System.out.println("LEFT");
+            case RIGHT -> System.out.println("RIGHT");
+            default -> System.out.println("ERROR");
+        }
+    }
+}
+```
+
+ConstDirection类
+```java
+public class ConstDirection {
+    public static final int UP = 0;
+    public static final int DOWN = 1;
+    public static final int LEFT = 2;
+    public static final int RIGHT = 3;
+}
+```
+
+Direction类
+```java
+public enum Direction {
+    UP, DOWN, LEFT, RIGHT;
+}
+```
+
+## 抽象类
+
+抽象类是定义抽象方法的类，抽象类不能被实例化，但可以继承抽象类，并且可以定义非抽象方法
+### 抽象方法
+
+抽象方法没有方法体，它只能定义在抽象类中，并且必须被重写，重写时必须使用`@Override`注解，否则编译器会报错
+
+### 抽象类的注意事项
+
+1. 抽象类不能被实例化，但可以继承抽象类
+
+2. 抽象类中可以没有抽象方法，但有抽象方法的类必须是抽象类
+
+3. 抽象类中可以有所有类中的成员
+
+4. 子类继承抽象类时，必须重写抽象类中的所有抽象方法，否则子类必须声明为抽象类
+
+5. 抽象类和方法使用`abstract`关键字修饰
+
+**示例**
+
+Main类
+```java
+public class Main {
+    public static void main(String[] args) {
+        Animal animal0 = new Dog();
+        Animal animal1 = new Cat();
+
+        animal0.eat();
+        animal1.eat();
+    }
+}
+```
+
+Animal类
+```java
+public abstract class Animal {
+    public abstract void eat();
+}
+```
+
+Dog类
+```java
+public class Dog extends Animal{
+
+    @Override
+    public void eat() {
+        System.out.println("Dog is eating");
+    }
+}
+```
+
+Cat类
+```java
+public class Cat extends Animal{
+    @Override
+    public void eat() {
+        System.out.println("Cat is eating");
+    }
+}
+```
+
+### 模板方法设计模式
+
+模板方法设计模式是一种软件设计模式，它定义了一个算法的骨架，而将一些步骤延迟到子类中，模板方法使得子类可以不改变一个算法的结构即可重定义该算法的某些特定步骤
+
+**示例**
+
+老师和学生都需要写作一篇作文，作文都有三段，第一段和第三段一样，而第二段不同，所以可以定义一个模板方法，让老师和学生继承该模板方法，重写第二段的内容
+
+Main类
+```java
+public class Main {
+    public static void main(String[] args) {
+        Write teacher = new Teacher();
+        teacher.write();
+
+        System.out.println();
+
+        Write student = new Student();
+        student.write();
+    }
+}
+```
+
+Write类
+```java
+public abstract class Write {
+
+    public final void write() {
+        System.out.println("\t\t\tMy Favorite Pet");
+        System.out.println("My favorite pet is my dog.");
+        writeParagraphTwo();
+        System.out.println("My dog is very friendly.");
+    }
+
+    public abstract void writeParagraphTwo();
+}
+```
+
+Teacher类
+```java
+public class Teacher extends Write{
+    @Override
+    public void writeParagraphTwo() {
+        System.out.println("He's called Captain, also my family.");
+    }
+}
+```
+
+Student类
+```java
+public class Student extends Write{
+    @Override
+    public void writeParagraphTwo() {
+        System.out.println("His name is Pudding, he likes playing balls with me.");
+    }
+}
+```
+
+> <img src="./img2/23.png">
+
+*注：模板方法一般使用final关键字修饰，防止子类重写*
