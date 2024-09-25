@@ -1716,3 +1716,258 @@ public class Student extends Write{
 > <img src="./img2/23.png">
 
 *注：模板方法一般使用final关键字修饰，防止子类重写*
+
+## 接口
+
+在Java中，接口使用`interface`关键字来声明，接口类中只能有常量和抽象方法，接口中的常量默认存在 `public static final` 关键字，接口中的方法也默认存在 `public abstract` 关键字。接口类似于抽象类，接口无法实例化，但可以由多个类实现，实现用 `implements` 关键字
+
+**基本语法**
+
+接口类
+```java
+interface InterfaceName {
+    // 常量和抽象方法
+    ConstantName = value;
+    void methodName();
+}
+```
+
+实现类
+```java
+class ClassName implements InterfaceName, InterfaceName2, ... {
+    @Override
+    public void methodName() {}
+}
+```
+
+### 接口的好处
+
+1. 弥足了单继承的不足，一个类可以实现多个接口，使类的角色更多，功能更强大
+
+**示例**
+
+一个学生继承People类，同时可以实现Driver、Son接口
+
+People类
+```java
+public class People {
+    private String name;
+    private int age;
+    private String gender;
+
+    public void eat() {}
+
+    public void sleep() {}
+}
+```
+
+Driver接口
+```java
+interface Driver {
+    int drivingYears = 0;
+    String drivingLicense = "";
+
+    void drive();
+}
+```
+
+Son接口
+```java
+interface Son {
+    String father = "";
+    String mother = "";
+
+    void callFather();
+}
+```
+
+Student类
+```java
+public class Student extends People implements Driver, Son {
+    @Override
+    public void drive() {}
+
+    @Override
+    public void callFather() {}
+}
+```
+
+2. 让程序可以面向接口编程，程序员可以灵活方便地切换各种业务实现
+
+## 综合案例：学生信息打印
+
+请设计一个班级学生的信息管理模块，学生的数据有：姓名、性别、成绩，该模块有两个功能，其一是打印全班所有人的信息，其二是打印全班所有人的平均成绩。注意，以上两个功能需要两套不同的方案完成，请各自做成一个接口供实现
+
+Test类
+```java
+public class Test {
+    public static void main(String[] args) {
+        Student[] students = {
+                new Student("张三", "男", 88),
+                new Student("李四", "男", 81),
+                new Student("王五", "女", 92),
+                new Student("赵六", "女", 80),
+                new Student("钱七", "男", 77)
+        };
+
+        // 调用A方案的方法
+        Scheme sc = new MethodA();
+        sc.printInfo(students);
+        sc.printScore(students);
+
+        // 调用B方案的方法
+        sc = new MethodB();
+        sc.printInfo(students);
+        sc.printScore(students);
+    }
+}
+```
+
+Student类
+```java
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class Student {
+    private String name;
+    private String gender;
+    private int score;
+}
+```
+
+Scheme接口
+```java
+public interface Scheme {
+    void printInfo(Student[] students);
+
+    void printScore(Student[] students);
+}
+```
+
+MethodA类
+```java
+public class MethodA implements Scheme{
+
+    /***
+     * 打印学生信息方法
+     * 打印所有学生的基本信息
+     * Student[] students 待打印学生信息数组
+     */
+    @Override
+    public void printInfo(Student[] students) {
+        for (Student student : students) {
+            System.out.println(student.toString());
+        }
+    }
+
+    /***
+     * 打印学生成绩方法
+     * 打印所有学生的平均成绩
+     * Student[] students 待打印学生成绩数组
+     */
+    @Override
+    public void printScore(Student[] students) {
+        double sum = 0;
+
+        for (Student student : students) {
+            sum += student.getScore();
+        }
+        System.out.println("平均成绩为：" + sum / students.length);
+    }
+}
+```
+
+MethodB类
+```java
+public class MethodB implements Scheme{
+
+    /***
+     * 打印学生信息方法
+     * 打印所有学生的基本信息，并输出男生和女生的个数
+     * Student[] students 待打印学生信息数组
+     */
+    @Override
+    public void printInfo(Student[] students) {
+        int male = 0;
+        int female = 0;
+
+        for (Student student : students) {
+            System.out.println(student.toString());
+            if (student.getGender().equals("男")) {
+                male++;
+            } else {
+                female++;
+            }
+        }
+        System.out.println("男生个数：" + male);
+        System.out.println("女生个数：" + female);
+    }
+
+    /***
+     * 打印学生成绩方法
+     * 打印所有学生的平均成绩，并输出最高分和最低分
+     * Student[] students 待打印学生成绩数组
+     */
+    @Override
+    public void printScore(Student[] students) {
+        double sum = 0;
+        double max = students[0].getScore();
+        double min = students[0].getScore();
+
+        for (Student student : students) {
+            sum += student.getScore();
+            if (student.getScore() > max) {
+                max = student.getScore();
+            }
+            if (student.getScore() < min) {
+                min = student.getScore();
+            }
+        }
+        System.out.println("平均成绩：" + sum / students.length);
+        System.out.println("最高分：" + max);
+        System.out.println("最低分：" + min);
+    }
+}
+```
+
+> <img src="./img2/24.png">
+
+*注：接口的命名规则一般为：接口需求 + Inter，实现类的命名规则一般为：接口名+Impl，如上文中的学生信息打印接口，应该命名为`StudentDataInter`，而实现类则命名为`StudentDataInterImpl`*
+
+## JDK8之后的接口
+
+在JDK8之后，接口定义方法时允许使用关键字`default`、`private`和`static`定义实例方法
+
+- `default`：普通实例方法，调用需要实现类对象
+
+- `private`：私有实例方法，调用需要接口类中其他的实例方法
+
+- `static`：静态实例方法，可以直接通过接口调用
+
+**接口和抽象类区别**
+
+1. 接口和接口之间可以多继承
+
+    - 类与类：单继承，一个类只能继承一个父类
+
+    - 类与接口：多实现，一个类可以同时实现多个接口
+
+    - 接口与接口：多继承，一个接口可以继承多个接口
+
+2. 在多继承的接口中，如果出现方法签名冲突，则此时既不支持多继承，也不支持多实现
+
+    - 方法签名冲突：方法名相同，返回值类型不同
+
+    > <img src="./img2/25.png">
+
+3. 一个类继承了父类，又实现了接口，如果父类中的接口有同名的默认方法，实现类会优先用父类的
+
+    > <img src="./img2/26.png">
+
+4. 一个类实现了多个接口，如果多个接口中存在同名的默认方法，可以不冲突，这个类重写该方法即可
+
+*注：多个接口中存在同名的默认方法，如果要指定一个调用，可以使用`接口名.super.方法名`的形式*
