@@ -1971,3 +1971,256 @@ public class MethodB implements Scheme{
 4. 一个类实现了多个接口，如果多个接口中存在同名的默认方法，可以不冲突，这个类重写该方法即可
 
 *注：多个接口中存在同名的默认方法，如果要指定一个调用，可以使用`接口名.super.方法名`的形式*
+
+## 智能家居控制系统
+
+设计一个智能家居控制系统，可以让用户选择要控制的家用设备，并可以对它们进行打开或关闭操作
+
+Test类
+```java
+import java.util.Scanner;
+
+public class Test {
+    public static void main(String[] args) {
+        Furniture[] furnitures = {
+                new AirConditioner("美的空调", false),
+                new Television("TCL电视", false),
+                new WashingMachine("海尔洗衣机", false),
+                new Lamp("长虹灯", false)
+        };
+
+        Controller controller = Controller.getInstance();
+        controller.showAll(furnitures);
+
+        Scanner sc = new Scanner(System.in);
+        while (true) {
+            System.out.println("请输入要操作的设备序号：");
+            int index = sc.nextInt() - 1;
+            controller.press(furnitures[index]);
+            controller.showAll(furnitures);
+            System.out.println("是否继续？(y/n)");
+            String input = sc.next();
+            if (input.equals("n")) {
+                break;
+            }
+        }
+    }
+}
+```
+
+Furniture类
+```java
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public abstract class Furniture implements Operator{
+    private String name;
+    private boolean isOn = false;
+
+    public void press() {
+        isOn = !isOn;
+        System.out.println(name + " is " + (isOn ? "on" : "off"));
+        System.out.println("==========================");
+    }
+}
+```
+
+AirConditioner类
+```java
+public class AirConditioner extends Furniture{
+
+    public AirConditioner(String name, boolean isOn) {
+        super(name, isOn);
+    }
+}
+```
+
+Television类
+```java
+public class Television extends Furniture{
+
+    public Television(String name, boolean isOn) {
+        super(name, isOn);
+    }
+}
+```
+
+WashingMachine类
+```java
+public class WashingMachine extends Furniture{
+
+    public WashingMachine(String name, boolean isOn) {
+        super(name, isOn);
+    }
+}
+```
+
+Lamp类
+```java
+public class Lamp extends Furniture{
+
+    public Lamp(String name, boolean isOn) {
+        super(name, isOn);
+    }
+}
+```
+
+Operator接口
+```java
+public interface Operator {
+    void press();
+}
+```
+
+Controller类
+```java
+public class Controller {
+    private static Controller instance;
+
+    private Controller() {}
+
+    public static Controller getInstance() {
+        if (instance == null) {
+            instance = new Controller();
+        }
+        return instance;
+    }
+
+    public void press(Furniture furniture) {
+        furniture.press();
+    }
+
+    public void showAll(Furniture[] furnitures) {
+        int i = 1;
+        for (Furniture furniture : furnitures) {
+            System.out.println(i++ + ". " + furniture.getName() + " is " + (furniture.isOn() ? "on" : "off"));
+        }
+    }
+}
+```
+
+---
+
+## 代码块
+
+代码块分为两种，实例代码块和静态代码块
+
+### 静态代码块
+
+- 格式：`static {}`
+
+- 特点：类加载时自动执行，由于类只会加载一次，所以静态代码块也只会加载一次
+
+- 作用：完成类的初始化，例如静态成员变量的赋值，创建静态成员对象等
+
+**示例**
+
+```java
+public class StaticCodeBlock {
+
+    static {
+        System.out.println("静态代码块");
+    }
+
+    public static void main(String[] args) {
+        
+    }
+}
+```
+
+> <img src="./img2/27.png">
+
+### 实例代码块
+
+- 格式：`{}`
+
+- 特点：对象创建时自动执行，由于对象只会创建一次，所以实例代码块也只会执行一次
+
+- 作用：完成对象的初始化，例如成员变量的赋值，创建成员对象等
+
+## 内部类
+
+内部类是定义在类内部的类，当一个事物包含了另一个事物，且不需要单独设计的时候，就可以将其设计为内部类
+
+**示例**
+
+```java
+class human {
+    class heart {}
+    class brain {}
+    class eye {}
+    ...
+}
+```
+
+在Java中，内部类有成员内部类、静态内部类、局部内部类和匿名内部类四种
+
+### 成员内部类
+
+定义在类中的类，外部类可以直接访问成员内部类的成员，包括私有成员
+
+Test类
+```java
+public class Test {
+    public static void main(String[] args) {
+        Human.Brain brain = new Human().new Brain();
+
+        brain.think();
+    }
+}
+```
+
+Human类
+```java
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+public class Human {
+
+    @Data
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public class Brain {
+        private int capacity;
+        private int size;
+
+        public void think() {
+            System.out.println("我在思考！");
+        }
+    }
+}
+```
+
+**成员内部类访问外部类成员的特点**
+
+1. 成员内部类中可以直接访问外部类的静态成员
+
+2. 成员内部类中也可以直接访问外部类的实例成员
+
+3. 成员内部类中的实例方法中，可以直接获取外部类对象，使用`外部类名.this`
+
+### 静态内部类
+
+定义在类中的静态类，属于外部类自己持有
+
+**基本语法**
+
+`外部类名.静态内部类名 对象名 = new 外部类名().new 静态内部类名();`
+
+**静态内部类访问外部类成员的特点**
+
+1. 静态内部类中可以直接访问外部类的静态成员
+
+2. 静态内部类中不可以直接访问外部类的实例成员
+
+### 局部内部类
+
+定义在方法中的类，属于方法自己持有
+
+*~~很鸡肋，一般没用~~*
+
