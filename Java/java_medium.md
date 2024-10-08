@@ -1,6 +1,6 @@
 # Java Medium
 
-`更新时间：2024-9-9`
+`更新时间：2024-10-8`
 
 注释解释：
 
@@ -2224,3 +2224,53 @@ public class Human {
 
 *~~很鸡肋，一般没用~~*
 
+## 匿名内部类
+
+匿名内部类，指的是程序员不需要为这个类声明类名，默认有个隐藏名字
+
+**基本语法**
+
+```java
+new {class | interface}(params) {
+    body;
+};
+```
+
+匿名内部类本质是一个子类，并且会立即创建出一个子类对象
+
+**示例**
+
+假设需要创建一个动物类，其下有方法`cry()`，在以往的写法中，我们将Animal类作为父类，然后创建子类Dog，重写`cry()`方法，但是现在我们可以直接使用匿名内部类作为子类
+
+```java
+public class Test {
+    public static void main(String[] args) {
+        Animal dog = new Animal() {
+            @Override
+            public void cry() {
+                System.out.println("汪汪汪");
+            }
+        };
+
+        dog.cry();
+    }
+}
+
+abstract class Animal {
+    public abstract void cry();
+}
+```
+
+> <img src="./img2/28.png">
+
+对于匿名内部类，在编译时会自动生成一个类文件，文件名是`外部类名$内部类名.class`
+
+> <img src="./img2/29.png">
+
+查看反编译的文件，可以看到自动创建了一个子类
+
+> <img src="./img2/30.png">
+
+### 匿名内部类的应用场景
+
+1. 作为一个对象参数传输给方法
