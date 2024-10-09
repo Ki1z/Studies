@@ -1,6 +1,6 @@
 # Java Medium
 
-`更新时间：2024-10-8`
+`更新时间：2024-10-9`
 
 注释解释：
 
@@ -2273,4 +2273,142 @@ abstract class Animal {
 
 ### 匿名内部类的应用场景
 
-1. 作为一个对象参数传输给方法
+1. 给按钮绑定单击事件监听器对象时，可以将监听器作为匿名内部类传入按钮类
+
+```java
+import javax.swing.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+
+public class Test {
+    public static void main(String[] args) {
+        // 创建一个GUI对象
+        JFrame gui = new JFrame("登录窗口");
+        // 设置窗口大小
+        gui.setSize(400, 300);
+        // 居中显示
+        gui.setLocationRelativeTo(null);
+        // 退出程序
+        gui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        // 创建画布
+        JPanel panel = new JPanel();
+        // 将画布添加到窗口中
+        gui.add(panel);
+
+        // 创建按钮
+        JButton button = new JButton("登录");
+        // 将按钮添加到画布中
+        panel.add(button);
+        // 为按钮添加点击事件监听器
+        button.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.out.println("点击了登录按钮");
+            }
+        });
+
+        // 显示窗口
+        gui.setVisible(true);
+    }
+}
+```
+
+> <img src="./img2/31.png">
+
+2. 调用Arrays类的sort()为对象进行排序时，需要传入比较器对象，此时的比较器对象就可以设计为匿名内部类
+
+Test类
+```java
+import java.util.Arrays;
+import java.util.Comparator;
+
+public class Test {
+    public static void main(String[] args) {
+        Student[] students = {
+                new Student("小王", 150),
+                new Student("小张", 149),
+                new Student("小李", 144),
+                new Student("小强", 151),
+                new Student("小卢", 145),
+        };
+
+        for (Student student : students) {
+            System.out.println(student);
+        }
+
+        // 调用Arrays类对数组排序
+        Arrays.sort(students, new Comparator<Student>() {
+            @Override
+            public int compare(Student o1, Student o2) {
+                // 左边大于右边，返回正整数
+                // 左边小于右边，返回负整数
+                // 左边等于右边，返回0
+                return (int) (o1.getScore() - o2.getScore());
+            }
+        });
+
+        System.out.println("排序后：");
+        for (Student student : students) {
+            System.out.println(student);
+        }
+    }
+}
+```
+
+Student类
+```java
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class Student {
+    private String name;
+    private double score;
+}
+```
+
+## 函数式编程（Lambda表达式）
+
+函数式编程，类似于数学中的函数，只要输入的数据一致，返回的结果也应该是一致的。在Java中，函数式编程使用lambda表达式来表示函数
+
+**基本语法**
+
+```java
+(params) -> { 
+    body; 
+}
+```
+
+lambda表达式并不能表示所有的匿名内部类，只能替代函数式编程接口的匿名内部类，函数式编程接口指的是有且仅有一个抽象方法的接口
+
+**示例**
+
+```java
+public class LambdaDemo1 {
+    public static void main(String[] args) {
+        Animal dog = new Animal() {
+            @Override
+            public void eat() {
+                System.out.println("狗吃肉");
+            }
+        };
+        dog.eat();
+
+        Animal cat = () -> System.out.println("猫吃鱼");
+        cat.eat();
+    }
+}
+
+@FunctionalInterface
+interface Animal{
+    void eat();
+}
+```
+
+*注：函数式编程接口一般使用`@FunctionalInterface`注解来确保安全性*
+
+> <img src="./img2/32.png">
