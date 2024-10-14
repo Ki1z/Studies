@@ -1,6 +1,6 @@
 # Java Medium
 
-`更新时间：2024-10-9`
+`更新时间：2024-10-14`
 
 注释解释：
 
@@ -2412,3 +2412,211 @@ interface Animal{
 *注：函数式编程接口一般使用`@FunctionalInterface`注解来确保安全性*
 
 > <img src="./img2/32.png">
+
+### 进一步省略Lambda表达式
+
+1. 参数类型可以省略不写
+
+2. 如果有且只有只有一个形参，括号可以省略
+
+3. 如果表达式中只有一行代码，大括号可以省略，同时省略分号，如果这条语句是`return`，则`return`必须省略
+
+**示例**
+
+```java
+public class LambdaOmit {
+    public static void main(String[] args) {
+        eatThings(s -> System.out.println(s));
+    }
+
+    public static void eatThings(Animals animal) {
+        animal.eat("吃东西");
+    }
+}
+
+@FunctionalInterface
+interface Animals {
+    abstract void eat(String s);
+}
+```
+
+## 方法引用
+
+### 静态方法引用
+
+如果Lambda表达式调用的是一个静态方法，并且`->`前后形参的形式一致，就可以用静态方法引用
+
+`ClassName::staticMethodName`
+
+**示例**
+
+```java
+public class LambdaOmit {
+    public static void main(String[] args) {
+        eatThings(System.out::println);
+    }
+
+    public static void eatThings(Animals animal) {
+        animal.eat("吃东西");
+    }
+}
+
+@FunctionalInterface
+interface Animals {
+    abstract void eat(String s);
+}
+```
+
+### 实例方法引用
+
+如果Lambda表达式调用的是一个实例方法，并且`->`前后形参的形式一致，就可以用实例方法引用
+
+`ObjectName::methodName`
+
+**示例**
+
+```java
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.Arrays;
+
+public class InstanceMethodReference {
+    public static void main(String[] args) {
+        Student[] students = {
+                new Student("小明", 18, "男", "90"),
+                new Student("小红", 19, "女", "85"),
+                new Student("小刚", 20, "男", "95"),
+                new Student("小李", 21, "男", "85"),
+                new Student("小王", 22, "男", "90")
+        };
+        Student compareInstance = new Student();
+
+        Arrays.sort(students, compareInstance::compareByAge);
+        for (Student student : students) {
+            System.out.println(student);
+        }
+    }
+}
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+class Student {
+    private String name;
+    private int age;
+    private String gender;
+    private String scores;
+
+    public int compareByAge(Student s1, Student s2) {
+        return Double.compare(s1.getAge(), s2.getAge());
+    }
+}
+```
+
+> <img src="./img2/33.png">
+
+### 特定类的方法引用
+
+如果某个Lambda方法里调用的是一个特定类型的实例方法，并且前面参数列表中的第一个参数是方法的主调，后面所有参数都是作为该实例方法的入参的，此时可以使用特定类型的方法引用
+
+`specificTypeClass::methodName`
+
+**示例**
+
+```java
+import java.util.Arrays;
+import java.util.Comparator;
+
+public class SpecificTypeReference {
+    public static void main(String[] args) {
+        // 创建一个人名数组，按照首字母升序排序
+        String[] names = {"Jack", "tom", "Kiiz", "小王", "jerry", "lucy", "Charly", "Mery", "Lily", "Andy", "bravo", "Jovi"};
+        // 一般情况，使用Arrays.sort()方法
+        Arrays.sort(names);
+        System.out.println(Arrays.toString(names));
+        // 无视大小写，按照首字母升序排序
+        Arrays.sort(names, new Comparator<String>() {
+            @Override
+            public int compare(String o1, String o2) {
+                return o1.compareToIgnoreCase(o2);
+            }
+        });
+        System.out.println(Arrays.toString(names));
+        // 特定类型方法引用
+        Arrays.sort(names, String::compareToIgnoreCase);
+        System.out.println(Arrays.toString(names));
+    }
+}
+```
+
+> <img src="./img2/34.png">
+
+### 构造器引用
+
+如果某个Lambda表达式调用的是一个构造器，并且`->`前后形参的形式一致，就可以用构造器引用
+
+`ClassName::new`
+
+**示例**
+
+```java
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+public class ConstructorReference {
+    public static void main(String[] args) {
+        // 匿名内部类写法
+        CarFactory cf = new CarFactory() {
+            @Override
+            public Car getCar(String name) {
+                return new Car(name);
+            }
+        };
+        Car car = cf.getCar("奔驰");
+        System.out.println(car);
+        // 构造器引用写法
+        CarFactory cf1 = Car::new;
+        Car car1 = cf1.getCar("福特");
+        System.out.println(car1);
+    }
+}
+
+@FunctionalInterface
+interface CarFactory {
+    Car getCar(String name);
+}
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+class Car {
+    private String name;
+}
+```
+
+> <img src="./img2/35.png">
+
+## 常用API
+
+### String
+
+一般创建String对象时，都省略new关键字，直接使用构造方法，但是Java中String其实存在几种创建对象的方式
+
+
+```java
+// 一般创建
+String s1 = "hello";
+// 调用构造方法
+String s2 = new String("hello");
+// 构建字符数组
+Char[] chars = {'h', 'e', 'l', 'l', 'o'};
+String s3 = new String(chars);
+// 构建字节数组
+byte[] bytes = {104, 101, 108, 108, 111};
+String s4 = new String(bytes);
+```
+
+*注：如果是以`String str = "";`的方式创建的字符串对象，其值实际是储存在一个常量池中，如果两个字符串值相同，那么这两个字符串对象是同一个对象*
