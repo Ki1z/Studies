@@ -1,6 +1,6 @@
 # Java Medium
 
-`更新时间：2024-10-14`
+`更新时间：2024-10-16`
 
 注释解释：
 
@@ -2601,7 +2601,7 @@ class Car {
 
 ## 常用API
 
-### String
+### String 字符串
 
 一般创建String对象时，都省略new关键字，直接使用构造方法，但是Java中String其实存在几种创建对象的方式
 
@@ -2620,3 +2620,359 @@ String s4 = new String(bytes);
 ```
 
 *注：如果是以`String str = "";`的方式创建的字符串对象，其值实际是储存在一个常量池中，如果两个字符串值相同，那么这两个字符串对象是同一个对象*
+
+**String常用API**
+
+- `int length()`：获取字符串的长度
+
+- `char charAt(int index)`：获取某个索引位置的字符
+
+- `char[] toCharArray()`：将字符串转换为字符数组
+
+- `boolean equals(String str)`：与另一个字符串比较值，若相同，返回`true`，不同返回`false`
+
+- `boolean equalsIgnoreCase(String str)`：与另一个字符串比较值，忽略大小写，若相同，返回`true`，不同返回`false`
+
+- `String substring(int start, int end)`：从索引开始处截取字符串，到索引末尾，左闭右开
+
+- `String substring(int start)`：从索引开始处截取字符串，直到字符串末尾
+
+- `String replace(char oldChar, char newChar)`：替换字符串中的某个字符
+
+- `boolean contains(CharSequence s)`：判断某个字符串中包含了指定字符序列
+
+- `boolean startsWith(String prefix)`：判断某个字符串是否以指定内容开头，如果是，返回`true`，否则返回`false`
+
+- `String[] split(String regex)`：把某个字符串按照指定字符串分割
+
+### 案例：验证码
+
+开发一个程序，实现随机生成验证码的功能，验证码每位可能是数字、大写字母或小写字母
+
+```java
+public class CaptchaGenerator {
+
+    private static final String ALLOWED_CHARS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+    private static final int ALLOWED_CHAR_LENGTH = ALLOWED_CHARS.length();
+
+    public static void main(String[] args) {
+        System.out.println(generator(4));
+        System.out.println(generator(8));
+    }
+
+    public static String generator(int length) {
+        StringBuilder code = new StringBuilder();
+
+        for (int i = 0; i < length; i++) {
+            int index = (int) (Math.random() * ALLOWED_CHAR_LENGTH);
+            code.append(ALLOWED_CHARS.charAt(index));
+        }
+
+        return code.toString();
+    }
+}
+```
+
+> <img src="./img2/36.png">
+
+### ArrayList 集合
+
+集合是一种容器，用来储存数据，类似于数组，但是数组的长度是固定的，而集合的长度是可变的，集合中的元素是动态的，可以添加、删除、修改等
+
+**ArrayList常用API**
+
+- `ArrayList<E>()`：创建一个空的集合对象
+
+- `boolean add(E e)`：将指定的元素添加到集合末尾
+
+- `void add(int index, E element)`：将指定的元素插入到集合索引位置
+
+- `E get(int index)`：返回索引位置的集合元素
+
+- `int size()`：返回集合中的元素个数
+
+- `E remove(int index)`：删除索引位置的元素，并返回被删除的元素
+
+- `boolean remove(Object o)`：删除索引位置的元素，并返回是否删除成功
+
+- `E set(int index, E element)`：修改指定索引的元素，并返回修改前的元素
+
+#### 泛型
+
+在集合中，泛型可以约束集合中的元素类型，也可以约束集合中的方法参数和返回值类型
+
+**基本语法**
+
+`ArrayList<dataType> name = new ArrayList<[dataType]>();`
+
+**示例**
+
+```java
+import java.util.ArrayList;
+
+public class ArrayListDemo {
+    public static void main(String[] args) {
+        // 创建集合对象
+        ArrayList<String> list = new ArrayList<>();
+        // 增添集合元素
+        list.add("hello");
+        list.add("world");
+        list.add("java");
+        // list.add(123); 集合使用了泛型约束，只能添加String类型的元素
+        // 删除集合元素
+        list.remove(2);
+        // 修改集合元素
+        list.set(1, "java");
+        // 查询集合元素
+        for (String str: list) {
+            System.out.println(str);
+        }
+    }
+}
+```
+
+> <img src="./img2/37.png">
+
+*集合可以直接打印输出*
+
+## GUI编程
+
+GUI，全称Graphical User Interface，即图形用户界面，是一种图形化的交互方式，通过图形化的界面，让用户与计算机进行交互，可以更直观的看到计算机的操作，方便用户使用。这里使用Swing包来实现GUI编程
+
+**示例**
+
+```java
+import javax.swing.*;
+
+public class GUI1 {
+    public static void main(String[] args) {
+        JFrame frame = new JFrame("Hello World");
+        frame.setSize(400, 300);
+        frame.setLocationRelativeTo(null);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        JButton button = new JButton("登录");
+        JPanel panel = new JPanel();
+        panel.add(button);
+        frame.add(panel);
+        frame.setVisible(true);
+    }
+}
+```
+
+> <img src="./img2/38.png">
+
+### 常见布局管理器
+
+布局管理器指的是它们可以自己决定组件在容器中的位置，避免了手动设置每个组件的位置和大小，从而简化了GUI设计过程
+
+- `FlowLayout`：水平布局
+- `BorderLayout`：方位布局
+- `GridLayout`：网格布局
+- `BoxLayout`：轴向布局
+
+#### FlowLayout
+
+最简单的布局管理器，它按照水平方向从左到右排列组件，当一行排满时，自动换到下一行，默认居中对齐
+
+```java
+import javax.swing.*;
+import java.awt.*;
+
+public class FlowLayoutDemo {
+    public static void main(String[] args) {
+        JFrame frame = new JFrame("FlowLayoutDemo");
+        frame.setSize(400, 300);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setLayout(new FlowLayout());
+        JButton button1 = new JButton("Button1");
+        JButton button2 = new JButton("Button2");
+        JButton button3 = new JButton("Button3");
+        JButton button4 = new JButton("Button4");
+        JButton button5 = new JButton("Button5");
+        frame.add(button1);
+        frame.add(button2);
+        frame.add(button3);
+        frame.add(button4);
+        frame.add(button5);
+        frame.setVisible(true);
+    }
+}
+```
+
+> <img src="./img2/39.png">
+
+#### BorderLayout
+
+将容器划分为东南西北中五个区域，每个区域只能添加一个组件，中间的组件会占据所有剩余位置
+
+```java
+	import javax.swing.*;
+import java.awt.*;
+
+public class LayoutDemo {
+    public static void main(String[] args) {
+        JFrame frame = new JFrame("FlowLayoutDemo");
+        frame.setSize(400, 300);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setLayout(new BorderLayout());
+        frame.add(new JButton("NORTH"), BorderLayout.NORTH);
+        frame.add(new JButton("SOUTH"), BorderLayout.SOUTH);
+        frame.add(new JButton("EAST"), BorderLayout.EAST);
+        frame.add(new JButton("WEST"), BorderLayout.WEST);
+        frame.add(new JButton("CENTER"), BorderLayout.CENTER);
+        frame.setVisible(true);
+    }
+}
+```
+
+> <img src="./img2/40.png">
+
+#### GridLayout
+
+将容器划分为多个网格，每个网格可以添加一个组件，且每个网格大小相同
+
+```java
+import javax.swing.*;
+import java.awt.*;
+
+public class LayoutDemo {
+    public static void main(String[] args) {
+        JFrame frame = new JFrame("FlowLayoutDemo");
+        frame.setSize(400, 300);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setLayout(new GridLayout(3, 3));
+        for (int i = 0; i < 9; i++) {
+            frame.add(new JButton("Button" + i));
+        }
+        frame.setVisible(true);
+    }
+}
+```
+
+> <img src="./img2/41.png">
+
+#### BoxLayout
+
+沿着x或y轴布局，可以设置间隔
+
+```java
+import javax.swing.*;
+import java.awt.*;
+
+public class LayoutDemo {
+    public static void main(String[] args) {
+        JFrame frame = new JFrame("LayoutDemo");
+        frame.setSize(400, 300);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+
+        panel.add(new JButton("Button1"));
+        panel.add(Box.createVerticalStrut(20));
+        panel.add(new JButton("Button2"));
+        panel.add(Box.createVerticalStrut(20));
+        panel.add(new JButton("Button3"));
+
+        frame.add(panel);
+        frame.setVisible(true);
+    }
+}
+```
+
+> <img src="./img2/42.png">
+
+### 事件处理
+
+GUI编程中，事件处理通过时间监听器（Event Listener）来实现
+
+**常用的事件监听器**
+
+- `ActionListener`：点击事件监听器
+
+**示例**
+
+```java
+import javax.swing.*;
+
+public class GUI2 {
+    public static void main(String[] args) {
+        // 创建窗口
+        JFrame frame = new JFrame("登录窗口");
+        // 设置窗口大小和位置
+        frame.setSize(400, 300);
+        frame.setLocationRelativeTo(null);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        // 创建画布
+        JPanel panel = new JPanel();
+        // 创建按钮
+        JButton button = new JButton("登录");
+        panel.add(button);
+        frame.add(panel);
+        // 为按钮设置监听器
+        button.addActionListener(e -> JOptionPane.showMessageDialog(frame, "登录成功"));
+        // 显示窗口
+        frame.setVisible(true);
+    }
+}
+```
+
+> <img src="./img2/43.png">
+
+- `KeyListener`：按键事件监听器
+
+**示例**
+
+```java
+import javax.swing.*;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+
+public class GUI2 {
+    public static void main(String[] args) {
+        // 创建窗口
+        JFrame frame = new JFrame("登录窗口");
+        // 设置窗口大小和位置
+        frame.setSize(400, 300);
+        frame.setLocationRelativeTo(null);
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        // 创建画布
+        JPanel panel = new JPanel();
+        // 创建按钮
+        JButton button = new JButton("登录");
+        panel.add(button);
+        frame.add(panel);
+        // 为按钮设置监听器
+        button.addActionListener(e -> JOptionPane.showMessageDialog(frame, "登录成功"));
+        // 为窗口设置按键事件监听器，监听上下左右按键行为
+        frame.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                int keyCode = e.getKeyCode();
+                if (keyCode == KeyEvent.VK_UP) {
+                    System.out.println("向上");
+                } else if (keyCode == KeyEvent.VK_DOWN) {
+                    System.out.println("向下");
+                } else if (keyCode == KeyEvent.VK_LEFT) {
+                    System.out.println("向左");
+                } else if (keyCode == KeyEvent.VK_RIGHT) {
+                    System.out.println("向右");
+                }
+            }
+        });
+        // 显示窗口
+        frame.setVisible(true);
+        // 让窗口称为按键监听焦点
+        frame.requestFocus();
+    }
+}
+```
+
+> <img src="./img2/44.png">
+
+### 事件的几种常见写法
+
+1. 直接提供实现类，用于创建事件监听器
+2. 直接使用匿名内部类，代表事件监听对象
+3. 自定义窗口，让窗口对象实现事件接口
