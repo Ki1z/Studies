@@ -1,6 +1,6 @@
 # Java Medium
 
-`更新时间：2024-10-16`
+`更新时间：2024-10-21`
 
 注释解释：
 
@@ -2974,5 +2974,100 @@ public class GUI2 {
 ### 事件的几种常见写法
 
 1. 直接提供实现类，用于创建事件监听器
+   ```java
+   import javax.swing.*;
+   import java.awt.event.ActionEvent;
+   import java.awt.event.ActionListener;
+   
+   public class directImplementClass {
+       public static void main(String[] args) {
+           // 创建一个登录窗口
+           JFrame frame = new JFrame("directImplementClass");
+           frame.setSize(300, 200);
+           frame.setLocationRelativeTo(null);
+           frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+           JPanel panel = new JPanel();
+           JButton button = new JButton("登录");
+           button.addActionListener(new MyActionListener(frame));
+           panel.add(button);
+           frame.add(panel);
+           frame.setVisible(true);
+       }
+   }
+   
+   // 实现类
+   class MyActionListener implements ActionListener {
+       private final JFrame jf;
+   
+       public MyActionListener(JFrame jf) {
+           this.jf = jf;
+       }
+   
+       @Override
+       public void actionPerformed(ActionEvent e) {
+           JOptionPane.showMessageDialog(jf, "登录成功");
+       }
+   }
+   ```
+
+   > <img src="./img2/45.png">
+
 2. 直接使用匿名内部类，代表事件监听对象
+
 3. 自定义窗口，让窗口对象实现事件接口
+   ```java
+   import javax.swing.*;
+   import java.awt.event.ActionEvent;
+   import java.awt.event.ActionListener;
+   
+   public class CustomWindow {
+       public static void main(String[] args) {
+           new LoginFrame();
+       }
+   }
+   
+   // 自定义窗口类
+   class LoginFrame extends JFrame implements ActionListener {
+       public LoginFrame() {
+           // 设置标题
+           setTitle("登录界面");
+           // 设置大小和位置
+           setSize(400, 300);
+           setLocationRelativeTo(null);
+           // 设置关闭方式
+           setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+           // 初始化窗口组件
+           init();
+           // 设置窗口可见
+           setVisible(true);
+       }
+   
+       private void init() {
+           // 创建窗口画布
+           JPanel panel = new JPanel();
+           this.add(panel);
+           // 创建按钮
+           JButton button = new JButton("登录");
+           panel.add(button);
+           // 为按钮绑定监听器
+           button.addActionListener(this);
+       }
+   
+       @Override
+       public void actionPerformed(ActionEvent e) {
+           JOptionPane.showMessageDialog(this, "登录成功");
+       }
+   }
+   ```
+
+   > <img src="./img2/46.png">
+
+## 综合项目：人事管理系统
+
+结合AI使用GUI编程实现一个人事管理系统，该系统有以下要求
+
+1. 提供一个登录和注册界面
+2. 提供一个人事管理界面：展示全部员工信息、根据员工名称查询某个员工的信息、添加员工信息、删除员工信息和修改员工信息
+3. 员工信息包括：ID、姓名、性别、年龄、电话、职位、入职日期、薪水、部门信息等
+
+- 
