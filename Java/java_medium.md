@@ -1,6 +1,6 @@
 # Java Medium
 
-`更新时间：2024-10-21`
+`更新时间：2024-10-23`
 
 注释解释：
 
@@ -3070,4 +3070,479 @@ public class GUI2 {
 2. 提供一个人事管理界面：展示全部员工信息、根据员工名称查询某个员工的信息、添加员工信息、删除员工信息和修改员工信息
 3. 员工信息包括：ID、姓名、性别、年龄、电话、职位、入职日期、薪水、部门信息等
 
-- 
+- LoginRegisterForm类
+
+```java
+public class LoginRegisterForm extends JFrame implements ActionListener {
+    private JTextField usernameField;
+    private JPasswordField passwordField;
+    private JButton loginButton;
+    private JButton registerButton;
+
+    // 创建静态集合，用于存储用户名和密码
+    private static ArrayList<User> allUsers = new ArrayList<>();
+    // 创建一些测试数据
+    static {
+        allUsers.add(new User("test", "1", "测试用户1"));
+        allUsers.add(new User("admin", "admin", "测试管理员1"));
+    }
+  
+    public LoginRegisterForm() {  
+        // 设置窗口标题  
+        setTitle("登录/注册界面");  
+  
+        // 设置默认关闭操作  
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);  
+  
+        // 设置窗口大小  
+        setSize(350, 200);  
+  
+        // 设置窗口居中  
+        setLocationRelativeTo(null);  
+  
+        // 创建面板并设置布局  
+        JPanel panel = new JPanel();  
+        panel.setLayout(new GridBagLayout());  
+        GridBagConstraints gbc = new GridBagConstraints();  
+        gbc.insets = new Insets(10, 10, 10, 10);  
+  
+        // 用户名标签和文本字段  
+        gbc.gridx = 0;  
+        gbc.gridy = 0;  
+        panel.add(new JLabel("用户名:"), gbc);  
+  
+        gbc.gridx = 1;  
+        gbc.gridy = 0;  
+        usernameField = new JTextField(20);  
+        panel.add(usernameField, gbc);  
+  
+        // 密码标签和密码字段  
+        gbc.gridx = 0;  
+        gbc.gridy = 1;  
+        panel.add(new JLabel("密码:"), gbc);  
+  
+        gbc.gridx = 1;  
+        gbc.gridy = 1;
+        passwordField = new JPasswordField(20);
+        passwordField.setEchoChar('*');
+        panel.add(passwordField, gbc);  
+  
+        // 登录按钮  
+        gbc.gridx = 0;  
+        gbc.gridy = 2;  
+        gbc.gridwidth = 1;  
+        loginButton = new JButton("登录");
+        panel.add(loginButton, gbc);
+        loginButton.addActionListener(this);
+  
+        // 注册按钮  
+        gbc.gridx = 1;  
+        gbc.gridy = 2;  
+        registerButton = new JButton("注册");
+        panel.add(registerButton, gbc);
+        registerButton.addActionListener(this);
+
+        // 设置Enter按键触发登录事件
+        getRootPane().setDefaultButton(loginButton);
+  
+        // 将面板添加到窗口  
+        add(panel);  
+  
+        // 设置窗口可见  
+        setVisible(true);  
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        JButton button = (JButton) e.getSource();
+        if (button == loginButton) {
+            login();
+        } else if (button == registerButton) {
+            JOptionPane.showMessageDialog(this, "注册功能暂未实现！", "提示", JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
+    private void login() {
+        String username = usernameField.getText();
+        String password = new String(passwordField.getPassword());
+        if (username.isEmpty() || password.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "用户名或密码不能为空！", "错误", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        User user = queryUserByUsername(username);
+        if (user != null && user.getPassword().equals(password)) {
+            JOptionPane.showMessageDialog(this, "登录成功！", "成功", JOptionPane.INFORMATION_MESSAGE);
+            new EmployeeManager(user.getDisplayName());
+            dispose();
+        } else {
+            JOptionPane.showMessageDialog(this, "用户名或密码错误！", "错误", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // 根据用户名查询用户对象，并返回
+    private User queryUserByUsername(String username) {
+        for (User user : allUsers) {
+            if (user.getUsername().equals(username)) {
+                return user;
+            }
+        }
+        return null;
+    }
+}
+```
+
+- EmployManager类
+
+```java
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+
+public class EmployeeManager extends JFrame implements ActionListener {
+    private DefaultTableModel tableModel;
+    private JTable employeeTable;
+    private JTextField searchField;
+    private JButton searchButton;
+    private JButton addButton;
+
+    // 添加测试集合
+    private static ArrayList<Employee> employees = new ArrayList<>();
+
+    static {
+        employees.add(new Employee(1, "浔麟", "男", 21, "15111291676", "董事长", "2024-02-16", 1e7, "无"));
+        employees.add(new Employee(2, "小明", "男", 25, "17815607977", "Java高级工程师", "2024-11-20", 12000, "研发部"));
+        employees.add(new Employee(3, "小红", "女", 22, "16100147891", "前台接待", "2024-05-01", 4300, "市场部"));
+        employees.add(new Employee(4, "小刚", "男", 23, "11564950569", "Python高级工程师", "2024-03-01", 10000, "研发部"));
+        employees.add(new Employee(5, "小花", "女", 24, "19915607977", "厨师", "2024-03-31", 4500, "后勤部"));
+    }
+
+    public EmployeeManager(String username) {
+        super("欢迎 " + username);
+        initializeComponents();
+        setupLayout();
+        populateTableWithSampleData();
+        addEventListeners();
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(800, 600);
+        setLocationRelativeTo(null); // Center the window
+        setVisible(true);
+    }
+
+    private void initializeComponents() {
+        String[] columns = {"ID", "姓名", "性别", "年龄", "电话", "职位", "入职时间", "薪水", "部门信息"};
+        tableModel = new DefaultTableModel(columns, 0);
+        employeeTable = new JTable(tableModel) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false; // Make the table read-only
+            }
+        };
+
+        searchField = new JTextField(20);
+        searchButton = new JButton("搜索");
+        searchButton.addActionListener(this);
+        addButton = new JButton("添加");
+        addButton.addActionListener(this);
+    }
+
+    private void setupLayout() {
+        JPanel topPanel = new JPanel();
+        topPanel.add(searchField);
+        topPanel.add(searchButton);
+        topPanel.add(addButton);
+
+        JScrollPane scrollPane = new JScrollPane(employeeTable);
+        setLayout(new BorderLayout());
+        add(topPanel, BorderLayout.NORTH);
+        add(scrollPane, BorderLayout.CENTER);
+    }
+
+    private void populateTableWithSampleData() {
+        for (Employee employee : employees) {
+            tableModel.addRow(new Object[]{
+                    employee.getID(),
+                    employee.getName(),
+                    employee.getGender(),
+                    employee.getAge(),
+                    employee.getPhone(),
+                    employee.getPosition(),
+                    employee.getEntryDate(),
+                    String.format("%.2f", employee.getSalary()),
+                    employee.getDepartment()
+            });
+        }
+    }
+
+    private void addEventListeners() {
+        // Right-click menu on table rows
+        JPopupMenu popupMenu = new JPopupMenu();
+        JMenuItem editItem = new JMenuItem("修改");
+        JMenuItem deleteItem = new JMenuItem("删除");
+
+        editItem.addActionListener(e -> {
+            int selectedRow = employeeTable.getSelectedRow();
+            if (selectedRow != -1) {
+                JOptionPane.showMessageDialog(this, "修改 ID: " + tableModel.getValueAt(selectedRow, 0));
+            }
+        });
+
+        deleteItem.addActionListener(e -> {
+            int selectedRow = employeeTable.getSelectedRow();
+            if (selectedRow != -1) {
+                int result = JOptionPane.showConfirmDialog(this, "确定删除 ID: " + tableModel.getValueAt(selectedRow, 0), "删除确认", JOptionPane.YES_NO_OPTION);
+                if (result == JOptionPane.YES_OPTION) {
+                    // 先使用id查找对象
+                    // 遍历集合，找到id相同的对象
+                    for (Employee employee : employees) {
+                        if (employee.getID() == (Integer) tableModel.getValueAt(selectedRow, 0)) {
+                            employees.remove(employee);
+                            break;
+                        }
+                    }
+                    // 从表格中删除行
+                    tableModel.removeRow(selectedRow);
+                }
+            }
+        });
+
+        popupMenu.add(editItem);
+        popupMenu.add(deleteItem);
+
+        employeeTable.addMouseListener(new MouseAdapter() {
+            public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    doPop(e);
+                }
+            }
+
+            public void mouseReleased(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    doPop(e);
+                }
+            }
+
+            private void doPop(MouseEvent e) {
+                if (employeeTable.rowAtPoint(e.getPoint()) != -1) {
+                    employeeTable.setRowSelectionInterval(employeeTable.rowAtPoint(e.getPoint()), employeeTable.rowAtPoint(e.getPoint()));
+                    popupMenu.show(e.getComponent(), e.getX(), e.getY());
+                }
+            }
+        });
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        JButton button = (JButton) e.getSource();
+        if (button == searchButton) {
+            // 搜索按钮
+        } else if (button == addButton) {
+            // 添加员工按钮
+            new AddEmployeeForm(this);
+        }
+    }
+
+    public void addEmployee(Employee newEmployee) {
+        tableModel.addRow(new Object[]{
+                newEmployee.getID(),
+                newEmployee.getName(),
+                newEmployee.getGender(),
+                newEmployee.getAge(),
+                newEmployee.getPhone(),
+                newEmployee.getPosition(),
+                newEmployee.getEntryDate(),
+                String.format("%.2f", newEmployee.getSalary()),
+                newEmployee.getDepartment()
+        });
+    }
+}
+```
+
+- AddEmployeeForm类
+
+```java
+import javax.swing.*;
+import java.awt.*;
+
+public class AddEmployeeForm extends JFrame {
+    private final JTextField idField, nameField, genderField, ageField, phoneField, positionField, entryDateField, salaryField, departmentField;
+    private final EmployeeManager em;
+
+    public AddEmployeeForm(EmployeeManager em) {
+        super("添加员工信息");
+        this.em = em;
+
+        // 创建一个面板用于输入字段
+        JPanel inputPanel = new JPanel();
+        inputPanel.setLayout(new GridLayout(9, 2));
+
+        // 添加标签和文本框
+        inputPanel.add(new JLabel("ID:"));
+        idField = new JTextField();
+        inputPanel.add(idField);
+
+        inputPanel.add(new JLabel("姓名:"));
+        nameField = new JTextField();
+        inputPanel.add(nameField);
+
+        inputPanel.add(new JLabel("性别:"));
+        genderField = new JTextField();
+        inputPanel.add(genderField);
+
+        inputPanel.add(new JLabel("年龄:"));
+        ageField = new JTextField();
+        inputPanel.add(ageField);
+
+        inputPanel.add(new JLabel("电话:"));
+        phoneField = new JTextField();
+        inputPanel.add(phoneField);
+
+        inputPanel.add(new JLabel("职位:"));
+        positionField = new JTextField();
+        inputPanel.add(positionField);
+
+        inputPanel.add(new JLabel("入职日期:"));
+        entryDateField = new JTextField();
+        inputPanel.add(entryDateField);
+
+        inputPanel.add(new JLabel("薪水:"));
+        salaryField = new JTextField();
+        inputPanel.add(salaryField);
+
+        inputPanel.add(new JLabel("部门:"));
+        departmentField = new JTextField();
+        inputPanel.add(departmentField);
+
+        // 按钮面板
+        JPanel buttonPanel = new JPanel();
+        JButton confirmButton = new JButton("确定");
+        JButton backButton = new JButton("返回");
+
+        // 按钮事件处理
+        confirmButton.addActionListener(e -> {
+            // 获取所有输入字段的值
+            String id = idField.getText().trim();
+            String name = nameField.getText().trim();
+            String gender = genderField.getText().trim();
+            String age = ageField.getText().trim();
+            String phone = phoneField.getText().trim();
+            String position = positionField.getText().trim();
+            String entryDate = entryDateField.getText().trim();
+            String salary = salaryField.getText().trim();
+            String department = departmentField.getText().trim();
+
+            // 检查是否有空字段
+            if (id.isEmpty() || name.isEmpty() || gender.isEmpty() || age.isEmpty() || phone.isEmpty() ||
+                position.isEmpty() || entryDate.isEmpty() || salary.isEmpty() || department.isEmpty()) {
+                JOptionPane.showMessageDialog(AddEmployeeForm.this,
+                        "请填写所有必填项！", "错误", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // 显示提交的信息
+            int result = JOptionPane.showConfirmDialog(AddEmployeeForm.this,
+                    "提交的员工信息为:\nID: " + id + "\n姓名: " + name + "\n性别: " + gender +
+                            "\n年龄: " + age + "\n电话: " + phone + "\n职位: " + position +
+                            "\n入职日期: " + entryDate + "\n薪水: " + salary + "\n部门: " + department,
+                    "确认提交", JOptionPane.OK_CANCEL_OPTION);
+
+            if (result == JOptionPane.OK_OPTION) {
+                // 用户确认提交
+                JOptionPane.showMessageDialog(AddEmployeeForm.this,
+                        "员工信息已成功提交！", "提交成功", JOptionPane.INFORMATION_MESSAGE);
+                // 可以在这里添加保存数据的逻辑
+                Employee newEmployee = new Employee(Integer.parseInt(id), name, gender, Integer.parseInt(age), phone, position, entryDate, Double.parseDouble(salary), department);
+                em.addEmployee(newEmployee);
+                dispose();
+            }
+        });
+
+        backButton.addActionListener(e -> dispose());
+
+        buttonPanel.add(confirmButton);
+        buttonPanel.add(backButton);
+
+        // 设置主面板布局
+        setLayout(new BorderLayout());
+        add(inputPanel, BorderLayout.CENTER);
+        add(buttonPanel, BorderLayout.SOUTH);
+
+        // 设置窗口属性
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(400, 400);
+        setLocationRelativeTo(null); // 居中显示
+        setVisible(true);
+    }
+}
+```
+
+- User类
+
+```java
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class User {
+    private String username;
+    private String password;
+    private String displayName;
+}
+```
+
+- Employee类
+
+```java
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class Employee {
+    //员工信息包括：ID、姓名、性别、年龄、电话、职位、入职日期、薪水、部门信息
+    private int ID;
+    private String name;
+    private String gender;
+    private int age;
+    private String phone;
+    private String position;
+    private String entryDate;
+    private double salary;
+    private String department;
+}
+```
+
+- App类
+
+```java
+public class App {
+    public static void main(String[] args) {
+        new LoginRegisterForm();
+    }
+}
+```
+
+*注：所有的类均没有导入其他类*
+
+> <img src="./img2/47.png">
+>
+> <img src="./img2/48.png">
+>
+> <img src="./img2/49.png">
+>
+> <img src="./img2/50.png">
+>
+> <img src="./img2/51.png">
+
+## 综合项目：数字华容道
+
+使用Java编写一个数字华容道游戏
