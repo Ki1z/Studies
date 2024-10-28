@@ -1,6 +1,6 @@
 # Java Medium
 
-`更新时间：2024-10-23`
+`更新时间：2024-10-28`
 
 注释解释：
 
@@ -3546,3 +3546,286 @@ public class App {
 ## 综合项目：数字华容道
 
 使用Java编写一个数字华容道游戏
+
+- MainFrame类
+
+```java
+import com.eiousee.enums.Direction;
+
+import javax.swing.*;
+import java.awt.event.*;
+import java.net.URL;
+
+public class MainFrame extends JFrame {
+
+    private final StringBuilder inputBuffer = new StringBuilder();
+    private static final String IMAGE_PATH = "/image/";
+    private int[][] imageLocation = {
+            {1, 2, 3, 4},
+            {5, 6, 7, 8},
+            {9, 10, 11, 12},
+            {13, 14, 15, 0}
+    };
+    private static final int[][] COMPLETE = {
+            {1, 2, 3, 4},
+            {5, 6, 7, 8},
+            {9, 10, 11, 12},
+            {13, 14, 15, 0}
+    };
+    private int row = 3;
+    private int col = 3;
+    private boolean isWin = false;
+    private JLabel winLabel;
+    private int step = 0;
+
+    public MainFrame() {
+        // 初始化框架
+        initFrame();
+        // 打乱顺序
+        randomize();
+        // 初始化图片
+        initImage();
+        // 初始化系统菜单
+        initMenu();
+        // 绑定按键监控事件
+        initKeyPressEvent();
+        // 添加debug方法
+        debug();
+        // 显示界面
+        this.setVisible(true);
+    }
+
+    private void initKeyPressEvent() {
+        this.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyPressed(KeyEvent e) {
+                int keyCode = e.getKeyCode();
+                switch (keyCode) {
+                    case KeyEvent.VK_UP:
+                        move(Direction.UP);
+                        break;
+                    case KeyEvent.VK_DOWN:
+                        move(Direction.DOWN);
+                        break;
+                    case KeyEvent.VK_LEFT:
+                        move(Direction.LEFT);
+                        break;
+                    case KeyEvent.VK_RIGHT:
+                        move(Direction.RIGHT);
+                        break;
+                }
+            }
+        });
+    }
+
+    public void move(Direction direction) {
+        switch (direction) {
+            case UP:
+                if (row < 3) {
+                    int temp = imageLocation[row][col];
+                    imageLocation[row][col] = imageLocation[row + 1][col];
+                    imageLocation[row + 1][col] = temp;
+                    row++;
+                    // 步数加一
+                    step++;
+                }
+                break;
+            case DOWN:
+                if (row > 0) {
+                    int temp = imageLocation[row][col];
+                    imageLocation[row][col] = imageLocation[row - 1][col];
+                    imageLocation[row - 1][col] = temp;
+                    row--;
+                    // 步数加一
+                    step++;
+                }
+                break;
+            case LEFT:
+                if (col < 3) {
+                    int temp = imageLocation[row][col];
+                    imageLocation[row][col] = imageLocation[row][col + 1];
+                    imageLocation[row][col + 1] = temp;
+                    col++;
+                    // 步数加一
+                    step++;
+                }
+                break;
+            case RIGHT:
+                if (col > 0) {
+                    int temp = imageLocation[row][col];
+                    imageLocation[row][col] = imageLocation[row][col - 1];
+                    imageLocation[row][col - 1] = temp;
+                    col--;
+                    // 步数加一
+                    step++;
+                }
+                break;
+        }
+        // 刷新界面
+        initImage();
+        // 判断是否完成
+        if (isComplete()) {
+            URL imageUrl = getClass().getResource(IMAGE_PATH + "win.png");
+            winLabel = new JLabel(new ImageIcon(imageUrl));
+            winLabel.setBounds(124, 230, 266, 88);
+            this.add(winLabel);
+            //将winLabel置于最高层
+            this.setComponentZOrder(winLabel, 0);
+            // 关闭按键监控
+            this.removeKeyListener(this.getKeyListeners()[0]);
+            isWin = true;
+            // 提示游戏成功，并显示所用步数
+            JOptionPane.showMessageDialog(this, "恭喜你，游戏成功，共" + step + "步！");
+        }
+    }
+
+    private boolean isComplete() {
+        // 与预设的数组进行比较
+        for (int i = 0; i < COMPLETE.length; i++) {
+            for (int j = 0; j < COMPLETE[i].length; j++) {
+                if (COMPLETE[i][j] != imageLocation[i][j]) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private void randomize() {
+        for (int i = 0; i < imageLocation.length; i++) {
+            for (int j = 0; j < imageLocation[i].length; j++) {
+                // 随机选择两个行列位置，交换这两个数的位置
+                int row1 = (int) (Math.random() * imageLocation.length);
+                int col1 = (int) (Math.random() * imageLocation[i].length);
+                int row2 = (int) (Math.random() * imageLocation.length);
+                int col2 = (int) (Math.random() * imageLocation[i].length);
+                int temp = imageLocation[row1][col1];
+                imageLocation[row1][col1] = imageLocation[row2][col2];
+                imageLocation[row2][col2] = temp;
+            }
+        }
+        // 遍历二维数组，寻找0
+        OUT:
+        for (int i = 0; i < imageLocation.length; i++) {
+            for (int j = 0; j < imageLocation[i].length; j++) {
+                if (imageLocation[i][j] == 0) {
+                    row = i;
+                    col = j;
+                    break OUT;
+                }
+            }
+        }
+    }
+
+    private void initMenu() {
+        JMenuBar menuBar = new JMenuBar();
+        JMenu menu = new JMenu("系统菜单");
+        JMenuItem beginJMenuItem = new JMenuItem("开始游戏");
+        menu.add(beginJMenuItem);
+        beginJMenuItem.addActionListener(e -> {
+            // 先判断是否已经获胜
+            if (isWin) {
+                // 关闭获胜窗口
+                winLabel.setVisible(false);
+                // 重启事件监听
+                initKeyPressEvent();
+                isWin = false;
+            }
+            // 重新打乱顺序
+            randomize();
+            // 刷新界面
+            initImage();
+            // 步数清零
+            step = 0;
+        });
+        JMenuItem exitJMenuItem = new JMenuItem("退出游戏");
+        menu.add(exitJMenuItem);
+        exitJMenuItem.addActionListener(e -> System.exit(0));
+        menuBar.add(menu);
+        this.setJMenuBar(menuBar);
+    }
+
+    private void initImage() {
+        // 清空所有图层
+        this.getContentPane().removeAll();
+        // 展示一个行列矩阵的图片，依次铺满4x4的区域
+        for (int i = 0; i < 4; i++) {
+            for (int j = 0; j < 4; j++) {
+                int index = imageLocation[i][j];
+                URL imageUrl = getClass().getResource(IMAGE_PATH + index + ".png");
+                ImageIcon icon = new ImageIcon(imageUrl);
+                JLabel label = new JLabel(icon);
+                label.setBounds(25 + j * 100, 60 + i * 100, 100, 100);
+                this.add(label);
+            }
+        }
+        // 设置背景图片
+        URL imageUrl = getClass().getResource(IMAGE_PATH + "background.png");
+        ImageIcon icon = new ImageIcon(imageUrl);
+        JLabel label = new JLabel(icon);
+        label.setBounds(0, 0, 448, 480);
+        this.add(label);
+        // 刷新图层
+        this.repaint();
+    }
+
+    private void initFrame() {
+        this.setTitle("石头迷阵 alpha Ver 0.1 By Ki1z");
+        this.setSize(460, 540);
+        this.setLocationRelativeTo(null);
+        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.setLayout(null);
+    }
+
+    private void debug() {
+        // 监听键盘输入，输入字符串admin
+        this.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyTyped(KeyEvent e) {
+                char c = e.getKeyChar();
+                inputBuffer.append(c);
+
+                // 检查输入缓冲区的末尾是否为 "admin"
+                if (inputBuffer.length() >= 5 && inputBuffer.substring(inputBuffer.length() - 5).equals("admin")) {
+                    // 设置数组的值
+                    imageLocation = new int[][]{
+                            {1, 2, 3, 4},
+                            {5, 6, 7, 8},
+                            {9, 10, 11, 12},
+                            {13, 14, 0, 15}
+                    };
+                    // 刷新界面
+                    initImage();
+                    // 重设row和col
+                    row = 3;
+                    col = 2;
+                    // 清空输入缓冲区
+                    inputBuffer.setLength(0);
+                }
+            }
+        });
+    }
+}
+```
+
+- Direction枚举
+
+```java
+public enum Direction {
+    UP, DOWN, LEFT, RIGHT;
+}
+```
+
+- App类
+
+```java
+public class App {
+    public static void main(String[] args) {
+        new MainFrame();
+    }
+}
+```
+
+> <img src="./img2/52.png">
+
+> <img src="./img2/53.png">
