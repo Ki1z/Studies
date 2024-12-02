@@ -2,7 +2,7 @@ import zlib
 import struct
 
 # 同时爆破宽度和高度
-filename = r"C:\Users\kiiz\Desktop\attachments.png"
+filename = r"C:\Users\kiiz\Desktop\神奇的二维码.png"
 with open(filename, 'rb') as f:
     all_b = f.read()
     data = bytearray(all_b[12:29])
@@ -16,7 +16,7 @@ with open(filename, 'rb') as f:
                 data[x+8] = height[x]
             crc32result = zlib.crc32(data)
             #替换成图片的crc
-            if crc32result == 0xAABDB56C:
+            if crc32result == 0xFDDA19B:
                 print("宽为：", end = '')
                 print(width, end = ' ')
                 print(int.from_bytes(width, byteorder='big'))
