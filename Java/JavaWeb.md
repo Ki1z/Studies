@@ -743,3 +743,583 @@ const app = createApp({
 ```
 
 > <img src="./javaweb/6.png">
+
+### Ajax
+
+`Ajax`全称`Asynchronous JavaScript And XML`，主要作用于数据交换和异步交互，通过`Ajax`可以给服务器发送请求，并获取服务器响应的数据，同时也可以在不刷新整个页面的情况下，与服务器交换数据并更新部分网页
+
+#### Axios
+
+`Axios`是一个基于`Promise`的用于浏览器和`Node.js`的`HTTP`客户端，主要用于`JavaScript`中发送`HTTP`请求，`Axios`对原生的`Ajax`进行了封装，简化书写，可以进行快速开发
+
+#### Axios快速入门
+
+- 从官方网站导入文件
+
+```vue
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+```
+
+- 使用`Axios`发送请求并获取响应结果
+
+```vue
+<script src="https://unpkg.com/axios/dist/axios.min.js">
+    axios({
+        method: "{GET | POST}",
+        url: "<URL>",
+        [data: "<POST DATA>"]
+    }).then((response) => {
+        console.log(response)
+    }).catch((error) => {
+        console.log(error)
+    })
+</script>
+```
+
+- `method`：请求方法，常见的如`POST`、`GET`
+- `url`：请求路径
+- `data`：当请求方法为`POST`时，可以通过`data`来指定携带的参数
+- `then()`：成功回调函数，当请求成功后，自动回调`then()`
+- `catch()`：异常捕获函数，当请求失败后，通过`catch()`进行捕获，可以省略
+
+**示例**
+
+为两个按钮各自绑定一个请求事件，一个通过`GET`，另一个通过`POST`
+
+使用`v-on`为按钮绑定点击事件，然后通过`Axios`发送请求
+
+```vue
+<html>
+    <head>
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <div id="app">
+            <button class="get-request" @click="getRequest">点击进行GET请求</button>
+            <button class="post-request" @click="postRequest">点击进行POST请求</button>
+        </div>
+    </body>
+
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script type="module">
+        import {createApp} from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+
+        createApp({
+            methods: {
+                getRequest() {
+                    axios({
+                        method: "get",
+                        url: "http://localhost/?submit=1",
+                    }).then(function(response) {
+                        console.log(response)
+                    }).catch(function(error) {
+                        alert(error)
+                    })
+                },
+                postRequest() {
+                    axios({
+                        method: "post",
+                        url: "http://localhost/",
+                        data: "submit=1"
+                    }).then(function(response) {
+                        console.log(response)
+                    }).catch(function(error) {
+                        alert(error)
+                    })
+                }
+            }
+        }).mount("#app")
+    </script>
+</html>
+```
+
+> <img src="./javaweb/7.png">
+
+**response.data**
+
+`Axios`请求得到的`response`实际是一个响应对象，如果仅需要数据部分，可以使用`response.data`属性
+
+```vue
+<html>
+    <head>
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <div id="app">
+            <h1>返回的数据体：{{responseData}}</h1>
+            <button class="get-request" @click="getRequest">点击进行GET请求</button>
+            <button class="post-request" @click="postRequest">点击进行POST请求</button>
+        </div>
+    </body>
+
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script type="module">
+        import {createApp} from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+
+        createApp({
+            data() {
+                return {
+                   responseData: ""
+                }
+            },
+            methods: {
+                getRequest() {
+                    axios({
+                        method: "get",
+                        url: "http://localhost/?submit=1",
+                    }).then((response) => {
+                        this.responseData = response.data
+                    }).catch((error) => {
+                        alert(error)
+                    })
+                },
+                postRequest() {
+                    axios({
+                        method: "post",
+                        url: "http://localhost/",
+                        data: "submit=1"
+                    }).then((response) => {
+                        console.log(response)
+                    }).catch((error) => {
+                        alert(error)
+                    })
+                }
+            }
+        }).mount("#app")
+    </script>
+</html>
+```
+
+> <img src="./javaweb/8.png">
+
+*注：这里的`.then()`回调函数必须使用箭头形式`.then((param) => {})`，而不是`.then(function(param) {})`，因为`.then()`的调用并不是作为对象方法调用，而是单独调用的。因此`.then()`不能继承父对象，默认的`function`形式无法找到父对象，所以导致报错`undefined`，而箭头形式默认没有`this`，在箭头函数中的所有`this`只能通过外层作用域来继承，此处即`app`对象*
+
+**.get()和.post()**
+
+在`Axios`中，提供了`.get()`和`.post()`两类更加简洁的请求方法
+
+```vue
+axios.get("url").then().catch()
+axios.post("url", "data").then().catch()
+```
+
+因此对刚才的程序进行简写，并删除不必要的`catch`
+
+```vue
+createApp({
+    data() {
+        return {
+           responseData: ""
+        }
+    },
+    methods: {
+        getRequest() {
+            axios.get("http://localhost/?submit=1").then((response) => {
+                this.responseData = response.data
+            })
+        },
+        postRequest() {
+            axios.post("http://localhost/", "submit=1").then((response) => {
+                this.responseData = response.data
+            })
+        }
+    }
+}).mount("#app")
+```
+
+#### Axios综合案例
+
+使用`Axios`将先前的员工管理系统进行完善，不考虑后端，已知的后端响应格式如下
+
+```json
+{
+    "code": "0",
+    "status": "",
+    "data": [
+        {
+            "id": 1,
+            "name": "name",
+            "gender": "gender",
+            "avatar": "avatar"
+        },
+        ...
+    ]
+}
+```
+
+首先准备好后端的数据以及筛选功能，这里我使用`php`
+
+```php
+<?php
+$employeeList = [
+    [
+        "id" => 1,
+        "name" => "jack",
+        "gender" => "male",
+        "avatar" => "https://img.pconline.com.cn/images/upload/upc/tx/itbbs/1804/23/c23/84211055_1524470634645_mthumb.jpg",
+        "position" => 1
+    ],
+    [
+        "id" => 2,
+        "name" => "tom",
+        "gender" => "male",
+        "avatar" => "https://ts3.tc.mm.bing.net/th/id/OIP-C.wYmbI_r2a8cDTJUBJ9HRcgHaLH?pid=ImgDet&w=60&h=60&c=7&rs=1&o=7&rm=3",
+        "position" => 2
+    ],
+    [
+        "id" => 3,
+        "name" => "lucy",
+        "gender" => "female",
+        "avatar" => "",
+        "position" => 3
+    ]
+];
+
+$response = [
+    "code" => 0,
+    "message" => "",
+    "data" => []
+];
+
+$jsonData = file_get_contents('php://input');
+$data = json_decode($jsonData, true);
+
+$name = $data['name'] ? $data['name'] : '';
+$gender = $data['gender'] ? $data['gender'] : '';
+$position = $data['position'] ? $data['position'] : '';
+
+function getEmployeeList($name, $gender, $position) {
+    global $employeeList;
+    $list = [];
+    foreach ($employeeList as $employee) {
+        if ($name && $employee['name'] != $name) {
+            continue;
+        }
+        if ($gender && $employee['gender'] != $gender) {
+            continue;
+        }
+        if ($position && $employee['position'] != $position) {
+            continue;
+        }
+        $list[] = $employee;
+    }
+    return $list;
+}
+
+// 如果搜索条件为空，则返回所有员工
+if (!$name && !$gender && !$position) {
+    $response['data'] = $employeeList;
+    $response['message'] = 'success';
+    $response['code'] = 1;
+} else {
+    $response['data'] = getEmployeeList($name, $gender, $position);
+    if (empty($response['data'])) {
+        $response['message'] = 'no data';
+        $response['code'] = 0;
+    } else {
+        $response['message'] = 'success';
+        $response['code'] = 1;
+    }
+}
+echo json_encode($response);
+```
+
+回到`Vue`上来，先前已经写好了前端展示逻辑，我们将前端数据都进行删除
+
+```vue
+<html>
+    <div class="app">
+        <form>
+            <label for="name">Name: </label>
+            <input type="text" id="name" v-model="searchForm.name">
+            &nbsp;&nbsp;
+            <label for="gender">Gender: </label>
+            <select name="gender" id="gender" v-model="searchForm.gender">
+                <option value="">All</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+            </select>
+            &nbsp;&nbsp;
+            <label for="position">Position: </label>
+            <select name="position" id="position" v-model="searchForm.position">
+                <option value="">All</option>
+                <option value="1">Boss</option>
+                <option value="2">Manager</option>
+                <option value="3">Other</option>
+            </select>
+            &nbsp;&nbsp;
+            <button type="button" @click="search">Search</button>
+            &nbsp;&nbsp;
+            <button type="reset">Reset</button>
+        </form>
+        <table>
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Name</th>
+                    <th>Gender</th>
+                    <th>Avatar</th>
+                    <th>Position</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="employee in employeeList" :key="employee.id">
+                    <td>{{employee.id}}</td>
+                    <td>{{employee.name}}</td>
+                    <td>{{employee.gender}}</td>
+                    <td><img :src="employee.avatar" :alt="employee.name" width="50px" height="50px"></td>
+                    <td>
+                        <span v-if="employee.position==1">boss</span>
+                        <span v-else-if="employee.position==2">manager</span>
+                        <span v-else-if="employee.position==3">other</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table> 
+    </div>
+    <script type="module">
+        import {createApp} from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+    
+        createApp({
+            data() {
+                return {
+                    employeeList: [],
+                    searchForm: {
+                        name: "",
+                        gender: "",
+                        position: ""
+                    }
+                }
+            },
+            methods: {
+                reset() {
+                    this.searchForm = {
+                        name: "",
+                        gender: "",
+                        position: ""
+                    }
+                },
+                search() {
+                    console.log(this.searchForm)
+                }
+            }
+        }).mount(".app")
+    </script>
+</html>
+```
+
+先添加一些用户友好型提示信息，新建一个对象`statusCode`，用于判断后端传来的数据中是否包含员工信息，如果不包含，则显示`暂无数据`。在`<tbody>`中新建一个`<tr>`和`<td>`，在`<tr>`中添加`v-if`属性来进行判断，判断条件为`statusCode`，我们设定0表示无数据，1表示有数据
+
+```vue
+<tbody>
+    <tr v-if="statusCode == 0">
+        <td>暂无数据</td>
+    </tr>
+</tbody>
+
+data() {
+    return {
+        employeeList: [],
+        searchForm: {
+            name: "",
+            gender: "",
+            position: ""
+        },
+		statusCode: 0,
+    }
+},
+```
+
+然后开始完善`search()`方法，这里使用`Axios`向后端发送请求，将收到的后端响应覆盖原始值
+
+```vue
+search() {
+    axios.post("http://localhost/index.php", this.searchForm).then((res) => {
+        this.statusCode = res.data.code
+        this.employeeList = res.data.data
+    })
+}
+```
+
+以下是所有代码
+
+```vue
+<html>
+    <head>
+        <meta charset="UTF-8">
+    </head>
+
+    <div class="app">
+        <form>
+            <label for="name">Name: </label>
+            <input type="text" id="name" v-model="searchForm.name">
+            &nbsp;&nbsp;
+            <label for="gender">Gender: </label>
+            <select name="gender" id="gender" v-model="searchForm.gender">
+                <option value="">All</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+            </select>
+            &nbsp;&nbsp;
+            <label for="position">Position: </label>
+            <select name="position" id="position" v-model="searchForm.position">
+                <option value="">All</option>
+                <option value="1">Boss</option>
+                <option value="2">Manager</option>
+                <option value="3">Other</option>
+            </select>
+            &nbsp;&nbsp;
+            <button type="button" @click="search">Search</button>
+            &nbsp;&nbsp;
+            <button type="reset">Reset</button>
+        </form>
+        <table>
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Name</th>
+                    <th>Gender</th>
+                    <th>Avatar</th>
+                    <th>Position</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-if="statusCode == 0">
+                    <td>暂无数据</td>
+                </tr>
+                <tr v-for="employee in employeeList" :key="employee.id">
+                    <td>{{employee.id}}</td>
+                    <td>{{employee.name}}</td>
+                    <td>{{employee.gender}}</td>
+                    <td><img :src="employee.avatar" :alt="employee.name" width="50px" height="50px"></td>
+                    <td>
+                        <span v-if="employee.position==1">boss</span>
+                        <span v-else-if="employee.position==2">manager</span>
+                        <span v-else-if="employee.position==3">other</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table> 
+    </div>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script type="module">
+        import {createApp} from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+    
+        createApp({
+            data() {
+                return {
+                    employeeList: [],
+                    searchForm: {
+                        name: "",
+                        gender: "",
+                        position: ""
+                    },
+                    statusCode: 0,
+                }
+            },
+            methods: {
+                reset() {
+                    this.searchForm = {
+                        name: "",
+                        gender: "",
+                        position: ""
+                    }
+                },
+                search() {
+                    axios.post("http://localhost/index.php", this.searchForm).then((res) => {
+                        this.statusCode = res.data.code
+                        this.employeeList = res.data.data
+                    })
+                }
+            }
+        }).mount(".app")
+    </script>
+</html>
+```
+
+> <img src="./javaweb/9.png">
+
+#### async & await
+
+在`Ajax`中可以使用`async`关键字来声明一个异步方法，并使用`await`来等待异步任务执行。`await`关键字必须在`async`声明的方法中使用
+
+**示例**
+
+程序运行逻辑一般是从上到下，但异步方法可以让程序先执行下方的代码，再执行上方的代码。比如下面这个程序，通过`Axios`获取一条数据，并在下方用另一条数据覆盖
+
+`PHP`
+
+```php
+<?php
+echo '这是第一条数据';
+```
+
+`HTML`
+
+```vue
+<meta charset="UTF-8">
+<div id="app">
+    <button @click="click">Click me</button>
+    <div>{{ message }}</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+<script type="module">
+    import { createApp } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
+
+    createApp({
+        data() {
+            return {
+                message: ''
+            }
+        },
+        methods: {
+            click() {
+                axios.get("http://localhost/add.php").then((res) => {
+                    this.message = res.data
+                })
+                this.message = "这是第二条数据"
+            }
+        } 
+    }).mount('#app')
+</script>
+```
+
+实际的结果却显示`这是第一条数据`
+
+> <img src="./javaweb/10.png">
+
+因此我们加入`await`，让异步交互变为同步
+
+```vue
+methods: {
+    async click() {
+        await axios.get("http://localhost/add.php").then((res) => {
+            this.message = res.data
+        })
+        this.message = "这是第二条数据"
+    }
+} 
+```
+
+> <img src="./javaweb/11.png">
+
+`await`关键字可以一定程度上取代`.then()`回调函数，因为`axios.get()`方法本身也会返回响应对象
+
+```vue
+methods: {
+    async click() {
+        let res = await axios.get("http://localhost/add.php")
+        this.message = res.data
+    }
+} 
+```
+
+<img src="./javaweb/10.png">
+
+*注：`let res = axios.get("http://localhost/add.php")`是无效的，由于异步执行的原因，会先执行`this.message = res.data`，再执行`let res = await axios.get("http://localhost/add.php")`，所以此时`this.message`的值为null*
+
+### Vue生命周期
+
