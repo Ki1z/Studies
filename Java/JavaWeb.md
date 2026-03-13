@@ -1,6 +1,6 @@
 # Java Web
 
-`更新时间：2026-3-11`
+`更新时间：2026-3-13`
 
 注释解释：
 
@@ -1323,3 +1323,155 @@ methods: {
 
 ### Vue生命周期
 
+生命周期是指一个对象从创建到销毁的整个过程，`Vue`生命周期共有八个阶段，每触发一个生命周期事件，会自动执行一个生命周期方法
+$$
+beforeCreate \rightarrow created \rightarrow beforeMount \rightarrow mounted \rightarrow beforeUpdate \rightarrow updated \rightarrow beforeUnmount \rightarrow unmounted
+$$
+**标准语法**
+
+```vue
+createApp({
+	data() {
+		
+	},
+	mounted() {
+		// 钩子方法
+	},
+	......
+}).mount()
+```
+
+**示例**
+
+在上文的员工搜索页面中，添加初次访问页面时自动搜索的功能
+
+这里可以使用`mounted()`方法，调用一次`search()`来实现
+
+```vue
+createApp({
+    data() {
+        return {
+            employeeList: [],
+            searchForm: {
+                name: "",
+                gender: "",
+                position: ""
+            },
+            statusCode: 0,
+        }
+    },
+    methods: {
+        reset() {
+            this.searchForm = {
+                name: "",
+                gender: "",
+                position: ""
+            }
+        },
+        search() {
+            axios.post("http://localhost/index.php", this.searchForm).then((res) => {
+                this.statusCode = res.data.code
+                this.employeeList = res.data.data
+            })
+        }
+    },
+    mounted() {
+        this.search()
+    }
+}).mount(".app")
+```
+
+## Maven
+
+`Maven`是一款用于管理和构建`Java`项目的工具，是`apache`旗下的一个开源项目。`Maven`可以方便快捷地管理项目的依赖资源，提供标准化的跨平台的自动化项目构建方式，提供标准、统一的项目结构
+
+### Maven坐标
+
+`Maven`中的坐标是资源的唯一标识，通过该坐标可以唯一定位资源位置
+
+**标准语法**
+
+```xml
+<groupId></groupId>
+<artifactId></artifactId>
+<version></version>
+```
+
+- `groupId`：定义当前`Maven`项目隶属的组织名称，通常是域名反写，如`com.eiousee`
+- `arifactId`：定义当前`Maven`项目名称
+- `version`：定义当前`Maven`项目版本号
+
+### Maven依赖管理
+
+#### 依赖安装
+
+在`pom.xml`中指定需要安装的依赖的坐标，然后刷新`pom.xml`
+
+```xml
+<dependencies>
+<!--         导入commons-io -->
+    <dependency>
+        <groupId>commons-io</groupId>
+        <artifactId>commons-io</artifactId>
+        <version>2.11.0</version>
+    </dependency>
+<!--        导入spring-context-->
+    <dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-context</artifactId>
+        <version>6.1.4</version>
+    </dependency>
+</dependencies>
+```
+
+> <img src="./javaweb/12.png">
+
+#### 排除依赖
+
+排除依赖指主动断开依赖的资源，被排除的依赖无需指定版本号。排除依赖使用`<exclusions>`标签，该标签必须位于某个依赖的`<dependency>`标签中
+
+**标准语法**
+
+```xml
+<dependency>
+    <exclusions>
+        <exclusion>
+            <groupId>needless jar</groupId>
+            <artifactId>needless jar</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+```
+
+**示例**
+
+在刚才配置的`spring-context`依赖中，我们不需要``，因此将其排除
+
+```xml
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-context</artifactId>
+    <version>6.1.4</version>
+
+    <exclusions>
+        <exclusion>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-observation</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+```
+
+> <img src="./javaweb/13.png">
+
+### Maven生命周期
+
+`Maven`生命周期就是对所有的`Maven`项目构建过程进行了抽象和统一。`Maven`共有三套独立的生命周期，`clean`、`default`和`site`。`clean`执行清理工作，如上一次编译产生的文件，打包产生的文件等；`default`负责核心工作内容，如编译、测试、打包、安装、部署等等；`site`负责生成报告，发布站点等工作
+
+#### 常见生命周期阶段
+
+- `clean`：移除上一次构建生成的文件
+- `compile`：编译项目源代码
+- `test`：使用合适的单元测试框架运行测试
+- `package`：将编译后的文件打包，生成`jar`、`war`等文件
+- `install`：安装项目到本地仓库
