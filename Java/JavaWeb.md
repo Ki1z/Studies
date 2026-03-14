@@ -1474,4 +1474,366 @@ createApp({
 - `compile`：编译项目源代码
 - `test`：使用合适的单元测试框架运行测试
 - `package`：将编译后的文件打包，生成`jar`、`war`等文件
-- `install`：安装项目到本地仓库
+- `install`：安装项目到本地`Maven`仓库
+
+### 单元测试
+
+测试是一种用来促进鉴定软件的正确性、完整新、安全性和质量的过程。软件开发阶段划分，测试可以分为`单元测试`、`集成测试`、`系统测试`、`验收测试`四类
+
+单元测试是指对软件的基本组成单元进行测试，是最小的测试单位，目的是验证软件基本组成单位的正确性，测试人员一般为开发人员
+
+集成测试是指将已分别通过测试的单元，按设计要求组合成系统或子系统，再进行的测试，目的是检查单元之间的协作是否正确，测试人员一般为开发人员
+
+系统测试是对集成好的软件系统进行彻底的测试，目的是验证软件系统的正确性，性能是否满足指定的要求，测试人员一般为专业测试工程师
+
+验收测试又称交付测试， 是针对用户需求，业务流程进行的正式的测试，目的是验证软件系统是否满足验收标准，测试人员一般为客户和需求方
+
+#### 测试方法
+
+根据暴露信息的不同，一般有三类测试方法，`白盒测试`、`黑盒测试`、`灰盒测试`
+
+白盒测试中，测试人员清楚软件内部结构、代码逻辑，一般用于验证代码、逻辑的正确性
+
+黑盒测试中，测试人员不清楚软件内部结构、代码逻辑，一般用于验证软件的功能、兼容性等方面
+
+灰盒测试结合了白盒测试和黑盒测试的特点，即关注软件的内部结构，又考虑软件外部表现
+
+| 测试方法 | 采用此方法的测试类型 |
+| -------- | -------------------- |
+| 白盒测试 | 单元测试             |
+| 黑盒测试 | 系统测试、验收测试   |
+| 灰盒测试 | 集成测试             |
+
+#### 单元测试快速入门
+
+`Java`单元测试就是针对最小的功能单元，即方法，编写测试代码对其正确性进行测试。目前`JUnit`是最流行的`Java`测试框架之一，提供了一些功能，方便程序进行单元测试
+
+**main方法测试的缺陷**
+
+1. 测试代码与源代码未分开，难维护
+2. 一个方法测试失败，影响后续方法的测试
+3. 无法自动化测试，得到测试报告
+
+**案例**
+
+使用`Junit`，对已经定义好的`UserService`类中的业务方法进行单元测试
+
+```java
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
+public class UserService {
+//     给定用户身份证号，计算用户年龄
+//     @param idCard
+//     @return Integer
+    public Integer getAge(String idCard) {
+        if (idCard == null || idCard.length() != 18) {
+            throw new IllegalArgumentException("请输入正确的身份证号");
+        }
+        String birth = idCard.substring(6, 14);
+        LocalDate parse = LocalDate.parse(birth, DateTimeFormatter.ofPattern("yyyyMMdd"));
+        return LocalDate.now().getYear() - parse.getYear();
+    }
+
+//    给定用户身份证号，计算用户性别
+//    @param idCard
+//    @return String
+    public String getGender(String idCard) {
+        if (idCard == null || idCard.length() != 18) {
+            throw new IllegalArgumentException("请输入正确的身份证号");
+        }
+        String gender = idCard.substring(16, 17);
+        return gender.endsWith("0") ? "女" : "男";
+    }
+}
+```
+
+1. 在`pom.xml`引入`Junit`依赖
+
+```xml
+<!--        导入Junit-->
+<dependency>
+    <groupId>org.junit.jupiter</groupId>
+    <artifactId>junit-jupiter</artifactId>
+    <version>5.9.2</version>
+</dependency>
+```
+
+2. 在`test/java`目录下创建测试类，并编写对应的测试方法，并在方法上声明`@Test`注解
+
+测试类命名一般为`被测试类名 + Test`，测试方法为`test + 被测试方法()`，测试方法权限修饰符必须为`public`，返回值类型必须为`void`
+
+```java
+import org.junit.jupiter.api.Test;
+
+public class UserServiceTest {
+
+    @Test
+    public void testGetAge() {
+        Integer age = new UserService().getAge("");
+        System.out.println(age);
+    }
+
+    @Test
+    public void testGetGender() {
+        String gender = new UserService().getGender("100000200201230000");
+        System.out.println(gender);
+    }
+}
+```
+
+3. 然后运行测试，测试失败的方法不会影响后续方法测试
+
+> <img src="./javaweb/14.png">
+
+#### 断言
+
+单元测试通过仅代表语法正确，并不代表逻辑正确，如上文的`UserService`类中的`getGender()`方法，假设我们传入的身份证号为`100000200201230020`，理论上应该是女性，但实际输出为男
+
+> <img src="./javaweb/15.png">
+
+因此`Junit`提供了一些辅助方法，用来帮我们确定被测试的方法是否按照预期的效果正常工作，这种方式被称为`断言`
+
+| 断言方法                                                     | 描述                            |
+| ------------------------------------------------------------ | ------------------------------- |
+| `Assertions.assertEquals(Object exp, Object act, [String msg])` | 检查`exp`、`act`是否相等        |
+| `Assertions.assertNotEquals(Object unexp, Object act, [String msg])` | 检查`unexp`、`act`是否不等      |
+| `Assertions.assertNull(Object act, [String msg])`            | 检查`act`是否为空               |
+| `Assertions.assertNotNull(Object act, [String msg])`         | 检查`act`是否不为空             |
+| `Assertions.assertTrue(boolean condition, [String msg])`     | 检查`condition`是否为`True`     |
+| `Assertions.assertFalse(boolean condition, [String msg])`    | 检查`condition`是否为`False`    |
+| `Assertions.assertThrow(Class expType, Executable exec, [String msg])` | 检查`exec`是否抛出`expType`异常 |
+
+**示例**
+
+现在我们对`getGender()`方法添加断言
+
+```java
+@Test
+public void testGetGender() {
+    String idCard = "100000200201230020";
+    String gender = new UserService().getGender(idCard);
+    Assertions.assertEquals("女", gender);
+    System.out.println("输入身份证号" + idCard + "，性别为：" + gender);
+}
+```
+
+> <img src="./javaweb/16.png">
+
+同样地，可以测试`getAge()`中抛出的异常是否符合要求
+
+```java
+@Test
+public void testGetAge() {
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
+        new UserService().getAge("");
+    });
+}
+```
+
+> <img src="./javaweb/17.png">
+
+#### 常见注解
+
+| 注解                 | 说明                                                         | 备注                                                      |
+| -------------------- | ------------------------------------------------------------ | --------------------------------------------------------- |
+| `@Test`              | 注解一个测试方法，只有用`@Test`修饰的方法才能在单元测试中执行 |                                                           |
+| `@ParameterizedTest` | 参数化测试注解                                               | 可以让单元测试运行多次，每次运行仅参数不同，与`@Test`互斥 |
+| `@ValueSource`       | 参数化测试的参数来源                                         |                                                           |
+| `@DisplayName`       | 指定测试类、测试方法显示的名字                               |                                                           |
+| `@BeforeEach`        | 用来修饰一个实例方法，该方法会在每一个测试方法执行之前执行一次 |                                                           |
+| `@AfterEach`         | 用来修饰一个实例方法，该方法会在每一个测试方法执行之后执行一次 |                                                           |
+| `@BeforeAll`         | 用来修饰一个静态方法，该方法会在所有测试方法之前执行一次     |                                                           |
+| `@AfterAll`          | 用来修饰一个静态方法，该方法会在所有测试方法之后执行一次     |                                                           |
+
+**示例**
+
+```java
+package com.eiousee;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+public class UserServiceTest {
+    @BeforeAll
+    static void beforeAll() {
+        System.out.println("测试类开始");
+    }
+
+    @AfterAll
+    static void afterAll() {
+        System.out.println("测试类结束");
+    }
+
+    @BeforeEach
+    void beforeEach() {
+        System.out.println("测试方法开始");
+    }
+
+    @AfterEach
+    void afterEach() {
+        System.out.println("测试方法结束");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"100000200101010011", "100000200101010012"})
+    void testGetGender(String idCard) {
+        String gender = new UserService().getGender(idCard);
+        System.out.println("用户性别：" + gender);
+    }
+}
+```
+
+> <img src="./javaweb/18.png">
+
+#### 覆盖率
+
+对于单元测试的效果，可以通过覆盖率来描述，覆盖率越高，单元测试的效果越好
+
+**示例**
+
+以上文的测试类举例，其覆盖率如下
+
+| 类          | 方法覆盖率 | 行覆盖率  | 分支覆盖率 |
+| ----------- | ---------- | --------- | ---------- |
+| UserService | 50% (1/2)  | 33% (3/9) | 30% (3/10) |
+
+我们添加更多的测试数据，尽量覆盖所有的测试结果
+
+```java
+package com.eiousee;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+@DisplayName("用户服务测试类")
+public class UserServiceTest {
+
+    @ParameterizedTest
+    @ValueSource(strings = {"100000200101010011", "100000200101010012"})
+    void testGetGender(String idCard) {
+        String gender = new UserService().getGender(idCard);
+        System.out.println("用户性别：" + gender);
+    }
+
+    // 测试异常情况
+    @Test
+    void testGetGenderException() {
+        Assertions.assertThrows(IllegalArgumentException.class, () -> {
+            new UserService().getGender("");
+        });
+    }
+
+}
+```
+
+修改后覆盖率显著提升
+
+| 类          | 方法覆盖率 | 行覆盖率  | 分支覆盖率 |
+| ----------- | ---------- | --------- | ---------- |
+| UserService | 50% (1/2)  | 44% (4/9) | 40% (4/10) |
+
+因此在企业开发中，一般地，核心代码应满足100%的完全单元测试覆盖率，非核心代码应满足至少70%的单元测试覆盖率
+
+### Maven依赖范围
+
+在`Maven`中，可以设定某个依然的作用范围。假设没有对`Junit`设定依赖范围，那么`@Test`注解甚至可以出现在`main`主目录中，这是绝对需要避免的。因此，可以使用`<scope>`标签来设置依赖的作用范围
+
+**示例**
+
+先不设置`Junit`的依赖范围
+
+```xml
+<dependency>
+    <groupId>org.junit.jupiter</groupId>
+    <artifactId>junit-jupiter</artifactId>
+    <version>5.9.2</version>
+</dependency>
+```
+
+然后在`Hello`定义测试方法`test()`
+
+```java
+package com.eiousee;
+
+import org.junit.jupiter.api.Test;
+
+public class Hello {
+    public static void main(String[] args) {
+        System.out.println("Hello World!");
+    }
+
+    @Test
+    public void test() {
+        System.out.println("Hello World!");
+    }
+}
+```
+
+执行测试
+
+> <img src="./javaweb/19.png">
+
+接着我们为`Junit`设置依赖范围
+
+```xml
+<dependency>
+    <groupId>org.junit.jupiter</groupId>
+    <artifactId>junit-jupiter</artifactId>
+    <version>5.9.2</version>
+    <scope>test</scope>
+</dependency>
+```
+
+然后再次执行
+
+> <img src="./javaweb/20.png">
+
+#### scope标签
+
+`<scope>`标签可以设置依赖的作用范围，但是`<scope>`本身的值不能随意设置
+
+| 属性值   | 主程序 | 测试程序 | 打包 | 举例        |
+| -------- | ------ | -------- | ---- | ----------- |
+| compile  | Y      | Y        | Y    | Log4j       |
+| test     | N      | Y        | N    | Junit       |
+| provided | Y      | Y        | N    | Servlet-api |
+| runtime  | N      | Y        | Y    | jdbc        |
+
+## Java Spring
+
+`Java Spring` 是一个开源的应用程序框架，提供了全面的基础设施支持，用于构建企业级 Java 应用程序。它通过依赖注入和控制反转等核心功能，简化了开发过程，降低了模块间的耦合度。`Spring` 框架包含多个模块，如 `Spring Boot`、`Spring MVC`、`Spring Data`和 `Spring Security`等，使得开发者能够灵活、高效地开发各种规模的 Java 项目。
+
+### Spring Boot
+
+Spring Boot 是 Spring 框架的一个关键子项目，旨在简化 Spring 应用的初始搭建和开发过程。它通过“约定大于配置”的理念，提供了自动配置**、**起步依赖和内置Web服务器等核心特性，让开发者无需编写大量样板配置，就能快速创建独立、可执行的、生产级的 Spring 应用程序。通常只需编写少量代码，即可启动一个功能完备的Web服务，极大地提升了开发效率。
+
+#### Spring Boot快速入门
+
+基于`Spring Boot`开发一个`Web`应用，浏览器发送请求，并携带一个参数，然后服务器返回该参数值
+
+- 创建`Spring Boot`项目
+
+> <img src="./javaweb/21.png">
+
+- 创建请求处理类`HelloController`并编写相关逻辑
+
+```java
+package com.eiousee;
+
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController	// 声明请求处理类
+public class HelloController {
+
+    @RequestMapping("/")	// 声明请求路径
+    public String hello(String name) {
+        return "Hello " + name + "!";
+    }
+}
+```
+
+- 访问`localhost/?name=123`
+
+> <img src="./javaweb/22.png">
