@@ -1,6 +1,6 @@
 # Java Web
 
-`更新时间：2026-3-13`
+`更新时间：2026-3-18`
 
 注释解释：
 
@@ -899,8 +899,8 @@ const app = createApp({
 在`Axios`中，提供了`.get()`和`.post()`两类更加简洁的请求方法
 
 ```vue
-axios.get("url").then().catch()
-axios.post("url", "data").then().catch()
+axios.get("url", {params:}).then().catch()
+axios.post("url", data).then().catch()
 ```
 
 因此对刚才的程序进行简写，并删除不必要的`catch`
@@ -1837,3 +1837,540 @@ public class HelloController {
 - 访问`localhost/?name=123`
 
 > <img src="./javaweb/22.png">
+
+#### HTTP协议
+
+在`SpringBoot`中，`Tomcat`会对`HTTP`协议的请求数据进行解析，并封装为`HttpServletRequest`对象，在调用`Controller`中的方法时，会自动将该对象传递至方法
+
+```java
+@RequestMapping("/request")
+public String request(HttpServletRequest req) {
+    // 获取请求参数
+    String name = req.getParameter("name");
+    System.out.println("name: " + name);
+    // 获取请求路径
+    String url = req.getRequestURL().toString();
+    String uri = req.getRequestURI();
+    System.out.println("url: " + url);
+    System.out.println("uri: " + uri);
+
+    return "Request Finished!";
+}
+```
+
+> <img src="./javaweb/23.png">
+
+同样地，也提供了`HttpServletResponse`对象来封装响应相关的内容
+
+```java
+@RequestMapping("/response")
+public void response(HttpServletResponse res) throws IOException {
+    // 设置响应状态码
+    res.setStatus(401);
+    // 设置响应头
+    res.setHeader("Responser", "Ki1z");
+    // 设置响应体
+    res.getWriter().write("Hello Response");
+}
+```
+
+> <img src="./javaweb/24.png">
+
+`Spring`中也提供了`ResponseEntity<String>`对象来封装响应，可以通过设置对象属性来更改响应
+
+```java
+@RequestMapping("/response")
+public ResponseEntity<String> response() {
+    return ResponseEntity.status(401)
+            .header("Responser", "Ki1z")
+            .body("Hello Response");
+}
+```
+
+#### Spring Boot简单案例
+
+设计一个员工搜索页面，使用`Axios`与`Spring Boot`技术
+
+首先编写前端页面，定义简单的表格，并添加一些样式信息
+
+```html
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        h1, form {
+            text-align: center;
+        }
+        table {
+            margin: 0 auto;
+        }
+    /*    为表格添加边框*/
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            text-align: center;
+            padding: 5px;
+            height: 30px;
+            background-color: #f5f5f5;
+            color: #333;
+            font-size: 16px;
+            line-height: 30px;
+            vertical-align: middle;
+            width: 40rem;
+            margin-top: 20px;
+        }
+        .noData {
+            border: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<!--    标题居中显示-->
+    <div id="app">
+        <h1>员工数据列表</h1>
+        <form class="search-bar">
+            <label>员工姓名：</label>
+            <input type="text" name="name" v-model="searchForm.name">
+            <label>员工性别：</label>
+            <select name="sex" v-model="searchForm.sex">
+                <option value="">请选择性别</option>
+                <option value="男">男</option>
+                <option value="女">女</option>
+            </select>
+            <button type="button" @click="query">查询</button>
+        </form>
+<!--        表格居中 -->
+        <table>
+            <thead>
+                <tr>
+                    <th>员工编号</th>
+                    <th>员工姓名</th>
+                    <th>员工性别</th>
+                    <th>员工职位</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-show="users.length === 0">
+                    <td class="noData" colspan="4">暂无数据</td>
+                </tr>
+                <tr v-for="user in users" :key="user.id">
+                    <td>{{user.id}}</td>
+                    <td>{{user.name}}</td>
+                    <td>{{user.sex}}</td>
+                    <td>{{user.job}}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+```
+
+然后使用`Vue`和`Axios`定义交互功能
+
+```vue
+<!-- 导入axios -->
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<!-- 导入vue -->
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+<script>
+    new Vue({
+        el: "#app",
+        data: {
+            searchForm: {
+                name: "",
+                sex: ""
+            },
+            users: []
+        },
+        methods: {
+            query() {
+                axios.get("list", {params: this.searchForm}).then(res => {
+                    this.users = res.data;
+                })
+            }
+        },
+        mounted() {
+            this.query();
+        }
+    })
+</script>
+</html>
+```
+
+接着在后端定义用户实体类
+
+```java
+package com.eiousee;
+
+@lombok.Data
+@lombok.AllArgsConstructor
+@lombok.NoArgsConstructor
+public class User {
+    private int id;
+    private String name;
+    private String sex;
+    private String job;
+}
+```
+
+最后完成后端请求逻辑
+
+```java
+package com.eiousee;
+
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import java.util.ArrayList;
+
+@RestController
+public class UserController {
+    @RequestMapping("/list")
+    public ArrayList<User> list(HttpServletRequest request) {
+        // 获取请求参数
+        String name = request.getParameter("name");
+        String sex = request.getParameter("sex");
+
+        System.out.println("name: " + name);
+        System.out.println("sex: " + sex);
+
+        // 准备一些员工数据
+        ArrayList<User> userList = new ArrayList<>();
+        userList.add(new User(1, "张三", "男", "程序员"));
+        userList.add(new User(2, "李四", "女", "教师"));
+        userList.add(new User(3, "王五", "男", "学生"));
+        userList.add(new User(4, "赵六", "女", "学生"));
+        userList.add(new User(5, "孙七", "男", "教师"));
+
+        userList = getUserList(name, sex, userList);
+
+        System.out.println(userList);
+        return userList;
+    }
+
+    public static ArrayList<User> getUserList(String name, String sex, ArrayList<User> originUserList) {
+        ArrayList<User> returnedUserList = new ArrayList<>();
+        for (User user : originUserList) {
+            if (name != null && !name.equals("")) {
+                if (!user.getName().contains(name)) {
+                    continue;
+                }
+            }
+            if (sex != null && !sex.equals("")) {
+                if (!user.getSex().equals(sex)) {
+                    continue;
+                }
+            }
+            returnedUserList.add(user);
+        }
+        return returnedUserList;
+    }
+}
+```
+
+*注：`带有@RestController`注解的类中，方法的返回值如果是对象或者集合，在传递给前端前会自动转换为`json`格式，无需手动转换*
+
+### 分层解耦
+
+分层解耦是软件架构设计中的核心思想，旨在将系统划分为不同层次，并减少各层之间的依赖关系，以提升系统的可维护性、可扩展性和灵活性。分层是指将系统功能按职责或抽象级别，垂直划分为多个独立的层。每一层都专注于特定的任务，并遵循“单向依赖”原则；解耦是指降低层与层之间的直接、紧密联系。层之间通过定义清晰的接口或协议进行通信，而不是直接调用具体的实现
+
+#### 三层架构
+
+三层架构指`Controller`、`Service`、`DAO(Data Access Object)`，即
+
+`Controller`：控制层，接收前端发送的请求，对请求进行处理，并相应数据
+
+`Service`：业务逻辑层，处理具体的业务逻辑
+
+`DAO`：数据访问层，负责数据访问操作，包括数据的增删改查
+
+一般来说，`Service`与`DAO`需要提供接口供其他层调用
+
+**示例**
+
+我们对上文的用户查询逻辑进行优化
+
+首先定义相应的软件包与类
+
+> <img src="./javaweb/25.png">
+
+然后分别定义三层架构和实体类
+
+- **Entity**
+
+`User.java`
+
+用户实体类，遵循`JavaBean`标准
+
+```java
+package com.eiousee.entity;
+
+@lombok.Data
+@lombok.AllArgsConstructor
+@lombok.NoArgsConstructor
+public class User implements java.io.Serializable{
+    private int id;
+    private String name;
+    private String sex;
+    private String job;
+}
+```
+
+`SearchCriteria.java`
+
+搜索条件对象类，用于存储搜索条件
+
+```java
+package com.eiousee.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class SearchCriteria {
+    private String name;
+    private String sex;
+}
+```
+
+- **DAO**
+
+`UserDao.java`
+
+在`UserDao`中，我们需要提供所有的数据对象，因此定义方法`getAllUsers()`来为`UserService`提供筛选原始数据
+
+```java
+package com.eiousee.dao;
+
+import com.eiousee.entity.User;
+import java.util.ArrayList;
+
+public interface UserDao {
+
+    public ArrayList<User> getAllUsers();
+
+}
+```
+
+`UserDaoImpl.java`
+
+在实现类中定义确定的用户集合，然后返回这个集合
+
+```java
+package com.eiousee.dao.impl;
+
+import com.eiousee.dao.UserDao;
+import com.eiousee.entity.User;
+
+import java.util.ArrayList;
+
+public class UserDaoImpl implements UserDao {
+    @Override
+    public ArrayList<User> getAllUsers() {
+        ArrayList<User> userList = new ArrayList<>();
+
+        userList.add(new User(1, "张三", "男", "程序员"));
+        userList.add(new User(2, "李四", "女", "教师"));
+        userList.add(new User(3, "王五", "男", "学生"));
+        userList.add(new User(4, "赵六", "女", "学生"));
+        userList.add(new User(5, "孙七", "男", "教师"));
+
+        return userList;
+    }
+}
+```
+
+- **Service**
+
+`UserService.java`
+
+在`UserService`中，考虑到搜索时存在两种情况，默认空字符串的全部搜索，以及传入参数`name`和`sex`时的条件搜索，因此定义`getUsers(SearchCriteria criteria)`，使用`SearchCriteria`搜索条件实体来进行条件查询，以及`getAllUsers()`获取全部用户对象
+
+```java
+package com.eiousee.service;
+
+import com.eiousee.entity.SearchCriteria;
+import com.eiousee.entity.User;
+import java.util.ArrayList;
+
+public interface UserService {
+    public ArrayList<User> getUsers(SearchCriteria criteria);
+
+    public ArrayList<User> getAllUsers();
+}
+```
+
+`UserServiceImpl.java`
+
+对于`Service`，应当持有一个`DAO`的实例，用于与`DAO`层进行交互，因此首先定义`private final UserDao userDao = new UserDaoImpl();`；对于条件查询方法`getUsers(SearchCriteria criteria)`，我们对条件查询逻辑进行进一步优化，分别判断`name`与`sex`是否满足要求，最后只用一个`if`来实现最优查询
+
+```java
+package com.eiousee.service.impl;
+
+import com.eiousee.dao.UserDao;
+import com.eiousee.dao.impl.UserDaoImpl;
+import com.eiousee.entity.SearchCriteria;
+import com.eiousee.entity.User;
+import com.eiousee.service.UserService;
+import java.util.ArrayList;
+
+public class UserServiceImpl implements UserService {
+
+    private final UserDao userDao = new UserDaoImpl();
+
+    @Override
+    public ArrayList<User> getUsers(SearchCriteria criteria) {
+        ArrayList<User> allUserList = userDao.getAllUsers();
+        ArrayList<User> returnedUserList = new ArrayList<>();
+
+        for (User user : allUserList) {
+
+            boolean nameMatch = criteria.getName().isEmpty() || criteria.getName().equals(user.getName());
+            boolean sexMatch = criteria.getSex().isEmpty() || criteria.getSex().equals(user.getSex());
+
+            if (nameMatch && sexMatch) {
+                returnedUserList.add(user);
+            }
+        }
+
+        return returnedUserList;
+    }
+
+    @Override
+    public ArrayList<User> getAllUsers() {
+        return userDao.getAllUsers();
+    }
+}
+```
+
+- **Controller**
+
+`UserController.java`
+
+在`UserController`中，同样需要持有一个`Service`实例来保持与`Service`的数据交换，因此使用`private final UserService userService = new UserServiceImpl();`，接着，我们需要对接收的参数进行空值判断来调用不同的`UserService`方法，进一步优化性能
+
+```java
+package com.eiousee.controller;
+
+import com.eiousee.entity.SearchCriteria;
+import com.eiousee.entity.User;
+import com.eiousee.service.UserService;
+import com.eiousee.service.impl.UserServiceImpl;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import java.util.ArrayList;
+
+@RestController
+public class UserController {
+
+    private final UserService userService = new UserServiceImpl();
+
+    @RequestMapping("/list")
+    public ArrayList<User> list(HttpServletRequest request) {
+        String name = request.getParameter("name");
+        String sex = request.getParameter("sex");
+
+        System.out.println("name: " + name);
+        System.out.println("sex: " + sex);
+
+        if (name != null && !name.equals("") || sex != null && !sex.equals("")) {
+            System.out.println(userService.getUsers(new SearchCriteria(name, sex)));
+            return userService.getUsers(new SearchCriteria(name, sex));
+        } else {
+            System.out.println(userService.getAllUsers());
+            return userService.getAllUsers();
+        }
+    }
+}
+```
+
+#### IOC & DI
+
+耦合度是衡量软件中各个层或各个模块的依赖关联程度，依赖关联程度越高，耦合度越高
+
+因此，在`Spring`中，提供了控制反转`IOC(Inversion Of Control)`和依赖注入`DI(Dependency Injection)`来进行解耦操作。
+
+`控制反转`：对象的创建控制权由程序自身转移到外部容器，这种思想被称为控制反转
+
+`依赖注入`：外部容器为应用程序提供运行时所依赖的资源，被称为依赖注入
+
+`Bean对象`：在`IOC`中创建的用于管理的容器对象被称为`Bean`对象
+
+**示例**
+
+在上文的`Spring简单案例`中，因为`Service`需要持有`DAO`，`Controller`需要持有`Service`，所以我们定义了以下的代码
+
+```java
+private final UserDao userDao = new UserDaoImpl();
+private final UserService userService = new UserServiceImpl();
+```
+
+从分层解耦的角度来看，这就属于不同层级之间的耦合，假设我们定义了新的`UserDaoImpl2`或者`UserServiceImpl2`，那么就需要更新相应相应的代码，这极大地降低了开发效率
+
+因此，我们将`DAO`和`Service`交由`IOC`容器管理，在`Spring`中，`@Component`注解用于标识`IOC`，目标为类
+
+`UserServiceImpl.java`
+
+```java
+@Component
+public class UserServiceImpl implements UserService {}
+```
+
+`UserDaoImpl.java`
+
+```java
+@Component
+public class UserDaoImpl implements UserDao {}
+```
+
+接着，我们为`Controller`与`Service`提供`DI`，在`Spring`中，`@Autowired`注解用于标识`DI`，目标为属性
+
+`UserController.java`
+
+```java
+@Autowired
+private UserService userService;
+```
+
+`UserServiceImpl.java`
+
+```java
+@Autowired
+private UserDao userDao;
+```
+
+##### IOC
+
+`IOC`是面向对象编程中的一种设计思想，它颠覆了传统程序中对象创建和依赖管理的方式。在传统编程模式中，对象的创建、依赖的组装都由开发者在代码中主动控制，比如通过`new`关键字创建对象，手动为对象设置依赖。而`IOC`思想则将这种控制权转移给第三方容器，由容器统一管理对象的生命周期和对象之间的依赖关系。`IOC` 的核心价值在于解耦。它将对象从复杂的依赖关系中解放出来，让对象只关注自身的业务逻辑，而无需关心依赖对象的创建和组装。
+
+在`Spring`中，提供了多种`IOC`注解
+
+| 注解          | 说明                 | 位置                       |
+| ------------- | -------------------- | -------------------------- |
+| `@Component`  | 声明`Bean`的基本注解 | 不属于以下三类时，用此注解 |
+| `@Controller` | `@Component`衍生注解 | 标注在控制层               |
+| `@Service`    | `@Component`衍生注解 | 标注在业务层               |
+| `@Repository` | `@Component`衍生注解 | 标注在数据访问层           |
+
+*注：所有注解可以使用如`@Component("name")`来指定`Bean`的名称；对于`@RestController`，其中已经封装了`@Controller`注解，因此不必二次添加；对于控制层，只能使用`Controller`注解*
+
+**@ComponentScan扫描范围**
+
+并不是所有添加`@Component`注解的类都可以作为有效的`Bean`，则需要保证其处于`@ComponentScan`扫描范围中。默认情况下，其范围为启动类`@SpringBootApplication`当前包及其子包，在`@SpringBootApplication`中，已经封装了一个`@ComponentScan`注解
+
+**示例**
+
+假设我们将启动类移动到某个子包中
+
+> <img src="./javaweb/26.png">
+
+启动`Spring Boot`，就会导致报错
+
+> <img src="./javaweb/27.png">
