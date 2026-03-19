@@ -1,6 +1,6 @@
 # Java Web
 
-`更新时间：2026-3-18`
+`更新时间：2026-3-19`
 
 注释解释：
 
@@ -2374,3 +2374,61 @@ private UserDao userDao;
 启动`Spring Boot`，就会导致报错
 
 > <img src="./javaweb/27.png">
+
+##### DI
+
+依赖注入是 `IOC` 思想的具体实现方式。它指的是：容器在创建对象时，自动将其依赖的其他对象注入到该对象中。例如，当 `Service` 层对象需要 `Dao` 层对象时，无需手动`new Dao()`，而是由容器直接将 `Dao` 对象交给 `Service` 对象。
+
+基于`@Autowired`注解进行依赖注入一般有如下三种方式
+
+- 属性注入，直接为`Bean`属性添加注解
+
+```java
+@RestController
+public class UserController {
+    @Autowired
+    private UserService userService;
+}
+```
+
+- 构造函数注入，为持有`Bean`的类的构造器添加注解
+
+```java
+@RestController
+public class UserController {
+    private final UserService userService;
+    
+    @Autowired
+    public UserController(UserService userService) {
+        this,userService = userService;
+    }
+}
+```
+
+如果当前类中只存在一个构造函数，那么`@Autowired`注解可以省略
+
+- `Setter`注入，为持有`Bean`的类的`setter`添加注解
+
+```java
+@RestController
+public class UserController {
+    private UserService userService;
+    
+    @Autowired
+    public void setUserService(UserService userService) {
+        this,userService = userService;
+    }
+}
+```
+
+**Bean冲突**
+
+假设一个类仅需要一个`Bean`，但是在书写代码时定义了两个`Bean`，就会导致`Bean`冲突，所以`Spring`又提供了三个额外注解来解决这个问题
+
+| 注解         | 语法                           | 说明                                                         |
+| ------------ | ------------------------------ | ------------------------------------------------------------ |
+| `@Primary`   | `@Primary`                     | 注解`Bean`类                                                 |
+| `@Qualifier` | `@Qualifier("BeanName")`       | 注解`Bean`属性，`BeanName`为`Bean`的名字，默认为类名，但是首字母小写 |
+| `@Resource`  | `@Resource(name = "BeanName")` | 注解`Bean`属性，拥有`@Resource`注解的属性无需再添加`@Autowired`注解 |
+
+*注：`@Resource`是`JavaEE`标准下的注解，根据名称进行注入；而`@Autowired`是`Spring`标准的注解，根据类型进行注入*
