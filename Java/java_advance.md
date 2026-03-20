@@ -695,3 +695,228 @@ public class CME {
 | public E removeFirst()    | 从此列表中删除并返回第一个元素   |
 | public E removeLast()     | 从此列表中删除并返回最后一个元素 |
 
+## Stream
+
+`Stream`流是从`jdk8`开始新增的一套`API`，位于`java.util.stream.*`，可以用于操作集合或者数组的数据；`Stream`的主要优势是大量结合了`Lambda`的语法风格来编程，功能强大，代码简洁，可读性好
+
+**示例**
+
+假设我们准备一个数组，里面存储了一些人名，要求过滤出所有姓张的，名字字数为3的人的人名
+
+```java
+List<String> nameList = new ArrayList<>();
+nameList.add("张三");
+nameList.add("李四");
+nameList.add("张三丰");
+nameList.add("张无忌");
+nameList.add("张先万");
+List<String> newNameList = new ArrayList<>();
+```
+
+- 传统过滤方式
+
+```java
+for (String name : nameList) {
+    if (name.startsWith("张") && name.length() == 3) {
+        newNameList.add(name);
+    }
+}
+```
+
+- `Stream`流方式
+
+```java
+newNameList = nameList.stream()
+        .filter(name -> name.startsWith("张"))
+        .filter(name -> name.length() == 3)
+        .toList();
+```
+
+### Stream流的获取
+
+- `Collection`
+
+在`Collection`集合中，为每个集合对象提供了`.stream()`方法来获取对应的`Stream`流数据
+
+**标准语法**
+
+```java
+Collection<E> collection;
+Stream<E> stream = collection.stream()
+```
+
+- `Map`
+
+`Map`集合并没有提供直接获取`Stream`流的`API`，但是可以将其转换为`Collection`集合，间接地获取`Stream`流
+
+**标准语法**
+
+```java
+Map<Key, Value> map;
+
+// 获取键流
+Stream<E> keyStream = map.keySet().stream();
+
+// 获取值流
+Stream<E> valueStream = map.values().stream();
+
+// 获取键值对流
+Stream<Map.Entry<E, E>> entryStream = map.entrySet().stream();
+```
+
+- 数组
+
+数组的`Stream`流通过`Arrays.stream()`方法或者`Stream.of()`方法来获取
+
+```java
+Array[] arr = {};
+
+Stream<E> stream = Arrays.stream(arr);
+
+Stream<E> stream = Stream.of(arr);
+```
+
+### 中间方法
+
+`Stream`提供了多个中间方法，搭配不同的中间方法进行链式编程，就可以达到不同的业务目的
+
+| API                                                          | 说明                                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `Stream<T> filter(Predicate<? super T> predicate)`           | 用于对流中的数据进行过滤，过滤参数是一个匿名函数             |
+| `Stream<T> sorted()`                                         | 对流元素进行升序排序                                         |
+| `Stream<T> sorted(Comparator<? super T> comparator)`         | 对流元素继续指定规则的排序，排序规则是一个匿名函数           |
+| `Stream<T> limit(long maxSize)`                              | 获取从头开始，`maxSize`个数的元素                            |
+| `Stream<T> skip(long n)`                                     | 跳过`n`个数的元素                                            |
+| `Stream<T> distinct()`                                       | 去除流中的重复元素                                           |
+| `<R> Stream<R> map(Function<? super T, ? extends R> mapper)` | 加工方法，能将原来的流数据映射为一份新数据，进行操作后再返回流 |
+| `static <T> Stream<T> concat(Stream a, Stream b)`            | 将`a`与`b`流拼接起来                                         |
+
+**示例**
+
+```java
+List<Integer> scores = new ArrayList<>();
+scores.add(85);
+scores.add(90);
+scores.add(75);
+scores.add(60);
+scores.add(80);
+scores.add(90);
+scores.add(60);
+scores.add(95);
+scores.add(55);
+
+scores.stream()
+        // 去掉分数小于60的
+        .filter(score -> score >= 60)
+        // 将分数降序处理
+        .sorted((s1, s2) -> Integer.compare(s2, s1))
+        // 去重
+        .distinct()
+        // 获取前5名
+        .limit(5)
+        // 跳过前3名
+        .skip(3)
+        // 将每人分数加10
+        .map(score -> score + 10)
+        .forEach(System.out::println);
+```
+
+> ![](./img3/9.png)
+
+### 终结方法
+
+在`Stream`流处理完成后，也提供了一系列的终结方法用于获取流数据
+
+| API                                                 | 说明                                       |
+| --------------------------------------------------- | ------------------------------------------ |
+| `void forEach(Consumer action)`                     | 遍历流中的每个数据                         |
+| `long count()`                                      | 统计流长度                                 |
+| `Optional<T> max(Comparator<? super T> comparator)` | 获取流中的最大值，并存储在`Optional`容器中 |
+| `Optional<T> min(Comparator<? super T> comparator)` | 获取流中的最小值，并存储在`Optional`容器中 |
+
+对于`max()`和`min()`，为了避免空指针异常，因此将获取的结果暂时存储在容器中，需要取用数据时，调用容器的`get()`方法获取
+
+```java
+List<Integer> scores = new ArrayList<>();
+scores.add(85);
+scores.add(90);
+scores.add(75);
+scores.add(60);
+scores.add(80);
+scores.add(90);
+scores.add(60);
+scores.add(95);
+scores.add(55);
+
+// 获取最高分
+Optional<Integer> maxScore = scores.stream().max(Integer::compareTo);
+System.out.println("最高分：" + maxScore.get());
+// 获取最低分
+Optional<Integer> minScore = scores.stream().min(Integer::compareTo);
+System.out.println("最低分：" + minScore.get());
+```
+
+> ![](img3/10.png)
+
+#### 收集集合
+
+在实际业务操作中，流只负责操作数据，不负责存储与传递数据，因此需要将流中的数据再次保存为新的集合或者数组
+
+| API                | 说明             |
+| ------------------ | ---------------- |
+| `List<E> toList()` | 收集为`List`集合 |
+| `Set<E> toSet()`   | 收集为`Set`集合  |
+
+以上的两个`API`是`JDK16`后新增的简化`API`，而对于`JDK16`之前的`Java`项目，可以使用`collect()`方法来实现，`collect()`接收一个`Collector`对象，调用`Collector`对象不同的方法即可收集为不同的集合
+
+| API                                                         | 说明                                                         |
+| ----------------------------------------------------------- | ------------------------------------------------------------ |
+| `Collector.toList()`                                        | 收集为`List`集合                                             |
+| `Collector.toSet()`                                         | 收集为`Set`集合                                              |
+| `Collector.toMap(Function keyMapper, Function valueMapper)` | 收集为`Map`集合，其中键由`keyMapper`匿名函数决定，值由`valueMapper`决定 |
+
+**示例**
+
+```java
+List<User> list = new ArrayList<>();
+list.add(new User("张三", 18));
+list.add(new User("李四", 27));
+list.add(new User("王五", 19));
+
+// 获取年龄小于20的，并收集为一个Map
+Map<String, Integer> userMap = list.stream()
+        .filter(user -> user.getAge() < 20)
+        .collect(Collectors.toMap(User::getName, User::getAge));
+
+System.out.println(userMap);
+```
+
+> ![](img3/11.png)
+
+#### 收集数组
+
+将`Stream`收集为集合使用`toArray()`方法
+
+**标准语法**
+
+```java
+Object[] toArray(Function<A[]> generator)
+```
+
+**示例**
+
+```java
+List<User> list = new ArrayList<>();
+list.add(new User("张三", 18));
+list.add(new User("李四", 27));
+list.add(new User("王五", 19));
+
+// 获取年龄小于20的，并收集为一个数组
+User[] users = list.stream()
+        .filter(user -> user.getAge() < 20)
+        .toArray(User[]::new);
+
+System.out.println(Arrays.toString(users));
+```
+
+![](img3/12.png)
