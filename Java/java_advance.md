@@ -920,3 +920,166 @@ System.out.println(Arrays.toString(users));
 ```
 
 ![](img3/12.png)
+
+## 多线程
+
+线程是一个程序内部执行的一条执行流程，如果程序中只有一条流程，那么这个程序就是单线程程序，在以往的学习中，我们进行的编程都是单线程。多线程是指从软硬件上实现多条执行流程的技术
+
+`main`方法实际也是在一个主线程中进行的
+
+### 创建线程
+
+在`Java`中，提供了多种创建线程的方式
+
+#### 继承Thread类
+
+ 将类声明为`Thread`类的子类，并重写`Thread`类的`run`方法
+
+```java
+package com.eiousee;
+
+public class Test {
+    public static void main(String[] args) {
+        Thread t = new MyThread();
+        t.start();
+
+        for (int i = 0; i < 5; i++) {
+            System.out.println("主线程" + i);
+        }
+    }
+}
+
+class MyThread extends Thread {
+    @Override
+    public void run() {
+        for (int i = 0; i < 5; i++) {
+            System.out.println("子线程" + i);
+        }
+    }
+}
+```
+
+> ![](img3/13.png)
+
+*注：在注册线程时。必须调用子线程实例的`start()`方法而不是`run()`方法；在实际业务逻辑中，启动子线程的代码应位于主线程逻辑的上方，先注册子线程，再完成主线程业务*
+
+#### 实现Runnable接口
+
+声明一个类，实现`Runnable`接口的`run()`方法，然后将此实例交给`Thread()`对象，调用`start()`方法
+
+```java
+package com.eiousee;
+
+public class Test {
+    public static void main(String[] args) {
+        Runnable t = new MyThread();
+        new Thread(t).start();
+
+        for (int i = 0; i < 5; i++) {
+            System.out.println("主线程" + i);
+        }
+    }
+}
+
+class MyThread implements Runnable {
+    @Override
+    public void run() {
+        for (int i = 0; i < 5; i++) {
+            System.out.println("子线程" + i);
+        }
+    }
+}
+```
+
+由于`Thread()`接收的参数`Runnable`类是一个函数式接口，因此可以使用`lambda`表达式的方式来简化以上代码
+
+```java
+package com.eiousee;
+
+public class Test {
+    public static void main(String[] args) {
+        new Thread(() -> {
+            for (int i = 0; i < 5; i++) {
+                System.out.println("子线程" + i);
+            }
+        }).start();
+
+        for (int i = 0; i < 5; i++) {
+            System.out.println("主线程" + i);
+        }
+    }
+}
+```
+
+#### 实现Callable接口
+
+上面两种线程创建方式都存在一个很大的问题，我们重写的方法`public void run()`的返回值类型永远是`void`，因此不能通过这两种类型获取任何的返回值
+
+在`JDK5.0`后，提供了`Callable`接口和`FutureTask`类来实现有返回值的子线程
+
+**创建步骤**
+
+1. 定义一个类，实现`Callable`接口，重写`call`方法，封装需要执行的逻辑和需要返回的数据
+2. 将`Callable`实例封装为`FutureTask`实例
+3. 将线程任务交给`Thread`实例，调用`Thread`实例的`start()`方法启动线程
+4. 线程结束后，通过`FutureTask`实例的`get()`方法获取线程执行的结果
+
+```java
+package com.eiousee;
+
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+
+public class Test {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        FutureTask<String> task = new FutureTask<>(new myCallable());
+        new Thread(task).start();
+        System.out.println(task.get());
+        System.out.println("这是主线程的结果");
+    }
+}
+
+class myCallable implements Callable<String> {
+    @Override
+    public String call() throws Exception {
+        return "这是子线程的结果";
+    }
+}
+```
+
+如果子线程想要传递参数，也可以在`Callable`类中定义私有属性，并通过有参构造器来传递参数
+
+```java
+package com.eiousee;
+
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+
+public class Test {
+    public static void main(String[] args) throws ExecutionException, InterruptedException {
+        FutureTask<String> task = new FutureTask<>(new myCallable(123));
+        new Thread(task).start();
+        System.out.println(task.get());
+        System.out.println("这是主线程的结果");
+    }
+}
+
+class myCallable implements Callable<String> {
+    private Integer i;
+
+    public myCallable(Integer i) {
+        this.i = i;
+    }
+
+    @Override
+    public String call() {
+        return "这是子线程的结果" + i;
+    }
+}
+```
+
+> ![](img3/14.png)
+
+*注：需要注意的是，如果子线程没有完成，则主线程会阻塞在`get()`方法处，直到子线程完成并返回数据，因此`get()`方法后方的代码一定会晚于子线程执行*
