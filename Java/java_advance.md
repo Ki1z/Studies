@@ -1,6 +1,6 @@
 # Java Advance
 
-`更新时间：2026-3-19`
+`更新时间：2026-3-25`
 
 注释解释：
 
@@ -1083,3 +1083,334 @@ class myCallable implements Callable<String> {
 > ![](img3/14.png)
 
 *注：需要注意的是，如果子线程没有完成，则主线程会阻塞在`get()`方法处，直到子线程完成并返回数据，因此`get()`方法后方的代码一定会晚于子线程执行*
+
+### 线程常用方法
+
+| 方法                                          | 说明                                         |
+| --------------------------------------------- | -------------------------------------------- |
+| `public void run()`                           | 线程的任务方法                               |
+| `public void start()`                         | 线程的启动方法                               |
+| `public String getName()`                     | 获取当前线程的名称                           |
+| `public void setName()`                       | 为线程设置名称                               |
+| `public static Thread currentThread()`        | 获取当前执行的线程实例                       |
+| `public static void sleep(long time)`         | 线程休眠                                     |
+| `public final void join()`                    | 抢占线程优先权                               |
+| `public Thread(String name)`                  | 为当前线程指定名称                           |
+| `public Thread(Runnable target)`              | 将`Runnable`实例封装为`Thread`实例           |
+| `public Thread(Runnable target, String name)` | 封装`Runnable`实例为`Thread`实例，并设置名称 |
+
+**示例**
+
+```java
+package com.eiousee;
+
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+
+public class Test {
+    public static void main(String[] args) throws InterruptedException {
+        // 获取当前线程名
+        Thread t = Thread.currentThread();
+        System.out.println(t.getName());
+        // 为当前线程设置名字
+        t.setName("MyThread");
+        System.out.println(t.getName());
+
+        // 创建新线程
+        Thread t1 = new Thread(() -> {
+            System.out.println("开始子线程1");
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            System.out.println("结束子线程1");
+        });
+        t1.start();
+
+        System.out.println("主线程1");
+
+        // 新线程2
+        Thread t2 = new Thread(() -> {
+            System.out.println("开始子线程2");
+            try {
+                Thread.sleep(2000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        t2.start();
+        t2.join();
+
+        System.out.println("主线程2");
+    }
+}
+```
+
+> ![](img3/15.png)
+
+### 线程安全
+
+线程安全问题是指，多个线程在操作同一个共享资源的时候，可能会出现的业务安全问题
+
+**示例**
+
+假设有两个人同时在`ATM`机取钱，`ATM`中剩余1000元，两人分别都取1000元
+
+```java
+package com.eiousee;
+
+public class Test {
+    public static void main(String[] args) {
+        ATM atm = new ATM(1000);
+        new DrawThread(atm, "甲").start();
+        new DrawThread(atm, "乙").start();
+    }
+}
+
+class ATM {
+    private Integer money;
+
+    public ATM(Integer money) {
+        this.money = money;
+    }
+
+    public void drawMoney(Integer money) {
+        if (this.money >= money) {
+            System.out.println(Thread.currentThread().getName() + "取钱成功，取钱数为：" + money);
+            this.money -= money;
+            System.out.println("余额为：" + this.money);
+        } else {
+            System.out.println(Thread.currentThread().getName() + "取钱失败，余额不足");
+        }
+    }
+}
+
+class DrawThread extends Thread {
+    private ATM atm;
+
+    public DrawThread(ATM atm, String name) {
+        super(name);
+        this.atm = atm;
+    }
+
+    @Override
+    public void run() {
+        atm.drawMoney(1000);
+    }
+}
+```
+
+> ![](img3/16.png)
+
+这里就可以发现，两个线程单独运行，每个线程执行`this.money >= money`均成功，因此最后余额为负数
+
+#### 线程同步
+
+为了解决以上的线程安全问题，可以使用线程同步方案。线程同步是指让多个线程先后依次访问资源，这样就可以避免出现线程安全问题
+
+#### 线程同步方案
+
+- `同步代码块`：每次只允许一个线程加锁，加锁后才能访问，访问完毕后自动解锁，然后其他线程才能进入
+
+**标准语法**
+
+指定一个唯一的对象作为同步锁，将访问共享资源的核心代码用同步锁包裹起来
+
+```java
+synchronized(synchrolock) {
+    // core code
+}
+```
+
+**示例**
+
+这里使用`this`作为同步锁，因为对于每个共享资源，其自身对于相同请求的不同线程来说就是唯一的，而对不同请求的线程来说不同，也就避免了同步锁范围过大的问题
+
+```java
+public void drawMoney(Integer money) {
+    synchronized (this) {
+        if (this.money >= money) {
+            System.out.println(Thread.currentThread().getName() + "取钱成功，取钱数为：" + money);
+            this.money -= money;
+            System.out.println("余额为：" + this.money);
+        } else {
+            System.out.println(Thread.currentThread().getName() + "取钱失败，余额不足");
+        }
+    }
+}
+```
+
+> ![](img3/17.png)
+
+*注：对于静态方法，可以使用字节码文件`className.class`对象作为同步锁*
+
+- `同步方法`：将访问共享资源的方法上锁，保证线程安全
+
+**标准语法**
+
+```java
+Accessibility synchronized returnedValueType methodName(params...) {
+    // method body
+}
+```
+
+**示例**
+
+```java
+public synchronized void drawMoney(Integer money) {
+    if (this.money >= money) {
+        System.out.println(Thread.currentThread().getName() + "取钱成功，取钱数为：" + money);
+        this.money -= money;
+        System.out.println("余额为：" + this.money);
+    } else {
+        System.out.println(Thread.currentThread().getName() + "取钱失败，余额不足");
+    }
+}
+```
+
+- `Lock锁`：`Lock`锁是`JDK5`开始提供的一个新的锁定操作，通过它可以创建出锁对象进行加锁和解锁，更灵活方便
+
+`Lock`锁是接口，不能实例化，可以采用实现类`ReentrantLock`来构建`Lock`锁对象
+
+**示例**
+
+在`ATM`类中添加`Lock`锁。这里不能使用`static`关键字，因为必须保证`Lock`锁只能锁定同一请求的不同线程。这里建议添加`final`关键字，以避免业务逻辑中`lock`的值被更改
+
+```java
+class ATM {
+    private final Lock lock = new ReentrantLock();
+}
+```
+
+然后在核心代码中加锁，为了避免死锁，应该使用`try-finally`包含核心代码，并在`finally`中使用`unlock()`方法
+
+```java
+public void drawMoney(Integer money) {
+    lock.lock();
+    try {
+        if (this.money >= money) {
+            System.out.println(Thread.currentThread().getName() + "取钱成功，取钱数为：" + money);
+            this.money -= money;
+            System.out.println("余额为：" + this.money);
+        } else {
+            System.out.println(Thread.currentThread().getName() + "取钱失败，余额不足");
+        }
+    } finally {
+        lock.unlock();
+    }
+}
+```
+
+### 线程池
+
+线程池就是一个可以复用线程的技术。线程池由工作线程`WorkThread`和任务队列`WorkQueue`构成，任务队列中只能包含`Runnable`和`Callable`实例
+
+#### 创建线程池
+
+`JDK 5.0`起提供了代表线程池的接口`ExecutorService`，然后创建`ThreadPoolExecutor`实例，或者使用`Executors`工具类的方法返回不同的线程池
+
+##### ThreadPoolExecutor
+
+```java
+public ThreadPoolExecutor(
+	int corePoolSize,
+    int maximumPoolSize,
+    long keepAliveTime,
+    TimeUnit unit,
+    BlockingQueue<Runnable> workQueue,
+    ThreadFactory threadFactory,
+    RejectedExecutionHandler handler
+);
+```
+
+- `corePoolSize`：指定线程池的核心线程数量，也就是常用线程数量
+- `maximumPoolSize`：指定线程池的最大线程数量
+- `keepAliveTime`：指定核心线程以外的临时线程的存活时间
+- `TimeUnit`：临时线程存活时间的单位，如`秒`、`分`、`时`等
+- `workQueue`：指定线程池的任务队列
+- `threadFactory`：指定线程池的线程工厂
+- `handler`：指定线程池满时，任务拒绝策略
+
+**示例**
+
+```java
+ExecutorService es = new ThreadPoolExecutor(
+        3,
+        5,
+        10,
+        TimeUnit.SECONDS,
+        new ArrayBlockingQueue<Runnable>(5),
+        Executors.defaultThreadFactory(),
+        new ThreadPoolExecutor.DiscardOldestPolicy()
+);
+```
+
+**常用方法**
+
+| 方法                                 | 说明                                                         |
+| ------------------------------------ | ------------------------------------------------------------ |
+| `void execute(Runnable command)`     | 执行`Runnable`任务                                           |
+| `Future<T> submit(Callable<T> task)` | 执行`Callable`任务，并返回`Future`对象，`Future`对象可以获取返回值 |
+| `void shutdown()`                    | 等全部任务执行完成后，关闭线程池                             |
+| `List<Runnable> shutdownNow()`       | 立刻关闭线程池，并返回未完成的任务                           |
+
+**示例**
+
+```java
+package com.eiousee;
+
+import java.util.concurrent.*;
+
+public class Test {
+    public static void main(String[] args) {
+        ExecutorService es = new ThreadPoolExecutor(
+                3,
+                5,
+                10,
+                TimeUnit.SECONDS,
+                new ArrayBlockingQueue<Runnable>(5),
+                Executors.defaultThreadFactory(),
+                new ThreadPoolExecutor.DiscardOldestPolicy()
+        );
+
+        Runnable task = new Task();
+        for (int i = 0; i < 10; i++) {
+            es.submit(task);
+        }
+    }
+}
+
+class Task implements Runnable {
+    @Override
+    public void run() {
+        System.out.println(Thread.currentThread().getName() + " is running");
+    }
+}
+```
+
+> ![](img3/18.png)
+
+*注：临时线程创建的条件有四点，第一，核心线程都在忙；第二，任务队列已满；第三，有足够的临时线程名额；第四，有新任务尝试加入任务队列*
+
+**任务拒绝策略**
+
+| 策略                                      | 说明                                               |
+| ----------------------------------------- | -------------------------------------------------- |
+| `ThreadPoolExecutor.AbortPolicy()`        | 丢弃任务并抛出`RejectedExecutionException`异常     |
+| `ThreadPoolExecutor.DiscardPolicy()`      | 丢弃任务但不抛出异常                               |
+| `ThreadPoolExecutor.DiscardOldesPolicy()` | 抛弃队列中等待最久的任务，然后把当前任务加入队列中 |
+| `ThreadPoolExecutor.CallerRunsPolicy()`   | 由主线程负责调用任务的`run()`方法，绕过线程池执行  |
+
+##### Executors
+
+| 方法名称                                                     | 说明                                                         |
+| ------------------------------------------------------------ | ------------------------------------------------------------ |
+| `public static ExecutorService newFixedThreadPool(int nThreads)` | 创建固定数量的线程池，如果某个线程因为执行异常而结束，那么线程池会补充一个新线程替代它 |
+| `public static ExecutorService newSingleThreadExecutor()`    | 创建只有一个线程的线程池对象，如果该线程出现异常而结束，那么线程池会补充一个新线程 |
+| `public static ExecutorService newCachedThreadPool()`        | 创建一个动态线程池，线程数量随着任务增加而增加，如果线程任务执行完毕且空闲了60秒，最会被回收 |
+| `public static ScheduledExecutorService newScheduledThreadPool(int corePoolSize)` | 创建一个线程池，可以实现在给定的延迟后运行任务，或者定期执行任务 |
+
+*注：在`《阿里巴巴JAVA开发手册》`中，强制要求线程池使用`ThreadPoolExecutor`类实现，因为`Executors`下的方法对任务长度或线程数量没有限制，容易造成`OOM`*
+
