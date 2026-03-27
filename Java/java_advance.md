@@ -1414,3 +1414,471 @@ class Task implements Runnable {
 
 *注：在`《阿里巴巴JAVA开发手册》`中，强制要求线程池使用`ThreadPoolExecutor`类实现，因为`Executors`下的方法对任务长度或线程数量没有限制，容易造成`OOM`*
 
+### 综合练习-抢红包
+
+**需求**
+
+红包雨游戏，某企业有100名员工，员工的工号依次是`1, 2, 3, 4...`，现在公司举办了年会活动，活动中有一个红包雨环节，要求共计发出200个红包雨。其中小红包在`1-30`元之间，占比80%，大红包`31-100`元之间，占比20%
+
+**具体功能如下**
+
+1. 系统模拟上述要求产生200个红包
+2. 模拟100个员工抢红包雨
+3. 活动结束后，请对100名员工按照所抢红包的总金额进行降序排序
+
+#### 实现
+
+1. 建立需要的实体类`User`、`RedPacket`和`SnatchCallable`
+
+`User.java`
+
+对于每个员工，其中的属性至少应包括员工编号和抢到的红包
+
+```java
+package com.eiousee;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+import java.util.Queue;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class User {
+    private Integer id;
+    private RedPacket redPacket;
+}
+
+```
+
+`RedPacket.java`
+
+红包只有面额这一个属性
+
+```java
+package com.eiousee;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class RedPacket {
+    private Integer money;
+}
+
+```
+
+`SnatchCallable.java`
+
+并发操作的`Callable`实体类，每个线程都应该持有共享的红包整体资源，并持有一个需要执行抢红包动作的用户实体
+
+这里需要注意，红包资源类的数据类型需要使用保证线程安全，因此我们使用`Queue`队列，类似于`List`，同样继承自`Collection`，其下的子类`ConcurrentLinkedDeque`或者`BlockingQueue`是线程安全的
+
+```java
+package com.eiousee;
+
+import java.util.Queue;
+import java.util.concurrent.Callable;
+
+public class SnatchCallable implements Callable<User> {
+    private User user;
+    private Queue<RedPacket> redPackets;
+
+    public SnatchCallable(User user, Queue<RedPacket> redPackets) {
+        this.user = user;
+        this.redPackets = redPackets;
+    }
+}
+```
+
+2. 为实体类`SnatchCallable`和`User`添加相应方法
+
+`User`
+
+用户类中需要一个抢红包方法`snatch`，根据外部传来的红包整体资源，从所有红包中取出一份，然后赋值给自己的属性`redPacket`
+
+`poll()`方法可以保证在并发操作中，每个子线程都只能独立获取唯一资源，如果`redPackets`中没有可用资源，那么`poll()`返回`null`，从而根据`redPacket`来判断用户是否抢到了红包。避免先判断后赋值时，可能出现多线程判断均通过，但是只有一个线程能够获取资源的问题
+
+```java
+public class User {
+    private Integer id;
+    private RedPacket redPacket;
+
+    public void snatch(Queue<RedPacket> redPackets) {
+        RedPacket redPacket = redPackets.poll();
+        if (redPacket != null) {
+            this.redPacket = redPacket;
+        }
+    }
+}
+```
+
+`SnatchCallable`
+
+`SnatchCallable`类用于实现调用用户抢红包的行为，将每个接收到的用户对象，调用其抢红包方法，方法参数即是接收到的红包整体资源，最后返回该用户即可
+
+```java
+public class SnatchCallable implements Callable<User> {
+    private User user;
+    private Queue<RedPacket> redPackets;
+
+    public SnatchCallable(User user, Queue<RedPacket> redPackets) {
+        this.user = user;
+        this.redPackets = redPackets;
+    }
+
+    @Override
+    public User call() {
+        this.user.snatch(this.redPackets);
+
+        return this.user;
+    }
+}
+```
+
+3. 实现主逻辑
+
+首先生成所有红包，我们使用`ConcurrentLinkedDeque`来存储总共的200个红包对象，然后调用`for`循环，在其中添加指定数量的红包对象，使用随机数作为红包金额
+
+```java
+Queue<RedPacket> redPackets = new ConcurrentLinkedDeque<>();
+for (int i = 0; i < (int) (200 * 0.8); i++) {
+    // 1-30的随机数
+    redPackets.add(new RedPacket((int) (Math.random() * 30 + 1)));
+}
+for (int i = 0; i < (int) (200 * 0.2); i++) {
+    // 31-100的随机数
+    redPackets.add(new RedPacket((int) (Math.random() * 70 + 31)));
+}
+```
+
+然后打乱所有红包，并创建用户整体，用户存储100和用户实例
+
+```java
+// 打乱
+List<RedPacket> redPackets2 = new ArrayList<>(redPackets);
+Collections.shuffle(redPackets2);
+redPackets.clear();
+redPackets.addAll(redPackets2);
+
+List<User> users = new ArrayList<>();
+for (int i = 0; i < 100; i++) {
+    users.add(new User(i + 1, null));
+}
+```
+
+然后创建线程池，核心线程数量根据自己的电脑配置而定，比如我使用的CPU是`AMD Ryzen 7 7840H`，共计8核心16线程，那么核心线程数量即是16个，最大线程数量一般为核心线程数量的两倍；队列长度必须大于任务总量，如果小于，则可能导致任务被拒绝
+
+```java
+// 创建线程池
+ThreadPoolExecutor executor = new ThreadPoolExecutor(
+        16,
+        32,
+        60,
+        TimeUnit.SECONDS,
+        new ArrayBlockingQueue<>(1000),
+        Executors.defaultThreadFactory()
+);
+```
+
+然后创建并发任务，定义一个`Future future`数组接收返回的用户实例，然后遍历`users`数组，将每个用户提交到线程池中进行抢红包任务，将得到的结果添加到`future`数组中，并在任务结束后关闭线程池
+
+```java
+// 创建并发任务
+List<Future<User>> futures = new ArrayList<>();
+for (User user : users) {
+    Future<User> future = executor.submit(new SnatchCallable(user, redPackets));
+    futures.add(future);
+}
+// 关闭线程池
+executor.shutdown();
+```
+
+然后将`future`数组的内容返还`users`，使用`stream()`流对`users`进行排序，最后打印`users`数组
+
+```java
+users = new ArrayList<>();
+for (Future<User> future : futures) {
+    users.add(future.get());
+}
+users = users.stream()
+        .sorted(Comparator.comparing((User user) -> user.getRedPacket().getMoney()).reversed())
+        .toList();
+System.out.println(users);
+```
+
+> ![](img3/19.png)
+
+## 网络编程
+
+网络编程是指可以让设备中的程序与网络上其他设备中的程序进行数据交互的技术。目前网络通信架构有两种形式：`Client/Server`的CS架构与`Browser/Server`的BS架构
+
+#### InetAddress API
+
+| 常用                                                         | 说明                                      |
+| ------------------------------------------------------------ | ----------------------------------------- |
+| `public static InetAddress getLocalHost() throws UnknownHostException` | 获取本地`IP`，返回`InetAddress`对象       |
+| `public String getHostName()`                                | 获取该`IP`地址对象对应的主机名            |
+| `public String getHostAddress()`                             | 获取该`IP`地址对象中的`IP`信息            |
+| `public static InetAddress getByName(String host) throws UnknownHostException` | 根据`IP`地址或者域名返回`InetAddress`对象 |
+| `public boolean isReachable(int timeout) throws IOException` | 测试网络连通性                            |
+
+**示例**
+
+```java
+package com.eiousee;
+
+import java.net.InetAddress;
+
+public class Test {
+    public static void main(String[] args) throws Exception {
+        // 获取本机IP
+        InetAddress inetAddress = InetAddress.getLocalHost();
+        System.out.println("本机主机：" + inetAddress);
+
+        // 访问必应
+        if (inetAddress.isReachable(5000)) {
+            System.out.println("可以访问必应");
+        } else {
+            System.out.println("不可以访问必应");
+        }
+        InetAddress inetAddress1 = InetAddress.getByName("www.bing.com");
+        System.out.println("必应主机名：" + inetAddress1.getHostName());
+        System.out.println("必应主机IP：" + inetAddress1.getHostAddress());
+    }
+}
+```
+
+> ![](img3/20.png)
+
+#### UDP
+
+`Java`提供了`java.net.DatagramSocket`类来实现`UDP`通信
+
+| 构造器                                                       | 说明                                             |
+| ------------------------------------------------------------ | ------------------------------------------------ |
+| `public DatagramSocket()`                                    | 创建客户端`Socket`对象，系统会随机分配一个端口号 |
+| `public DatagramSocket(int port)`                            | 创建服务端的`Socket`对象，并指定端口号           |
+| `public DatagramPacket(byte[] buf, int length, InetAddress address, int port)` | 创建发送的数据包对象                             |
+| `public DatagramPacket(byte[] buf, int length)`              | 创建用于接收的数据包对象                         |
+
+| 方法                                    | 说明               |
+| --------------------------------------- | ------------------ |
+| `public void send(DatagramPacket dp)`   | 发送数据包         |
+| `public void receive(DatagramPacket p)` | 使用数据包接收数据 |
+
+**示例**
+
+`Server.java`
+
+```java
+package com.eiousee;
+
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketException;
+
+public class Server {
+    public static void main(String[] args) throws Exception {
+        // 创建服务端
+        DatagramSocket socket = new DatagramSocket(30000);
+        // 接收数据
+        byte[] bytes = new byte[1024 * 64];
+        DatagramPacket packet = new DatagramPacket(bytes, bytes.length);
+        socket.receive(packet);
+        String content = new String(bytes, 0, packet.getLength());
+        System.out.println("接收数据：" + content);
+    }
+}
+
+```
+
+`Client.java`
+
+```java
+package com.eiousee;
+
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.SocketException;
+
+public class Client {
+    public static void main(String[] args) throws Exception {
+        // 创建客户端
+        DatagramSocket socket = new DatagramSocket();
+        // 发送数据
+        byte[] bytes = "Hello, World".getBytes();
+        DatagramPacket packet = new DatagramPacket(bytes, bytes.length, InetAddress.getLocalHost(), 30000);
+        socket.send(packet);
+    }
+}
+```
+
+> ![](img3/21.png)
+
+*`DatagramPacket`对象还有一些可以获取发送方`IP`、端口的`API`，如`public String getHostAddress()`、`public synchronized int getPort()`等等*
+
+#### TCP
+
+`Java`提供了`java.net.Socket`类实现`TCP`通信
+
+| 构造器或方法                            | 说明                                                         |
+| --------------------------------------- | ------------------------------------------------------------ |
+| `public Socket(String host, int port)`  | 根据指定的服务器`ip`了，端口号，请求与服务器建立连接，连接通过则获得客户端`socket`对象 |
+| `public OutputStream getOutputStream()` | 获得字节输出流对象                                           |
+| `public InputStream getInputStream()`   | 获得字节输入流对象                                           |
+| `public ServerSocket(int port)`         | 为服务端程序注册端口                                         |
+| `public Socket accept()`                | 等待客户端连接，一旦与客户端连接成功，则返回服务端`Socket`对象 |
+
+**示例**
+
+`Client.java`
+
+```java
+package com.eiousee;
+
+import java.io.DataOutputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+
+public class Client {
+    public static void main(String[] args) throws Exception {
+        // 创建客户端
+        Socket socket = new Socket("127.0.0.1", 30000);
+        // 创建发送数据流
+        OutputStream out = socket.getOutputStream();
+        // 封装数据流
+        DataOutputStream dos = new DataOutputStream(out);
+        // 发送数据
+        dos.writeInt(0);
+        dos.writeUTF("hello world");
+    }
+}
+```
+
+`Server,java`
+
+```java
+package com.eiousee;
+
+import java.io.DataInputStream;
+import java.io.InputStream;
+import java.net.*;
+
+public class Server {
+    public static void main(String[] args) throws Exception {
+        // 创建服务端
+        Socket socket = new ServerSocket(30000).accept();
+        // 读取数据
+        DataInputStream dis = new DataInputStream(socket.getInputStream());
+        System.out.println(dis.readInt());
+        System.out.println(dis.readUTF());
+        // 获取客户端信息
+        System.out.println("IP：" + socket.getInetAddress().getHostAddress());
+        System.out.println("Port: " + socket.getPort());
+    }
+}
+```
+
+#### 多线程通信
+
+在上述的`TCP`通信中，客户端与服务端是一对一的关系，无法做到服务端同时接收多个客户端的信息。这里可以利用多线程技术，让每个线程独立接管一个连接请求
+
+`client`
+
+我们先对客户端进行改造，让用户能够自由发送数据
+
+```java
+package com.eiousee;
+
+import java.io.DataOutputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+import java.util.Scanner;
+
+public class Client {
+    public static void main(String[] args) throws Exception {
+        // 创建客户端
+        Socket socket = new Socket("127.0.0.1", 30000);
+        // 创建发送数据流
+        OutputStream out = socket.getOutputStream();
+        // 封装数据流
+        DataOutputStream dos = new DataOutputStream(out);
+        Scanner sc = new Scanner(System.in);
+        // 发送数据
+        while (true) {
+            System.out.print("请输入：");
+            String line = sc.nextLine();
+            dos.writeUTF(line);
+            dos.flush();
+            if ("exit".equals(line)) {
+                return;
+            }
+        }
+    }
+}
+```
+
+`server`
+
+然后改造服务端，我们让主线程负责接收所有连接请求，然后将`socket`对象分发至各个子线程，在子线程的`run()`方法中实现业务逻辑
+
+```java
+package com.eiousee;
+
+import java.io.DataInputStream;
+import java.io.InputStream;
+import java.net.*;
+
+public class Server {
+    public static void main(String[] args) throws Exception {
+        // 创建服务端
+        ServerSocket ss = new ServerSocket(30000);
+
+        while(true) {
+            new ServerThread(ss.accept()).start();
+        }
+    }
+}
+
+class ServerThread extends Thread {
+    private Socket socket;
+    public ServerThread(Socket socket) {
+        this.socket = socket;
+    }
+
+    @Override
+    public void run() {
+        try {
+            InputStream in = socket.getInputStream();
+            DataInputStream dis = new DataInputStream(in);
+            System.out.println("有客户端" + socket.getInetAddress().getHostName() + "连接了");
+
+            while (true) {
+                String content = dis.readUTF();
+
+                System.out.println("IP: " + socket.getInetAddress().getHostAddress());
+                System.out.println("Port: " + socket.getPort());
+                System.out.println("Message: " + content);
+                System.out.println("-------------------");
+                if ("exit".equals(content)) {
+                    socket.close();
+                }
+            }
+        } catch (Exception e) {
+            System.out.println(socket.getInetAddress().getHostName() + "断开了连接");
+        }
+    }
+}
+```
+
+> ![](img3/22.png)
+
