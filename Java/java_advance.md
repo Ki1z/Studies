@@ -1882,3 +1882,68 @@ class ServerThread extends Thread {
 
 > ![](img3/22.png)
 
+#### BS架构的TCP通信
+
+`BS`架构，也就是常见的`浏览器-服务器`架构，最常见的通信协议是就是基于`TCP`协议的`HTTP`协议。因此，只要我们在服务端将响应包装为`HTTP`协议格式，就能实现`Java`与浏览器进行通信
+
+`Server.java`
+
+我们将端口改为浏览器常用的`8080`端口，并封装一些`HTML`数据，使用`HTTP`协议返回给浏览器。因为`HTTP`协议是单次连接，请求结束即断开，所以需要在最后关闭输出流与`Socket`管道
+
+```java
+package com.eiousee;
+
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.PrintStream;
+import java.net.*;
+
+public class Server {
+    public static void main(String[] args) throws Exception {
+        // 创建服务端
+        ServerSocket ss = new ServerSocket(8080);
+
+        while(true) {
+            new ServerThread(ss.accept()).start();
+        }
+    }
+}
+
+class ServerThread extends Thread {
+    private final Socket socket;
+    public ServerThread(Socket socket) {
+        this.socket = socket;
+    }
+
+    @Override
+    public void run() {
+        try {
+            OutputStream os = socket.getOutputStream();
+            System.out.println("有客户端" + socket.getInetAddress().getHostName() + "连接了");
+
+            // 使用PrintStream封装
+            PrintStream ps = new PrintStream(os);
+            // 封装HTTP响应报文
+            ps.println("HTTP/1.1 200 OK");
+            ps.println("Content-Type: text/html;charset=utf-8");
+            ps.println();
+            // 封装HTML内容
+            ps.println("<html>");
+            ps.println("<head><title>Hello</title></head>");
+            ps.println("<body>");
+            ps.println("<h1>Hello World</h1>");
+            ps.println("</body>");
+            ps.println("</html>");
+
+            // 关闭输出流与管道
+            ps.close();
+            socket.close();
+        } catch (Exception e) {
+            System.out.println(socket.getInetAddress().getHostName() + "断开了连接");
+        }
+    }
+}
+```
+
+> ![](img3/23.png)
+
