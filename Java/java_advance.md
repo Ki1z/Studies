@@ -1,6 +1,6 @@
 # Java Advance
 
-`更新时间：2026-3-25`
+`更新时间：2026-3-31`
 
 注释解释：
 
@@ -1619,7 +1619,7 @@ System.out.println(users);
 
 网络编程是指可以让设备中的程序与网络上其他设备中的程序进行数据交互的技术。目前网络通信架构有两种形式：`Client/Server`的CS架构与`Browser/Server`的BS架构
 
-#### InetAddress API
+### InetAddress API
 
 | 常用                                                         | 说明                                      |
 | ------------------------------------------------------------ | ----------------------------------------- |
@@ -1657,7 +1657,7 @@ public class Test {
 
 > ![](img3/20.png)
 
-#### UDP
+### UDP
 
 `Java`提供了`java.net.DatagramSocket`类来实现`UDP`通信
 
@@ -1726,7 +1726,7 @@ public class Client {
 
 *`DatagramPacket`对象还有一些可以获取发送方`IP`、端口的`API`，如`public String getHostAddress()`、`public synchronized int getPort()`等等*
 
-#### TCP
+### TCP
 
 `Java`提供了`java.net.Socket`类实现`TCP`通信
 
@@ -1788,7 +1788,7 @@ public class Server {
 }
 ```
 
-#### 多线程通信
+### 多线程通信
 
 在上述的`TCP`通信中，客户端与服务端是一对一的关系，无法做到服务端同时接收多个客户端的信息。这里可以利用多线程技术，让每个线程独立接管一个连接请求
 
@@ -1882,7 +1882,7 @@ class ServerThread extends Thread {
 
 > ![](img3/22.png)
 
-#### BS架构的TCP通信
+### BS架构的TCP通信
 
 `BS`架构，也就是常见的`浏览器-服务器`架构，最常见的通信协议是就是基于`TCP`协议的`HTTP`协议。因此，只要我们在服务端将响应包装为`HTTP`协议格式，就能实现`Java`与浏览器进行通信
 
@@ -1946,4 +1946,480 @@ class ServerThread extends Thread {
 ```
 
 > ![](img3/23.png)
+
+### 综合练习-网络聊天室
+
+**需求**
+
+编写一个网络聊天室程序，要求可以让局域网内的用户进行自由聊天
+
+**具体功能如下**
+
+1. 用户友好型设计，使用`GUI`编程
+2. 用户可以自定义自己的用户名，聊天室中不允许出现同样的用户名
+3. 可以看到在线用户列表，用户下线也需要同步在列表中删除该用户
+4. 用户的发言应有明显的标注信息，如用户名、时间等
+
+#### 实现
+
+1. 首先进行`GUI`开发，创建需要的登陆页面和聊天室页面，并添加相应的监听与`API`备用
+
+`LoginFrame.java`
+
+```java
+package com.eiousee;
+
+import javax.swing.*;
+import java.awt.*;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.Socket;
+
+public class LoginFrame extends JFrame {
+
+    private JTextField usernameField;
+    private JButton loginButton;
+    private JButton exitButton;
+    private DataOutputStream dos;
+    private DataInputStream dis;
+
+    public LoginFrame() {
+        // 1. 窗口基本设置
+        setTitle("用户登录");
+        setSize(300, 130); // 高度稍微调小一点以适应单行输入
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null); // 居中显示
+
+        // 2. 初始化组件
+        usernameField = new JTextField(15); // 设置列数为15，控制宽度
+        loginButton = new JButton("登录");
+        exitButton = new JButton("退出");
+
+        // 3. 布局设计
+        
+        // --- 顶部面板：放置用户名输入 ---
+        // 使用 BorderLayout 可以让 TextField 高度自动适应文字高度
+        JPanel topPanel = new JPanel(new BorderLayout(10, 0)); 
+        topPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 10)); // 添加外边距
+        topPanel.add(new JLabel("用户名:"), BorderLayout.WEST); // 标签靠左
+        topPanel.add(usernameField, BorderLayout.CENTER);     // 输入框填满剩余空间
+
+        // --- 底部面板：放置按钮 ---
+        // FlowLayout 默认就是居中对齐的
+        JPanel bottomPanel = new JPanel(); 
+        bottomPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10)); // 底部留白
+        bottomPanel.add(loginButton);
+        bottomPanel.add(exitButton);
+
+        // 4. 将面板添加到主窗口
+        add(topPanel, BorderLayout.CENTER); // 输入区域在中间
+        add(bottomPanel, BorderLayout.SOUTH); // 按钮区域在底部
+
+        // 5. 事件监听
+
+        exitButton.addActionListener(e -> System.exit(0));
+    }
+}
+```
+
+`ChatInterface.java`
+
+```java
+package com.eiousee;
+
+import javax.swing.*;
+import javax.swing.border.EmptyBorder;
+import java.awt.*;
+import java.io.DataOutputStream;
+import java.net.Socket;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+public class ChatInterface extends JFrame {
+
+    private JTextArea messageArea;      // 聊天记录显示区
+    private JTextArea inputField;       // 消息输入框
+    private JButton sendButton;
+    private JList<String> userList;     // 成员列表
+    private DefaultListModel<String> userListModel;
+    private Socket socket;
+    private String username;
+
+    public ChatInterface() {
+        setSize(800, 600);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        initComponents();
+        setupListeners();
+    }
+
+    private void initComponents() {
+        messageArea = new JTextArea();
+        messageArea.setEditable(false); 
+        messageArea.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        messageArea.setMargin(new Insets(5, 5, 5, 5));
+        JScrollPane messageScrollPane = new JScrollPane(messageArea);
+
+        inputField = new JTextArea();
+        inputField.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        inputField.setLineWrap(true); 
+        JScrollPane inputScrollPane = new JScrollPane(inputField);
+
+        sendButton = new JButton("发送");
+        sendButton.setPreferredSize(new Dimension(80, 30));
+
+        JPanel inputPanel = new JPanel(new BorderLayout());
+        inputPanel.add(inputScrollPane, BorderLayout.CENTER);
+        inputPanel.add(sendButton, BorderLayout.EAST);
+
+        userListModel = new DefaultListModel<>();
+        userList = new JList<>(userListModel);
+        userList.setFont(new Font("微软雅黑", Font.PLAIN, 14));
+        userList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        JScrollPane userListScrollPane = new JScrollPane(userList);
+        userListScrollPane.setBorder(BorderFactory.createTitledBorder("在线成员"));
+
+        JPanel leftPanel = new JPanel(new BorderLayout());
+        leftPanel.add(messageScrollPane, BorderLayout.CENTER);
+        leftPanel.add(inputPanel, BorderLayout.SOUTH);
+
+        JPanel rightPanel = new JPanel(new BorderLayout());
+        rightPanel.setPreferredSize(new Dimension(150, 0)); 
+        rightPanel.add(userListScrollPane, BorderLayout.CENTER);
+
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBorder(new EmptyBorder(5, 5, 5, 5));
+        mainPanel.add(leftPanel, BorderLayout.CENTER);
+        mainPanel.add(rightPanel, BorderLayout.EAST);
+
+        add(mainPanel);
+    }
+
+    private void setupListeners() {
+        sendButton.addActionListener(e -> {
+            String text = inputField.getText().trim();
+            if (!text.isEmpty()) {
+                onSendMessage(text);
+                inputField.setText("");
+            }
+        });
+
+        userList.addListSelectionListener(e -> {
+            if (!e.getValueIsAdjusting()) {
+                String selectedUser = userList.getSelectedValue();
+                if (selectedUser != null) {
+                    onUserSelected(selectedUser);
+                }
+            }
+        });
+    }
+
+}
+```
+
+2. 创建服务端程序
+
+在服务端中，我们需要根据指定的端口开启`Socket`服务端通道，然后通过多线程技术，为每个连接请求分配一个独立的线程进行执行
+
+`Server.java`
+
+```java
+package com.eiousee;
+
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class Server {
+
+    public static void main(String[] args) throws Exception {
+        ServerSocket serverSocket = new ServerSocket(Config.SERVER_PORT);
+
+        while(true) {
+            Socket socket = serverSocket.accept();
+            System.out.println("用户" + socket.getInetAddress().getHostAddress() + "已连接");
+            new ServerThread(socket).start();
+        }
+    }
+}
+
+```
+
+3. 创建服务端线程
+
+在服务端线程中，主要负责业务逻辑的实现，即收到用户请求后，返回正确的服务端响应。因此我们需要自定义一个简单的网络协议，用于区分不同的用户请求，比如先发送一个数字代表操作类型，`0`表示用户登录请求，需要服务器检查用户名并返回检查结果，`1`表示群聊消息请求，需要服务器转发到其他线程中。
+
+`ServerThread.java`
+
+```java
+package com.eiousee;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.net.Socket;
+import java.util.Map;
+import java.util.Queue;
+
+public class ServerThread extends Thread{
+    private Socket socket;
+    private DataInputStream dis;
+    private DataOutputStream dos;
+    private String username;
+
+    public ServerThread(Socket socket) {
+        this.socket = socket;
+    }
+
+    @Override
+    public void run() {
+        try {
+            dis = new DataInputStream(socket.getInputStream());
+            dos = new DataOutputStream(socket.getOutputStream());
+
+            while(true) {
+                int type = dis.readInt();
+                switch (type) {
+                    // 用户名检查
+                    case 0:
+                        
+                        break;
+                    // 接收群聊消息
+                    case 1:
+                       
+                        break;
+                }
+            }
+        } catch (Exception e) {
+            if (username != null) {
+                System.out.println("用户" + username + "已下线");
+            }
+        }
+    }
+}
+
+```
+
+4. 实现登录逻辑
+
+根据用户思维，假设我们打开了程序，输入用户名，点击了登录，下一步就是客户端向服务端发送连接请求，然后发送一个数字`0`表示登录请求
+
+`LoginFrame.java`
+
+因此我们补充登录页面中的事件监听器，向服务端发送`Socket`连接请求，然后再发送一个数字`0`表示登录请求，然后发送用户名，接着接收服务器响应。这里我们再自定义一个协议，当客户端发送登录请求后，接收一个服务端发来的数字，`1`表示用户名已存在，禁止登录，`0`表示用户名可用
+
+```java
+// 5. 事件监听
+loginButton.addActionListener(e -> {
+    String username = usernameField.getText().trim();
+    if (username.isEmpty() || username.length() > 20 || username.contains(" ")) {
+        JOptionPane.showMessageDialog(this, "非法用户名", "提示", JOptionPane.WARNING_MESSAGE);
+    } else {
+        try {
+            // 建立与服务器的连接
+            Socket socket = new Socket(Config.SERVER_IP, Config.SERVER_PORT);
+            // 用户名验证
+            dos = new DataOutputStream(socket.getOutputStream());
+            dis = new DataInputStream(socket.getInputStream());
+            dos.writeInt(0);
+            dos.writeUTF(username);
+            dos.flush();
+
+            int result = dis.readInt();
+            if (result == 1) {
+                JOptionPane.showMessageDialog(this, "用户名已存在", "提示", JOptionPane.WARNING_MESSAGE);
+            }
+            else if (result == 0){
+                // 登录成功，进入聊天界面
+                ChatInterface chatInterface = new ChatInterface(socket, username);
+                chatInterface.setVisible(true);
+                this.dispose(); // 关闭当前窗口
+            } else {
+                JOptionPane.showMessageDialog(this, "未知错误", "提示", JOptionPane.WARNING_MESSAGE);
+            }
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "服务器连接失败", "提示", JOptionPane.WARNING_MESSAGE);
+        }
+    }
+});
+```
+
+`ServerThread.java`
+
+现在客户端已经给我们发来了数字`0`登录请求，因此我们需要完善用户名检查的验证逻辑，并向客户端返回正确的验证结果信息。首先我们应该接收用户名，然后判断用户名是否存在。而这里就需要一个容器来存储用户名，我们暂且先使用`Queue`队列，每次检查，我们判断队列中是否存在这个用户名，如果不存在，则加入队列，并返回数字`0`，允许用户登录，如果队列中已经存在该用户名，则返回数字`1`，禁止用户登录
+
+```java
+package com.eiousee;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.net.Socket;
+import java.util.Map;
+import java.util.Queue;
+
+public class ServerThread extends Thread{
+    private Socket socket;
+    private DataInputStream dis;
+    private DataOutputStream dos;
+    private String username;
+    private Queue<String> userList;
+
+    public ServerThread1(Socket socket) {
+        this.socket = socket;
+    }
+
+    @Override
+    public void run() {
+        try {
+            dis = new DataInputStream(socket.getInputStream());
+            dos = new DataOutputStream(socket.getOutputStream());
+
+            while(true) {
+                int type = dis.readInt();
+                switch (type) {
+                    // 用户名检查
+                    case 0:
+                        String username = dis.readUTF();
+                        isUsernameExist(username);
+                        break;
+                    // 接收群聊消息
+                    case 1:
+
+                        break;
+                }
+            }
+        } catch (Exception e) {
+            if (username != null) {
+                System.out.println("用户" + username + "已下线");
+            }
+        }
+    }
+
+    private void isUsernameExist(String username) throws Exception {
+        if (userList.contains(username)) {
+            dos.writeInt(1);
+        } else {
+            dos.writeInt(0);
+            this.username = username;
+            userList.add(username);
+            System.out.println("用户" + username + "已上线");
+        }
+    }
+}
+
+```
+
+5. 实现在线人数更新逻辑
+
+`Server.java`
+
+登录通过后，服务端应该主动向所有客户端发送一个更新在线人数的请求，然后再发送当前的在线人数。因此在`Server.java`主程序中，还需要一个属性来存储所有的`socket`实例，为了能够区分所有的`socket`实例，并为后面可能出现的私聊功能做准备，这里我们使用`Map<socket, username>`来保存所有的`socket`，用`socket`作为键的原因是用户名可能会重复~~（虽然这里不允许）~~，但是`socket`实例一定是唯一的。
+
+```java
+package com.eiousee;
+
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class Server {
+    private static Map<Socket, String> socketMap = new ConcurrentHashMap<>();
+
+    public static void main(String[] args) throws Exception {
+        ServerSocket serverSocket = new ServerSocket(Config.SERVER_PORT);
+
+        while(true) {
+            Socket socket = serverSocket.accept();
+            System.out.println("用户" + socket.getInetAddress().getHostAddress() + "已连接");
+            new ServerThread(socket, socketMap).start();
+        }
+    }
+}
+```
+
+`ServerThread.java`
+
+在`Server.java`中创建`socketMap`后，也要同步更新到所有线程实例中，这样才能让所有线程都有将数据转发到所有`socket`的能力。然后是完善在线人数更新的逻辑，在登录完成后，然后遍历`socketMap`的键，也就是所有的`socket`实例，发送数字`1`，表示服务端发送的更新在线人数请求，然后再发送需要接收的在线人数的个数，最后遍历`socketMap`的值，将所有的在线用户的用户名发送到客户端。同时，如果有用户断开`socket`连接，随即将其从`socketMap`中删除，并再次更新在线人数
+
+```java
+package com.eiousee;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.net.Socket;
+import java.util.Map;
+import java.util.Queue;
+
+public class ServerThread extends Thread{
+    private Socket socket;
+    private DataInputStream dis;
+    private DataOutputStream dos;
+    private String username;
+    private Map<Socket, String> socketMap;
+
+    public ServerThread(Socket socket, Map<Socket, String> socketMap) {
+        this.socket = socket;
+        this.socketMap = socketMap;
+    }
+
+    @Override
+    public void run() {
+        try {
+            dis = new DataInputStream(socket.getInputStream());
+            dos = new DataOutputStream(socket.getOutputStream());
+
+            while(true) {
+                int type = dis.readInt();
+                switch (type) {
+                    // 用户名检查
+                    case 0:
+                        String username = dis.readUTF();
+                        isUsernameExist(username);
+                        break;
+                    // 接收群聊消息
+                    case 1:
+                        break;
+                }
+            }
+        } catch (Exception e) {
+            socketMap.remove(socket);
+            if (username != null) {
+                System.out.println("用户" + username + "已下线");
+                try {
+                    getAllOnlineUsers();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
+    }
+
+    private void isUsernameExist(String username) throws Exception {
+        if (socketMap.containsValue(username)) {
+            dos.writeInt(1);
+        } else {
+            dos.writeInt(0);
+            this.username = username;
+            System.out.println("用户" + username + "已上线");
+            socketMap.put(socket, username);
+            getAllOnlineUsers();
+        }
+    }
+
+    private void getAllOnlineUsers() throws Exception {
+        for (Socket socket : socketMap.keySet()) {
+            DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+            dos.writeInt(1);
+            dos.writeInt(socketMap.size());
+            for (String username : socketMap.values()) {
+                dos.writeUTF(username);
+            }
+            dos.flush();
+        }
+    }
+}
+```
 
