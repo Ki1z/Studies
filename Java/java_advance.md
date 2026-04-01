@@ -1,6 +1,6 @@
 # Java Advance
 
-`更新时间：2026-3-31`
+`更新时间：2026-4-1`
 
 注释解释：
 
@@ -2423,3 +2423,305 @@ public class ServerThread extends Thread{
 }
 ```
 
+`ChatInterface.java`
+
+客户端需要同时拥有收发功能，因此在创建`Frame`时，也必须将`socket`实例一并传递给聊天窗口实例。这里我们不考虑`MVC`，也不考虑`IOC`和`DI`
+
+```java
+private Socket socket;
+private String username;
+
+public ChatInterface(Socket socket, String username) {
+    this();
+    this.socket = socket;
+    this.username = username;
+    this.setTitle(username + " - 聊天室");
+}
+```
+
+`ClientReaderThread.java`
+
+如果客户端需要随时能够接收来自服务端的数据，就需要写一个死循环，通过`readInt`来监听请求代码
+
+```java
+public ChatInterface(Socket socket, String username) {
+    this();
+    this.socket = socket;
+    this.username = username;
+    this.setTitle(username + " - 聊天室");
+
+    while(true) {
+        try {
+            DataInputStream dis = new DataInputStream(socket.getInputStream());
+            System.out.println("等待服务器请求");
+            int type = dis.readInt();
+            System.out.println("请求类型：" + type);
+            switch (type) {
+                case 1:
+                    System.out.println("收到用户列表更新");
+                    int count = dis.readInt();
+                    System.out.println("用户数量：" + count);
+                    String[] users = new String[count];
+                    for (int i = 0; i < count; i++) {
+                        users[i] = dis.readUTF();
+                        System.out.println("用户：" + users[i]);
+                    }
+                    setUserList(users);
+                    break;
+                case 2:
+                    break;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+protected void setUserList(String[] users) {
+    userList.setListData(users);
+```
+
+但这里又有一个问题，如果程序开始循环监听服务端的数据，那么其他的代码就无法正常运行，如上的代码中，在用户点击登陆后，客户端的控制台结果如下
+
+> ![](img3/24.png)
+
+在正确接收服务端请求后，客户端会立即再次尝试接收，甚至连聊天界面都无法创建
+
+> ![](img3/25.png)
+
+`ClientReaderThread.java`
+
+因此，客户端接收数据的工作不能靠主线程来完成，而是需要额外创建一个专门用于接收服务端请求的线程。在这个线程中，随时监听服务端请求，并根据请求号的不同执行不用的数据处理流程，同时，子线程也需要持有用户界面`chatInterface`的实例，让`chatInterface`随时能够更新用户界面
+
+```java
+package com.eiousee;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.Socket;
+import java.util.Queue;
+
+public class ClientReaderThread extends Thread{
+    private final ChatInterface chatInterface;
+    private final Socket socket;
+    private final String username;
+    private DataInputStream dis;
+    private DataOutputStream dos;
+
+    public ClientReaderThread(Socket socket, String username, ChatInterface chatInterface) {
+        this.socket = socket;
+        this.username = username;
+        this.chatInterface = chatInterface;
+    }
+
+    @Override
+    public void run() {
+        try {
+            dis = new DataInputStream(socket.getInputStream());
+            dos = new DataOutputStream(socket.getOutputStream());
+
+            while (true) {
+                int type = dis.readInt();
+                switch (type) {
+                    // 用户列表更新
+                    case 1:
+                        System.out.println("收到用户列表更新");
+                        updateUserList();
+                        break;
+                    // 群聊消息
+                    case 2:
+                        break;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void updateUserList() {
+        try {
+            System.out.println("开始更新用户列表");
+            int count = dis.readInt();
+            System.out.println("用户数量：" + count);
+            String[] users = new String[count];
+            for (int i = 0; i < count; i++) {
+                users[i] = dis.readUTF();
+            }
+            chatInterface.setUserList(users);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+6. 实现群聊逻辑
+
+现在用户已经登录了系统，并且正确更新了在线人数，于是在输入框输入了想要发送的聊天数据，并点击了发送按钮
+
+`ChatInterface.java`
+
+我们为`ChatInterface`中的按钮绑定事件
+
+```java
+private void setupListeners() {
+    sendButton.addActionListener(e -> {
+        String text = inputField.getText().trim();
+        if (!text.isEmpty()) {
+            onSendMessage(text);
+            inputField.setText("");
+        }
+    });
+}
+```
+
+然后实现发送逻辑，通过当前`socket`向服务端发送群聊请求，请求号`1`，后面紧跟聊天数据
+
+```java
+protected void onSendMessage(String message) {
+    try {
+        DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+        dos.writeInt(1);
+
+        LocalDateTime now = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd   HH:mm:ss");
+        String content = username + "   " + now.format(formatter) + "\r\n     " + message + "\r\n\n";
+        System.out.println(username + "发送了一条群聊消息");
+        dos.writeUTF(content);
+        dos.flush();
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+```
+
+`ServerThread.java`
+
+现在客户端发来了群聊请求，需要服务端转发到其他`socket`中，服务端首先接收请求号`1`，表示群聊消息转发请求，然后遍历当前所有的`socket`实例，用每个`socket`实例向客户端发送请求号`2`，再发送聊天内容
+
+```java
+@Override
+public void run() {
+    try {
+        dis = new DataInputStream(socket.getInputStream());
+        dos = new DataOutputStream(socket.getOutputStream());
+
+        while(true) {
+            int type = dis.readInt();
+            switch (type) {
+                // 用户名检查
+                case 0:
+                    String username = dis.readUTF();
+                    isUsernameExist(username);
+                    break;
+                // 接收群聊消息
+                case 1:
+                    String message = dis.readUTF();
+                    System.out.println("收到群聊消息：" + message);
+                    sendMessageToAll(message);
+                    break;
+            }
+        }
+    } catch (Exception e) {
+        socketMap.remove(socket);
+        if (username != null) {
+            System.out.println("用户" + username + "已下线");
+            try {
+                getAllOnlineUsers();
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+}
+
+private void sendMessageToAll(String message) throws Exception {
+    for (Socket socket : socketMap.keySet()) {
+        DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
+        dos.writeInt(2);
+        dos.writeUTF(message);
+        dos.flush();
+    }
+}
+```
+
+`ClientReaderThread.java`
+
+现在服务端完成了转发，客户端随即接收请求号，并接收聊天内容，调用`ChatInterface`实例，将聊天内容添加到用户界面上
+
+```java
+package com.eiousee;
+
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
+import java.io.IOException;
+import java.net.Socket;
+import java.util.Queue;
+
+public class ClientReaderThread extends Thread{
+    private final ChatInterface chatInterface;
+    private final Socket socket;
+    private final String username;
+    private DataInputStream dis;
+    private DataOutputStream dos;
+
+    public ClientReaderThread(Socket socket, String username, ChatInterface chatInterface) {
+        this.socket = socket;
+        this.username = username;
+        this.chatInterface = chatInterface;
+    }
+
+    @Override
+    public void run() {
+        try {
+            dis = new DataInputStream(socket.getInputStream());
+            dos = new DataOutputStream(socket.getOutputStream());
+
+            while (true) {
+                int type = dis.readInt();
+                switch (type) {
+                    // 用户列表更新
+                    case 1:
+                        System.out.println("收到用户列表更新");
+                        updateUserList();
+                        break;
+                    // 群聊消息
+                    case 2:
+                        System.out.println("收到群聊消息");
+                        updateMessageQueue();
+                        break;
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void updateMessageQueue() {
+        try {
+            System.out.println("开始更新消息队列");
+            String message = dis.readUTF();
+            chatInterface.appendMessage(message);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+```
+
+`ChatInterface.java`
+
+在用户界面中，将所有聊天记录添加到`messageArea`中
+
+```java
+public void appendMessage(String message) {
+    messageArea.append(message);
+}
+```
+
+> ![](img3/26.png)
+
+> ![](img3/27.png)
+
+> ![](img3/28.png)
