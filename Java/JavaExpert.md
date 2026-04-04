@@ -684,7 +684,7 @@ public class SourceImpl implements SourceInterface{
 
 `ProxyUtil.java`
 
-```java
+```ejava
 package com.eiousee.expert.calculation;
 
 import java.lang.reflect.Proxy;

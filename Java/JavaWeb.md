@@ -1,6 +1,6 @@
 # Java Web
 
-`更新时间：2026-3-19`
+`更新时间：2026-4-4`
 
 注释解释：
 
@@ -2432,3 +2432,206 @@ public class UserController {
 | `@Resource`  | `@Resource(name = "BeanName")` | 注解`Bean`属性，拥有`@Resource`注解的属性无需再添加`@Autowired`注解 |
 
 *注：`@Resource`是`JavaEE`标准下的注解，根据名称进行注入；而`@Autowired`是`Spring`标准的注解，根据类型进行注入*
+
+### JDBC
+
+`JDBC`全称`Java DataBase Connectivity`，是使用`Java`语言操作关系型数据库的`API`的统称
+
+`sun`公司官方定义一套操作所有关系型数据库的规范接口，各个数据库厂商自行实现接口，提供数据库驱动`jar`包，作为开发者，使用的就是驱动`jar`包中的实现类
+
+#### 快速入门
+
+基于`JDBC`，编写一个程序，连接后台`mysql`数据库，执行一条更新语句
+
+1. 准备依赖
+
+```xml
+<!--		jdbc mysql8 -->
+<dependency>
+    <groupId>com.mysql</groupId>
+    <artifactId>mysql-connector-j</artifactId>
+    <version>8.0.33</version>
+</dependency>
+```
+
+2. 注册驱动，获取连接
+
+```java
+// 注册驱动 mysql8.1
+Class.forName("com.mysql.cj.jdbc.Driver");
+// 获取连接
+String url = "jdbc:mysql://localhost:3306/jdbc?serverTimezone=UTC";
+String user = "root";
+String password = "root";
+java.sql.Connection connection = java.sql.DriverManager.getConnection(url, user, password);
+```
+
+3. 获取`sql`执行器对象，并执行`sql`语句
+
+```java
+// 获取执行器对象
+java.sql.Statement statement = connection.createStatement();
+// 构建sql语句
+String sql = "UPDATE users SET password = 666666 WHERE id = 3";
+// 执行sql语句
+int count = statement.executeUpdate(sql);
+// 关闭资源
+statement.close();
+connection.close();
+```
+
+> ![](javaweb/28.png)
+
+执行`sql`语句，将`id`为1的用户信息封装到用户实体类中
+
+```java
+package com.eiousee.test;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.sql.Date;
+import java.sql.ResultSet;
+
+public class DBTest {
+    public static void main(String[] args) throws Exception {
+        // 注册驱动 mysql8.1
+        Class.forName("com.mysql.cj.jdbc.Driver");
+        // 获取连接
+        String url = "jdbc:mysql://localhost:3306/jdbc?serverTimezone=UTC";
+        String username = "root";
+        String password = "root";
+        java.sql.Connection connection = java.sql.DriverManager.getConnection(url, username, password);
+        // 获取执行器对象
+        java.sql.Statement statement = connection.createStatement();
+        // 构建sql语句
+        String sql = "SELECT * FROM users WHERE id = 3";
+        // 执行sql语句
+        ResultSet resultSet = statement.executeQuery(sql);
+        // 封装为User
+        User user = new User();
+        while (resultSet.next()) {
+            user.setId(resultSet.getInt("id"));
+            user.setName(resultSet.getString("name"));
+            user.setPassword(resultSet.getString("password"));
+            user.setEmail(resultSet.getString("email"));
+            user.setBirthday(resultSet.getDate("birthday"));
+        }
+        System.out.println(user);
+        // 关闭资源
+        statement.close();
+        connection.close();
+    }
+}
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+class User {
+    private Integer id;
+    private String name;
+    private String password;
+    private String email;
+    private Date birthday;
+}
+```
+
+> ![](javaweb/29.png)
+
+#### 预编译SQL
+
+为了提高查询效率，并防止`SQL`注入攻击，`JDBC`提供了预编译`SQL`，通过使用`PrepareStatement`类来构建预编译`SQL`语句，然后执行数据库查询
+
+**示例**
+
+```java
+// 注册驱动 mysql8.1
+Class.forName("com.mysql.cj.jdbc.Driver");
+// 获取连接
+String url = "jdbc:mysql://localhost:3306/jdbc?serverTimezone=UTC";
+String username = "root";
+String password = "root";
+java.sql.Connection connection = java.sql.DriverManager.getConnection(url, username, password);
+// 构建sql语句
+String sql = "UPDATE users SET password = ? WHERE id = ?";
+// 获取预编译对象
+PreparedStatement statement = connection.prepareStatement(sql);
+statement.setObject(1, 666666);
+statement.setObject(2, 3);
+// 执行sql语句
+ResultSet resultSet = statement.executeQuery(sql);
+```
+
+### MyBatis
+
+`MyBatis`是一款优秀的持久层框架，用于简化`JDBC`的开发。`MyBatis`原是`Apache`的开源项目`iBatis`，2010年由`Apache`迁移到了`Google Code`，并改名为`MysBatis`，2013年又迁移到`Github`
+
+#### 快速入门
+
+使用`mybatis`查询所有用户数据，并封装为用户实体类
+
+1. 引入`mybatis`依赖
+
+```xml
+<!--		MyBatis-->
+<dependency>
+    <groupId>org.mybatis.spring.boot</groupId>
+    <artifactId>mybatis-spring-boot-starter</artifactId>
+</dependency>
+```
+
+2. 在`application.properties`添加数据库信息
+
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/jdbc
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.username=root
+spring.datasource.password=root
+```
+
+3. 定义`mybatis`接口，并注解`Mapper`接口
+
+```java
+package com.eiousee.test;
+
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
+
+import java.util.List;
+
+@Mapper
+public interface UserMapper {
+    @Select("SELECT * FROM users")
+    public List<User> getUsers();
+}
+```
+
+4. 目前的`UserMapper`已经成为了`IOC`中的一个`Bean`，现在只需要用一个容器注入`Bean`即可，我们在`SpringBoot`提供的默认测试类中编写测试方法，并注入`UserMapper`
+
+```java
+package com.eiousee;
+
+import com.eiousee.entity.User;
+import com.eiousee.mapper.UserMapper;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.List;
+
+@SpringBootTest
+class WebProjectApplicationTests {
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Test
+    public void test() {
+        List<User> users = userMapper.getUsers();
+        users.forEach(System.out::println);
+    }
+}
+```
+
+> ![](javaweb/30.png)
