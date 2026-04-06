@@ -1,6 +1,6 @@
 # Java Web
 
-`更新时间：2026-4-4`
+`更新时间：2026-4-6`
 
 注释解释：
 
@@ -2428,7 +2428,7 @@ public class UserController {
 | 注解         | 语法                           | 说明                                                         |
 | ------------ | ------------------------------ | ------------------------------------------------------------ |
 | `@Primary`   | `@Primary`                     | 注解`Bean`类                                                 |
-| `@Qualifier` | `@Qualifier("BeanName")`       | 注解`Bean`属性，`BeanName`为`Bean`的名字，默认为类名，但是首字母小写 |
+| `@Qualifier` | `@Qualifier("BeanName")`       | 注解`Bean`属性，`BeanName`为`Bean`的名字，默认为类名，但是首字母小写。必须结合`@Autowired`使用 |
 | `@Resource`  | `@Resource(name = "BeanName")` | 注解`Bean`属性，拥有`@Resource`注解的属性无需再添加`@Autowired`注解 |
 
 *注：`@Resource`是`JavaEE`标准下的注解，根据名称进行注入；而`@Autowired`是`Spring`标准的注解，根据类型进行注入*
@@ -2635,3 +2635,280 @@ class WebProjectApplicationTests {
 ```
 
 > ![](javaweb/30.png)
+
+#### 数据库连接池
+
+数据库连接池是负责分配管理数据库连接实例的容器，它允许应用程序重复使用一个现有的数据库连接，而不是每次重新建立一个。数据库连接池可以释放空闲时间超过最大空间时间的连接，避免因为没有释放连接而引起的数据库连接遗漏。`sun`公司提供了数据库连接池的接口`DataSource`，由第三方公司或组织实现此接口。常见的数据库连接池产品有`c3p0`、`dbcp`、`druid`，以及`spring`默认的`hikari`
+
+目前最常用的是`com.alibaba`旗下的`druid`连接池
+
+##### 切换连接池
+
+1. 引入依赖
+
+`pom.xml`
+
+```xml
+<!--        druid连接池-->
+<dependency>
+    <groupId>com.alibaba</groupId>
+    <artifactId>druid-spring-boot-starter</artifactId>
+    <version>1.2.17</version>
+</dependency>
+```
+
+2. 修改配置文件
+
+`application.properties`
+
+```properties
+# 配置druid连接池
+spring.datasource.type=com.alibaba.druid.pool.DruidDataSource
+```
+
+#### CRUD
+
+##### 删除操作
+
+使用`MyBatis`删除数据库中的一条数据。
+
+在`MyBatis`中，提供了参数化查询的方式，使用`#{ParamName}`的方式指定需要插入的参数，然后放置在`sql`语句中
+
+`UserMapper.java`
+
+```java
+@Delete("DELETE FROM users WHERE id = #{id}")
+public void deleteUser(Integer id);
+```
+
+`WebProjectApplicationTests.java`
+
+```java
+@Test
+public void testDeleteUser() {
+    userMapper.deleteUser(1);
+}
+```
+
+> ![](javaweb/31.png)
+
+可以看出，在`MyBatis`的底层，将`#{id}`解析为了`?`，使用`PrepareStatement`预编译`sql`来执行
+
+同时，可以为方法设置一个返回值接收受影响的行数
+
+`UserMapper.java`
+
+```java
+@Delete("DELETE FROM users WHERE id = #{id}")
+public Integer deleteUserWithReturn(Integer id);
+```
+
+`WebProjectApplicationTests.java`
+
+```java
+@Test
+public void testDeleteUserWithReturn() {
+    Integer result = userMapper.deleteUserWithReturn(1);
+    if (result > 0) {
+        System.out.println("删除成功");
+    } else {
+        System.out.println("删除失败");
+    }
+}
+```
+
+> ![](javaweb/32.png)
+
+*在`MyBatis`中，也能使用拼接符`${...}`，直接将输入拼接在`sql`语句中，因此存在`sql`注入风险*
+
+##### 增加操作
+
+向用户表增添一条用户数据。
+
+在`MyBatis`中新增用户时，可以直接将用户实例作为参数插入`sql`语句中，`MyBatis`会根据`sql`语句中的占位符自动解析实例属性
+
+`UserMapper.java`
+
+```java
+@Insert("INSERT INTO users(id, name, password, email, birthday) VALUES(#{id},#{name},#{password},#{email},#{birthday})")
+public void addUser(User user);
+```
+
+`WebProjectApplicationTests.java`
+
+```java
+@Test
+public void testAddUser() {
+    User user = new User(1, "zs", "123456", "zhangsan@163.com", Date.valueOf("1999-01-01"));
+    userMapper.addUser(user);
+}
+```
+
+> ![](javaweb/33.png)
+
+##### 修改操作
+
+根据`ID`更新用户信息
+
+`UserMapper.java`
+
+```java
+@Update("UPDATE users SET name = #{name}, password = #{password}, email = #{email}, birthday = #{birthday} WHERE id = #{id}")
+public void updateUser(User user);
+```
+
+`WebProjectApplicationTests.java`
+
+```java
+@Test
+public void testUpdateUser() {
+    User user = new User(1, "lisi", "123456", "lisi@163.com", Date.valueOf("1999-01-01"));
+    userMapper.updateUser(user);
+}
+```
+
+> ![](javaweb/34.png)
+
+##### 查询操作
+
+使用`name`和`email`来约束查询条件
+
+由于非官方骨架创建的`SpringBoot`项目中字节码文件无法保留参数名称，因此`MyBatis`提供了`@Param`注解来标记需要注入的参数位置
+
+`UserMapper.java`
+
+```java
+@Select("SELECT * FROM users WHERE name = #{name} AND email = #{email}")
+public User getUserByNameAndEmail(@Param("name") String name, @Param("email") String email);
+```
+
+`WebProjectApplicationTests.java`
+
+```java
+@Test
+public void testGetUserByNameAndEmail() {
+    User user = userMapper.getUserByNameAndEmail("lisi", "lisi@163.com");
+    System.out.println(user);
+}
+```
+
+> ![](javaweb/35.png)
+
+#### XML映射配置
+
+`MyBatis`支持使用`xml`文件来定义所有的注解信息，这个`xml`文件即被称为`XML`映射配置文件。`XML`映射配置文件的命名规范是必须与对应的`java`文件同包同名，并存储在`resources`目录中
+
+> ![](javaweb/36.png)
+
+然后在`xml`文件中定义`<mapper>`标签，使用`namespace`属性来指定`java`文件
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.eiousee.mapper.UserMapper">
+    
+</mapper>
+```
+
+然后添加对应的标签，如`select`、`update`、`delete`、`insert`等等来构建`sql`语句，在查询标签中，使用`id`属性指定`Mapper.java`文件中的方法，使用`resultType`方法指定返回值类型，`resultType`的值应是一个`Java`类引用
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.eiousee.mapper.UserMapper">
+    <select id="getUserByNameAndEmail" resultType="com.eiousee.entity.User">
+        SELECT * FROM users WHERE name = #{name} AND email = #{email}
+    </select>
+</mapper>
+```
+
+然后我们删除`UserMapper`中`getUserByNameAndEmail`的注解，并测试是否正常执行
+
+```
+//    @Select("SELECT * FROM users WHERE name = #{name} AND email = #{email}")
+    public User getUserByNameAndEmail(@Param("name") String name, @Param("email") String email);
+```
+
+> ![](javaweb/37.png)
+
+在`application.properties`中，也可以设置`Mapper.xml`文件的存储位置
+
+```properties
+# 设置mapper.xml路径
+mybatis.mapper-locations=classpath:mapper/*.xml
+```
+
+> ![](javaweb/38.png)
+
+### Spring配置文件
+
+在前面的学习中，我们为`Spring`配置文件新增了非常多的配置信息，但是总体来看，所有的配置信息混合在一起，结构非常混乱
+
+```properties
+spring.application.name=webProject
+server.port=80
+
+# 配置数据源
+spring.datasource.url=jdbc:mysql://localhost:3306/jdbc
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.username=root
+spring.datasource.password=root
+# 配置druid连接池
+spring.datasource.type=com.alibaba.druid.pool.DruidDataSource
+
+# mybatis控制台输出
+mybatis.configuration.log-impl=org.apache.ibatis.logging.stdout.StdOutImpl
+# 设置mapper.xml路径
+mybatis.mapper-locations=classpath:mapper/*.xml
+```
+
+而且类似`spring.datasource`的前缀出现次数非常多，如果有非常多相同前缀的配置，那么就要重复很多次。因此，我们可以使用`yml`格式的配置文件
+
+`application.yml`
+
+```yml
+server:
+  # 端口
+  port: 80
+
+spring:
+  application:
+    name: webProject
+  # 数据源
+  datasource:
+    url: jdbc:mysql://localhost:3306/jdbc
+    username: root
+    password: root
+    driver-class-name: com.mysql.jdbc.Driver
+    # druid连接池
+    type: com.alibaba.druid.pool.DruidDataSource
+
+# mybatis相关配置
+mybatis:
+  # mapper.xml文件路径
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    # 控制台输出
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+```
+
+在`yml`文件中，也可以定义对象、`Map`集合、数组等等
+
+```yml
+# 定义对象/Map集合
+User:
+  name: zhangsan
+  age: 18
+ 
+# 定义数组
+Hobby:
+  - java
+  - python
+  - c
+```
+
