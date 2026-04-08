@@ -1,6 +1,6 @@
 # Java Web
 
-`更新时间：2026-4-6`
+`更新时间：2026-4-8`
 
 注释解释：
 
@@ -1800,7 +1800,7 @@ public class Hello {
 | provided | Y      | Y        | N    | Servlet-api |
 | runtime  | N      | Y        | Y    | jdbc        |
 
-## Java Spring
+## Java Spring概述
 
 `Java Spring` 是一个开源的应用程序框架，提供了全面的基础设施支持，用于构建企业级 Java 应用程序。它通过依赖注入和控制反转等核心功能，简化了开发过程，降低了模块间的耦合度。`Spring` 框架包含多个模块，如 `Spring Boot`、`Spring MVC`、`Spring Data`和 `Spring Security`等，使得开发者能够灵活、高效地开发各种规模的 Java 项目。
 
@@ -2912,3 +2912,411 @@ Hobby:
   - c
 ```
 
+## Java Spring基础项目实战
+
+编写一个完善的校园后台管理系统，拥有以下内容
+
+- `模块`：班级学员管理、系统信息管理、数据统计管理、员工信息管理、学员信息管理等
+- `操作`：对数据的增删改查操作、登录操作、文件上传操作
+- `技术`：数据可视化技术、报表统计技术、登录认证技术、日志管理技术
+
+### 开发规范
+
+#### 开发模式
+
+前后端分离开发：最主流的开发模式，前端工程师只负责前端渲染与页面表现，后端工程师只负责数据处理
+
+#### 接口文档
+
+在前后端分离开发模式中，如果前后端工程师没有交互，则互相都无法得知对方的参数名和参数类型等等，因此需要事先提供一份接口文档，用于规范前后端的编程接口，方便数据交互
+
+本项目接口文档详见<a href="./Interfaces.md">接口文档</a>
+
+#### Restful
+
+`Restful`是一种用于设计网络应用程序和服务之间通信的软件架构风格，基于HTTP协议，强调使用HTTP动词，如`GET`、`POST`、`PUT`、`DELETE`来操作资源，并通过URI唯一标识资源
+
+| 传统URI                 | 请求方式 | REST风格URI | 请求方式 | 含义              |
+| ----------------------- | -------- | ----------- | -------- | ----------------- |
+| `/user/getById?id=1`    | `GET`    | `/users/1`  | `GET`    | 查询`id`为1的用户 |
+| `/user/addUser`         | `POST`   | `/users`    | `POST`   | 新增用户          |
+| `/user/updateUser`      | `POST`   | `/users`    | `PUT`    | 更新用户          |
+| `/user/deleteUser?id=1` | `GET`    | `/users/1`  | `DELETE` | 删除`id`为1的用户 |
+
+#### API测试
+
+在实际开发过程中，由于前后端通常是并行开发，当某一方想要测试开发效果时，对方都还未完成开发工作。因此需要借助`API`测试工具，在测试过程中充当对方的身份，提供或返回相应数据
+
+这里我们使用`Postman`软件向后台发送一条测试数据
+
+```java
+package com.eiousee.controller;
+
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class UserController {
+    @RequestMapping("/hello")
+    public String list(@RequestParam("name") String name) {
+        return "Hello " + name;
+    }
+}
+```
+
+> ![](javaweb/39.png)
+
+#### 工程搭建
+
+1. 创建`Spring`工程，引入`MyBatis`、`Lombok`、`Mysql`等依赖
+
+`pom.xml`
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.mybatis.spring.boot</groupId>
+        <artifactId>mybatis-spring-boot-starter</artifactId>
+        <version>3.0.5</version>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.mybatis.spring.boot</groupId>
+        <artifactId>mybatis-spring-boot-starter-test</artifactId>
+        <version>3.0.5</version>
+        <scope>test</scope>
+    </dependency>
+    <!--    lombok-->
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <optional>true</optional>
+    </dependency>
+<!--        mysql8.0-->
+    <dependency>
+        <groupId>mysql</groupId>
+        <artifactId>mysql-connector-java</artifactId>
+        <version>8.0.33</version>
+    </dependency>
+<!--        druid连接池-->
+    <dependency>
+        <groupId>com.alibaba</groupId>
+        <artifactId>druid-spring-boot-starter</artifactId>
+        <version>1.2.17</version>
+    </dependency>
+</dependencies>
+```
+
+2. 创建数据表`dept`，配置`application.yml`的相关信息
+
+`application.yml`
+
+```yml
+server:
+  # 端口
+  port: 80
+
+spring:
+  application:
+    name: webProject
+  # 数据源
+  datasource:
+    url: jdbc:mysql://localhost:3306/jdbc
+    username: root
+    password: root
+    driver-class-name: com.mysql.jdbc.Driver
+    # druid连接池
+    type: com.alibaba.druid.pool.DruidDataSource
+
+# mybatis相关配置
+mybatis:
+  # mapper.xml文件路径
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    # 控制台输出
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+```
+
+`dept.sql`
+
+```mysql
+CREATE TABLE IF NOT EXISTS `dept`(
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT '部门编号',
+    name VARCHAR(32) NOT NULL UNIQUE COMMENT '部门名称',
+    create_time DATETIME DEFAULT NULL COMMENT '创建时间',
+    update_time DATETIME DEFAULT NULL COMMENT '修改时间'
+) COMMENT '部门表';
+
+INSERT INTO `dept`
+VALUES
+(1, '学工部', '2026-04-08 17:00:00', '2026-04-08 17:00:00'),
+(2, '教研部', '2026-04-08 17:00:00', '2026-04-08 17:00:00'),
+(3, '咨询部', '2026-04-08 17:00:00', '2026-04-08 17:00:00'),
+(4, '就业部', '2026-04-08 17:00:00', '2026-04-08 17:00:00'),
+(5, '人事部', '2026-04-08 17:00:00', '2026-04-08 17:00:00'),
+(6, '行政部', '2026-04-08 17:00:00', '2026-04-08 17:00:00');
+```
+
+3. 准备基础代码结构，创建实体类`Dept`以及统一的响应结果封装类`Result`
+
+`Dept.java`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class Dept {
+    private Integer id;
+    private String name;
+    private LocalDateTime createTime;
+    private LocalDateTime updateTime;
+}
+```
+
+`Result.java`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class Result {
+    private Integer code;
+    private String msg;
+    private Object data;
+
+    public static Result success() {
+        return new Result(1, "success", null);
+    }
+
+    public static Result success(Object data) {
+        return new Result(1, "success", data);
+    }
+
+    public static Result error(String msg) {
+        return new Result(0, msg, null);
+    }
+}
+```
+
+`DeptMapper.java`
+
+```java
+package com.eiousee.mapper;
+
+import org.apache.ibatis.annotations.Mapper;
+import org.springframework.stereotype.Repository;
+
+@Mapper
+@Repository
+public interface DeptMapper {
+
+}
+```
+
+`DeptService.java`
+
+```java
+package com.eiousee.service;
+
+public interface DeptService {
+}
+```
+
+`DeptController.java`
+
+```java
+package com.eiousee.controller;
+
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class DeptController {
+}
+```
+
+`DeptServiceImpl.java`
+
+```java
+package com.eiousee.service.impl;
+
+import com.eiousee.service.DeptService;
+import org.springframework.stereotype.Service;
+
+@Service
+public class DeptServiceImpl implements DeptService {
+}
+```
+
+### 部门查询功能
+
+#### 开发要求
+
+1. 由于部门数量较少，不考虑分页展示
+2. 对查询的结果，根据最后修改时间进行倒序排序
+
+#### 实现
+
+1. 首先构建正确的`sql`语句
+
+```mysql
+SELECT id, name, create_time, update_time FROM `dept` ORDER BY update_time DESC;
+```
+
+> ![](javaweb/40.png)
+
+2. 在`Controller`中定义正确的路由，调用`Service`提供的接口，并返回数据
+
+```java
+package com.eiousee.controller;
+
+import com.eiousee.pojo.Dept;
+import com.eiousee.pojo.Result;
+import com.eiousee.service.DeptService;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+@RestController
+public class DeptController {
+
+    private final DeptService deptService;
+
+    public DeptController(DeptService deptService) {
+        this.deptService = deptService;
+    }
+
+    @GetMapping("/depts")
+    public Result list() {
+        System.out.println("查询全部部门数据");
+        List<Dept> depts = deptService.getAllDepts();
+        return Result.success(depts);
+    }
+}
+```
+
+3. 在`Service`中编写`API`调用`Mapper`
+
+```java
+package com.eiousee.service.impl;
+
+import com.eiousee.mapper.DeptMapper;
+import com.eiousee.pojo.Dept;
+import com.eiousee.service.DeptService;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class DeptServiceImpl implements DeptService {
+
+    private final DeptMapper deptMapper;
+
+    public DeptServiceImpl(DeptMapper deptMapper) {
+        this.deptMapper = deptMapper;
+    }
+
+    @Override
+    public List<Dept> getAllDepts() {
+        return deptMapper.getAllDepts();
+    }
+}
+```
+
+4. 在`Mapper`中构建正确的`sql`语句，并返回结果
+
+```java
+package com.eiousee.mapper;
+
+import com.eiousee.pojo.Dept;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Mapper
+@Repository
+public interface DeptMapper {
+    @Select("SELECT id, name, create_time, update_time FROM `dept` ORDER BY update_time DESC")
+    public List<Dept> getAllDepts();
+}
+```
+
+> ![](javaweb/41.png)
+
+#### 结果封装
+
+在上文的截图中可以看到，虽然成功获取了部门数据，但是`createTime`和`updateTime`没有正确封装，这是因为我们在`sql`中定义的字段名是`update_time`，而`Java`中属性名是`updateTime`。为了解决这个问题，`MyBatis`提供了几种解决方案
+
+##### @Results注解
+
+**标准语法**
+
+```java
+@Results({
+            @Result(column = "column_name", property = "attributeName"),
+            @Result(column = "column_name", property = "attributeName")
+    })
+```
+
+**示例**
+
+```java
+@Select("SELECT id, name, create_time, update_time FROM `dept` ORDER BY update_time DESC")
+@Results({
+        @Result(column = "update_time", property = "updateTime"),
+        @Result(column = "create_time", property = "createTime")
+})
+public List<Dept> getAllDepts();
+```
+
+##### 起别名
+
+直接在`sql`语句中为字段起别名，别名与属性名一致
+
+**示例**
+
+```java
+@Select("SELECT id, name, create_time createTime, update_time updateTime FROM `dept` ORDER BY update_time DESC")
+public List<Dept> getAllDepts();
+```
+
+##### 驼峰命名映射
+
+如果开启驼峰命名映射，`MyBatis`会自动将`aa_bb_cc`的命令规范映射为`aaBbCc`
+
+`application.yml`
+
+```yml
+mybatis:
+	configuration:
+		map-underscore-to-camel-case: true
+```
+
+> ![](javaweb/42.png)
