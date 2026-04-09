@@ -1,6 +1,6 @@
 # Java Web
 
-`更新时间：2026-4-8`
+`更新时间：2026-4-9`
 
 注释解释：
 
@@ -3320,3 +3320,206 @@ mybatis:
 ```
 
 > ![](javaweb/42.png)
+
+### 部门删除功能
+
+#### 开发要求
+
+1. 根据参数`id`删除部门，要求使用`DELETE`请求方式
+
+#### 实现
+
+1. 构建正确的`sql`语句
+
+```mysql
+DELETE FROM `dept` WHERE id = #{id}
+```
+
+2. 实现`Controller`、`Service`、`Mapper`调用链逻辑
+
+`Controller`
+
+```java
+@DeleteMapping("/depts")
+public Result delete(Integer id) {
+    System.out.println("删除部门数据");
+    return deptService.deleteDeptById(id) > 0 ? Result.success() : Result.error("删除失败");
+}
+```
+
+`Service`
+
+```java
+@Override
+public Integer deleteDeptById(Integer id) {
+    return deptMapper.deleteDeptById(id);
+}
+```
+
+`Mapper`
+
+```java
+@Delete("DELETE FROM `dept` WHERE id = #{id}")
+Integer deleteDeptById(Integer id);
+```
+
+> ![](javaweb/43.png)
+
+### 部门添加功能
+
+`Controller`
+
+```java
+@PostMapping("/depts")
+public Result add(@RequestBody Dept dept) {
+    System.out.println("添加部门数据");
+    return deptService.addDept(dept) > 0 ? Result.success() : Result.error("添加失败");
+}
+```
+
+`Service`
+
+```java
+@Override
+public int addDept(Dept dept) {
+    LocalDateTime now = LocalDateTime.now();
+    dept.setCreateTime(now);
+    dept.setUpdateTime(now);
+    return deptMapper.addDept(dept);
+}
+```
+
+`Mapper`
+
+```java
+@Insert("INSERT INTO `dept` (name, create_time, update_time) VALUES (#{name}, #{createTime}, #{updateTime})")
+Integer addDept(Dept dept);
+```
+
+> ![](javaweb/44.png)
+
+### 部门修改功能
+
+#### 路径参数
+
+路径参数是指直接从`URI`中解析的参数，如`/depts/1`中的`1`就是路径参数。在`Spring`中，使用`{paramName}`来标记`URI`中的路径参数，如`/depts/{id}`，然后使用`@PathVariable`注解来标记路径参数解析到的形参位置
+
+#### 修改回显
+
+在点击修改按钮后，前端应再次向服务器的修改回显接口发送请求，根据指定的`id`来查询指定部门信息
+
+`Controller`
+
+```java
+@GetMapping("/depts/{id}")
+public Result getDeptById(@PathVariable Integer id) {
+    System.out.println("根据id查询部门数据");
+    return Result.success(deptService.getDeptById(id));
+}
+```
+
+`Service`
+
+```java
+@Override
+public Dept getDeptById(Integer id) {
+    return deptMapper.getDeptById(id);
+}
+```
+
+`Mapper`
+
+```java
+@Select("SELECT id, name, create_time, update_time FROM `dept` WHERE id = #{id}")
+Dept getDeptById(Integer id);
+```
+
+> ![](javaweb/45.png)
+
+#### 实现
+
+`Controller`
+
+```java
+@PutMapping("/depts")
+public Result update(@RequestBody Dept dept) {
+    System.out.println("更新部门数据");
+    return deptService.updateDept(dept) > 0 ? Result.success() : Result.error("更新失败");
+}
+```
+
+`Service`
+
+```java
+@Override
+public Integer updateDept(Dept dept) {
+    LocalDateTime now = LocalDateTime.now();
+    dept.setUpdateTime(now);
+    return deptMapper.updateDept(dept);
+}
+```
+
+`Mapper`
+
+```java
+@Update("UPDATE `dept` SET name = #{name}, update_time = #{updateTime} WHERE id = #{id}")
+Integer updateDept(Dept dept);
+```
+
+> ![](javaweb/46.png)
+
+*对于`URI`相同的`Mapping`方法，可以直接在类中添加`@RequestMapping("URI")`来指定，通过子注解指定`URI`后缀*
+
+```java
+package com.eiousee.controller;
+
+import com.eiousee.pojo.Dept;
+import com.eiousee.pojo.Result;
+import com.eiousee.service.DeptService;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/depts")
+public class DeptController {
+
+    private final DeptService deptService;
+
+    public DeptController(DeptService deptService) {
+        this.deptService = deptService;
+    }
+
+    @GetMapping
+    public Result list() {
+        System.out.println("查询全部部门数据");
+        List<Dept> depts = deptService.getAllDepts();
+        return Result.success(depts);
+    }
+
+    @DeleteMapping
+    public Result delete(Integer id) {
+        System.out.println("删除部门数据");
+        return deptService.deleteDeptById(id) > 0 ? Result.success() : Result.error("删除失败");
+    }
+
+    @PostMapping
+    public Result add(@RequestBody Dept dept) {
+        System.out.println("添加部门数据");
+        return deptService.addDept(dept) > 0 ? Result.success() : Result.error("添加失败");
+    }
+
+    @GetMapping("/{id}")
+    public Result getDeptById(@PathVariable Integer id) {
+        System.out.println("根据id查询部门数据");
+        return Result.success(deptService.getDeptById(id));
+    }
+
+    @PutMapping
+    public Result update(@RequestBody Dept dept) {
+        System.out.println("更新部门数据");
+        return deptService.updateDept(dept) > 0 ? Result.success() : Result.error("更新失败");
+    }
+}
+```
+
