@@ -1,6 +1,6 @@
 # Java Web
 
-`更新时间：2026-4-9`
+`更新时间：2026-4-10`
 
 注释解释：
 
@@ -3519,6 +3519,322 @@ public class DeptController {
     public Result update(@RequestBody Dept dept) {
         System.out.println("更新部门数据");
         return deptService.updateDept(dept) > 0 ? Result.success() : Result.error("更新失败");
+    }
+}
+```
+
+### LogBack日志技术
+
+在上文的程序中，我们记录程序日志的方式是`sout`控制台消息的方式，这种记录方式存在诸多弊端，如控制台清空后日志也一并清空，无法存储到文件等等。因此，我们需要一个专门的日志记录技术来记录程序的执行的所有操作信息，以便程序的维护与数据安全
+
+#### LogBack快速入门
+
+1. 引入依赖
+
+`pom.xml`
+
+```xml
+<!--        LogBack-->
+<dependency>
+    <groupId>ch.qos.logback</groupId>
+    <artifactId>logback-classic</artifactId>
+</dependency>
+```
+
+*注：`SpringBoot`依赖默认附带`LogBack`，无需再次引入*
+
+2. 编写`LogBack.xml`配置文件
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="debug">
+        <appender-ref ref="STDOUT" />
+    </root>
+</configuration>
+```
+
+3. 定义`LogBack`实例，调用实例方法记录日志
+
+```java
+package com.eiousee;
+
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class LogTest {
+
+    private static final Logger log = LoggerFactory.getLogger(LogTest.class);
+
+    @Test
+    public void test1() {
+        log.debug("开始计算");
+
+        Integer sum = 0;
+        Integer[] nums = {1, 2, 3, 4, 5};
+        for (Integer num : nums) {
+            sum += num;
+        }
+
+        log.info("结果为：{}", sum);
+        log.debug("结束计算");
+    }
+}
+```
+
+> ![](javaweb/47.png)
+
+#### 配置文件详解
+
+**日志输出位置**
+
+`LogBack`支持两种日志输出位置，分别是
+
+`控制台`
+
+```xml
+<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+```
+
+`文件`
+
+```xml
+<appender name="STDOUT" class="ch.qos.logback.core.rolling.RollingFileAppender">
+```
+
+**日志输出格式**
+
+```xml
+<pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n</pattern>
+```
+
+- `%d{}`：输出日期，后方的大括号内是日期的表示格式
+- `%thread`：线程名
+- `%-5level`：`%level`表示输出级别，`%-5`表示补齐到5个字符
+- `%logger{}`：`Logger`实例的名称，`{50}`表示最大50字符
+
+**文件设置**
+
+```xml
+<!--    文件输出-->
+<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+<!--            日志输出文件名-->
+        <fileNamePattern>log/wp-%d{yyyy-MM-dd}-%i.log</fileNamePattern>
+<!--            最多保留的日志文件数量-->
+        <maxHistory>30</maxHistory>
+<!--            最大日志文件大小-->
+        <maxFileSize>10MB</maxFileSize>
+    </rollingPolicy>
+    <encoder>
+        <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n</pattern>
+    </encoder>
+</appender>
+```
+
+**日志输出级别**
+
+日志级别指的是日志信息的类型，日志都会分级别，常见的日志级别如下
+
+| 日志级别 | 说明                                                         | 记录方式      |
+| -------- | ------------------------------------------------------------ | ------------- |
+| `TRACE`  | 追踪，记录程序运行轨迹                                       | `log.trace()` |
+| `DEBUG`  | 调试，记录程序中的信息，实际应用中一般将其视为最低级别       | `log.debug()` |
+| `INFO`   | 记录一般信息，描述程序运行的关键事件，如网络连接、`IO`操作等等 | `log.info()`  |
+| `WARN`   | 警告信息，记录潜在有害的情况                                 | `log.warn()`  |
+| `ERROR`  | 错误信息                                                     | `log.error()` |
+
+在`LogBack`中，通过`<root>`标签来设置日志输出级别，`<root>`大小写不敏感
+
+```xml
+<!--    日志输出级别-->
+<root level="DEBUG">
+    <appender-ref ref="STDOUT" />
+    <appender-ref ref="FILE" />
+</root>
+```
+
+*注：设置为`OFF`可以关闭所有日志*
+
+#### @Slf4j
+
+可以为类设置`@Slf4j`注解来代替`Logger`实例的创建语句
+
+```java
+@Slf4j
+public class Test{}
+```
+
+### 员工查询功能
+
+#### 数据表设计
+
+为了添加员工查询功能，我们需要自行设计几张有关员工信息的数据表，表中包括`姓名`、`性别`、`头像`、`所属部门`、`职位`、`入职日期`、`最后操作时间`，以及员工的工作经历表，表中包括`公司名`、`入职时间`、`离职时间`、`职位`等
+
+根据需求分析，我们至少需要`员工信息表`、`员工工作经历表`、`职位表`
+
+`emp_info.sql`
+
+```mysql
+CREATE TABLE IF NOT EXISTS `emp_info` (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '员工编号',
+    name VARCHAR(255) NOT NULL COMMENT '员工姓名',
+    birth DATE COMMENT '员工出生日期',
+    sex ENUM('male', 'female') COMMENT '员工性别',
+    avatar BLOB COMMENT '员工头像',
+    dept_id INT COMMENT '员工部门编号',
+    job_id INT COMMENT '员工职位编号',
+    board_date DATE COMMENT '入职日期',
+    update_time DATETIME COMMENT '更新时间'
+) COMMENT '员工信息表';
+```
+
+`job.sql`
+
+```mysql
+CREATE TABLE IF NOT EXISTS `job` (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '职位编号',
+    title VARCHAR(255) NOT NULL COMMENT '职位名称'
+) COMMENT '职位表';
+```
+
+`emp_exp.sql`
+
+```mysql
+CREATE TABLE IF NOT EXISTS `emp_exp` (
+    id INT COMMENT '员工编号',
+    start_time DATE COMMENT '开始时间',
+    end_time DATE COMMENT '结束时间',
+    company VARCHAR(255) COMMENT '公司名称',
+    job VARCHAR(255) COMMENT '职位名称',
+    PRIMARY KEY (id, start_time),
+    CONSTRAINT chk_date_order CHECK (end_time > start_time)
+) COMMENT '员工工作经历表';
+```
+
+#### 框架准备
+
+准备需要的实体类`Employee`、`EmpExp`，以及相关的`Controller`、`Service`和`Mapper`
+
+`Employee.java`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class Employee {
+    private Integer id;
+    private String name;
+    private LocalDate birth;
+    private String sex;
+    private String avatarPath;
+    private String deptName;
+    private String jobName;
+    private LocalDate boardDate;
+    private LocalDateTime updateTime;
+}
+```
+
+`EmpExp.java`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class EmpExp {
+    private Integer id;
+    private LocalDate startTime;
+    private LocalDate endTime;
+    private String company;
+    private String job;
+}
+```
+
+`EmpController.java`
+
+```java
+package com.eiousee.controller;
+
+import com.eiousee.service.EmpService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@Slf4j
+@RestController
+@RequestMapping("/emp")
+public class EmpController {
+
+    private final EmpService empService;
+
+    public EmpController(EmpService empService) {
+        this.empService = empService;
+    }
+}
+```
+
+`EmpMapper.java`
+
+```java
+package com.eiousee.mapper;
+
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface EmpMapper {
+}
+```
+
+`EmpService.java`
+
+```java
+package com.eiousee.service;
+
+import org.springframework.stereotype.Service;
+
+public interface EmpService {
+}
+```
+
+`EmpServiceImpl.java`
+
+```java
+package com.eiousee.service.impl;
+
+import com.eiousee.mapper.EmpMapper;
+import com.eiousee.service.EmpService;
+
+@Service
+public class EmpServiceImpl implements EmpService {
+
+    private final EmpMapper empMapper;
+
+    public EmpServiceImpl(EmpMapper empMapper) {
+        this.empMapper = empMapper;
     }
 }
 ```
