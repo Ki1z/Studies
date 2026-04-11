@@ -257,3 +257,93 @@
 }
 ```
 
+## 2. 员工管理
+
+### 2.1 员工列表查询
+
+#### 2.1.1 基本信息
+
+请求路径：`/emps`
+
+请求方式：`GET`
+
+接口描述：该接口用于员工列表数据的条件分页查询
+
+#### 2.1.2 请求参数
+
+参数格式：`queryString`
+
+参数说明：
+
+| 参数名   | 是否必须 | 示例     | 备注                           |
+| -------- | -------- | -------- | ------------------------------ |
+| name     | 否       | 张       | 姓名                           |
+| sex      | 否       | 男       | 性别                           |
+| begin    | 否       | 2010-1-1 | 范围匹配的开始时间             |
+| end      | 否       | 2010-1-1 | 范围匹配的结束时间             |
+| page     | 是       | 1        | 分页查询的页码，默认为1        |
+| pageSize | 是       | 10       | 分页查询的每页记录数，默认为10 |
+
+请求数据样例：
+
+`/emps?name=张&sex=男&begin=2010-1-1&end=2010-1-1&page=1&pageSize=10`
+
+#### 2.1.3 响应数据
+
+参数格式：`application/json`
+
+参数说明：
+
+| 名称            | 类型     | 是否必须 | 备注                         |
+| --------------- | -------- | -------- | ---------------------------- |
+| code            | number   | 必须     | 响应码，1表示成功，0表示失败 |
+| msg             | string   | 非必须   | 提示信息                     |
+| data            | object   | 必须     | 返回的数据体                 |
+| data-total      | number   | 必须     | 总记录数                     |
+| data-rows       | object[] | 必须     | 数据列表                     |
+| rows-id         | number   | 非必须   | 员工id                       |
+| rows-name       | string   | 非必须   | 员工姓名                     |
+| rows-birth      | string   | 非必须   | 员工出生日期                 |
+| rows-sex        | string   | 非必须   | 员工性别                     |
+| rows-avatarPath | string   | 非必须   | 员工头像url                  |
+| rows-deptName   | string   | 非必须   | 员工部门名称                 |
+| rows-jobName    | string   | 非必须   | 员工职称                     |
+| rows-boardDate  | string   | 非必须   | 员工入职日期                 |
+| rows-updateTime | string   | 非必须   | 最后修改时间                 |
+
+响应数据样例：
+
+```json
+{
+    "code": 1,
+    "msg": "success",
+    "data": {
+        "total": 2,
+        "rows": [
+            {
+                "id": 1,
+                "name": "张三",
+                "birth": "1990-01-01",
+                "sex": "男",
+                "avatarPath": "https://example.eiousee.com/zhangsan.jpg",
+                "deptName": "学工部",
+                "jobName": "助教",
+                "boardDate": "2020-01-01",
+                "updateTime": "2020-01-01T00:00:00"
+            },
+            {
+                "id": 2,
+                "name": "李四",
+                "birth": "1990-01-01",
+                "sex": "女",
+                "avatarPath": "https://example.eiousee.com/lisi.jpg",
+                "deptName": "学工部",
+                "jobName": "助教",
+                "boardDate": "2020-01-01",
+                "updateTime": "2020-01-01T00:00:00"
+            },
+        ]
+    }
+}
+```
+

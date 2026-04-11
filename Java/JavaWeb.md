@@ -1,6 +1,6 @@
 # Java Web
 
-`更新时间：2026-4-10`
+`更新时间：2026-4-11`
 
 注释解释：
 
@@ -3839,3 +3839,311 @@ public class EmpServiceImpl implements EmpService {
 }
 ```
 
+#### 分页查询
+
+因为员工的数量较多，因此我们需要制定分页查询的逻辑，由前端决定每页展示的行数，然后传递给后端，后端构建相应的`sql`语句，并返回对应结果
+
+```mysql
+SELECT
+    e.id AS id,
+    e.name AS name,
+    birth, sex,
+    avatar_path,
+    d.name AS dept_name,
+    j.title AS job_name,
+    board_date,
+    e.update_time AS update_time
+FROM emp_info AS e
+    LEFT JOIN dept AS d
+        ON e.dept_id = d.id
+    LEFT JOIN job AS j
+        ON e.job_id = j.id
+LIMIT
+    #{offset}, #{step}
+```
+
+并且构建专门用于获取查询数量的`sql`语句
+
+```mysql
+SELECT
+    COUNT(*)
+FROM emp_info AS e
+    LEFT JOIN dept AS d
+        ON e.dept_id = d.id
+    LEFT JOIN job AS j
+        ON e.job_id = j.id
+```
+
+在编写正式逻辑之前，我们还需要一个`pageResult`来存储对应的数据实体
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class PageResult<T> {
+    private Long total;
+    private List<T> rows;
+}
+```
+
+然后我们编写对应的`Controller`、`Service`和`Mapper`
+
+`Controller`
+
+这里需要注意，`page`和`pageSize`需要拥有默认值，因此使用`@RequestParam`注解的`defaultValue`属性来设定默认值
+
+```java
+@GetMapping
+public Result getEmpList(
+        String name,
+        String sex,
+        String begin,
+        String end,
+        @RequestParam(defaultValue = "1") Integer page,
+        @RequestParam(defaultValue = "10") Integer pageSize
+) {
+    log.info("查询员工列表，参数：name={},sex={},begin={},end={},page={},pageSize={}", name, sex, begin, end, page, pageSize);
+    return Result.success(empService.getEmpList(name, sex, begin, end, page, pageSize));
+}
+```
+
+`Service`
+
+在`Service`中，我们不能直接将`page`传递给`Mapper`，因为`LIMIT`的第一个参数是截取的偏移位置，因此需要先计算每页的偏移位置，然后再一同交给`Mapper`
+
+```java
+@Override
+public PageResult<Employee> getEmpList(String name, String sex, String begin, String end, Integer page, Integer pageSize) {
+    Integer offset = (page - 1) * pageSize;
+    List<Employee> empList = empMapper.getEmpList(name, sex, begin, end, offset, pageSize);
+    Long total = empMapper.getEmpListTotal(name, sex, begin, end);
+    return new PageResult<>(total, empList);
+}
+```
+
+`Mapper`
+
+`Mapper`中需要定义查询内容和查询数量两个查询方法，以便封装`pageResult`实例
+
+```java
+@Select("""
+        SELECT
+            e.id AS id,
+            e.name AS name,
+            birth, sex,
+            avatar_path,
+            d.name AS dept_name,
+            j.title AS job_name,
+            board_date,
+            e.update_time AS update_time
+        FROM emp_info AS e
+            LEFT JOIN dept AS d
+                ON e.dept_id = d.id
+            LEFT JOIN job AS j
+                ON e.job_id = j.id
+        ORDER BY
+            e.id
+        LIMIT
+            #{offset}, #{step}
+        """)
+List<Employee> getEmpList(String name, String sex, String begin, String end, Integer offset, Integer step);
+
+@Select("""
+        SELECT
+            COUNT(*)
+        FROM emp_info AS e
+            LEFT JOIN dept AS d
+                ON e.dept_id = d.id
+            LEFT JOIN job AS j
+                ON e.job_id = j.id
+        """)
+Long getEmpListTotal(String name, String sex, String begin, String end);
+```
+
+> ![](javaweb/48.png)
+
+#### PageHelper分页查询
+
+`PageHelper`是第三方提供的用于`MyBatis`框架中实现分页的插件，用于简化分页操作，提高开发效率
+
+1. 引入依赖
+
+`pom.xml`
+
+```xml
+<!--        pageHelper-->
+<dependency>
+    <groupId>com.github.pagehelper</groupId>
+    <artifactId>pagehelper-spring-boot-starter</artifactId>
+    <version>1.4.6</version>
+</dependency>
+```
+
+2. 在`Mapper`中定义查询方法
+
+```java
+@Select("""
+        SELECT
+            e.id AS id,
+            e.name AS name,
+            birth, sex,
+            avatar_path,
+            d.name AS dept_name,
+            j.title AS job_name,
+            board_date,
+            e.update_time AS update_time
+        FROM emp_info AS e
+            LEFT JOIN dept AS d
+                ON e.dept_id = d.id
+            LEFT JOIN job AS j
+                ON e.job_id = j.id
+        ORDER BY
+            e.id
+        """)
+List<Employee> getEmpList(String name, String sex, String begin, String end);
+```
+
+3. 在`Service`中定义分页查询逻辑
+
+```java
+@Override
+public PageResult<Employee> getEmpList(String name, String sex, String begin, String end, Integer page, Integer pageSize) {
+    // 开启分页
+    PageHelper.startPage(page, pageSize);
+    // 获取分页结果实例
+    List<Employee> empList = empMapper.getEmpList(name, sex, begin, end);
+    PageInfo<Employee> empPage = new PageInfo<>(empList);
+    // 封装分页结果
+    return new PageResult<>(empPage.getTotal(), empPage.getList());
+}
+```
+
+*注：使用`PageHelper`的`sql`语句中不能添加`;`，因为`PageHelper`会直接在原有的`sql`后面添加`LIMIT`，如果有分号，则会导致`sql`语法错误。`PageHelper`的作用域仅有一条查询语句，如果在`PageHelper.startPage()`方法后跟了多条查询语句，仅有第一条查询语句会生效*
+
+#### 条件分页查询
+
+上文我们实现了分页查询的逻辑，但是接口文档中可以看出，页面原型需要的是条件分页查询逻辑，因此我们需要添加条件查询的逻辑
+
+首先，我们对查询参数进行优化，定义查询实体类封装查询参数
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.time.LocalDate;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class EmpQueryParam {
+    private String name;
+    private String sex;
+    @DateTimeFormat(pattern = "yyyy-M-d")
+    private LocalDate begin;
+    @DateTimeFormat(pattern = "yyyy-M-d")
+    private LocalDate end;
+    private Integer page = 1;
+    private Integer pageSize = 10;
+}
+```
+
+然后同步更新`Controller`、`Service`、`Mapper`
+
+`Controller`
+
+```java
+@GetMapping
+public Result getEmpList(EmpQueryParam params) {
+    log.info("查询员工列表，参数：{}", params);
+    return Result.success(empService.getEmpList(params));
+}
+```
+
+`Service`
+
+```java
+@Override
+public PageResult<Employee> getEmpList(EmpQueryParam params) {
+    Page<Employee> page = PageHelper.startPage(params.getPage(), params.getPageSize());
+    List<Employee> list = empMapper.getEmpList(params);
+    return new PageResult<>(page.getTotal(), page.getResult());
+}
+```
+
+`Mapper`
+
+```java
+List<Employee> getEmpList(EmpQueryParam params);
+```
+
+而`sql`语句的构建我们也转为使用`Mapper.xml`来构建复杂`sql`语句，以及定义动态`sql`
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.eiousee.mapper.EmpMapper">
+<!--    员工列表条件查询-->
+    <select id="getEmpList" resultType="com.eiousee.pojo.Employee">
+    </select>
+</mapper>
+```
+
+接着，跟据查询条件，使用`<if>`标签来构建动态`sql`，当用户指定了某个条件，再将条件插入到`sql`语句中
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.eiousee.mapper.EmpMapper">
+<!--    员工列表条件查询-->
+    <select id="getEmpList" resultType="com.eiousee.pojo.Employee">
+            SELECT
+                e.id AS id,
+                e.name AS name,
+                birth, sex,
+                avatar_path,
+                d.name AS dept_name,
+                j.title AS job_name,
+                board_date,
+                e.update_time AS update_time
+            FROM emp_info AS e
+                LEFT JOIN dept AS d
+                    ON e.dept_id = d.id
+                LEFT JOIN job AS j
+                    ON e.job_id = j.id
+            WHERE
+                1=1
+                <if test="name != null and name != ''">
+                    AND e.name LIKE CONCAT('%', #{name}, '%')
+                </if>
+                <if test="sex != null and sex != ''">
+                    AND e.sex = #{sex}
+                </if>
+                <if test="begin != null">
+                    AND e.board_date &gt;= #{begin}
+                </if>
+                <if test="end != null">
+                    AND e.board_date &lt;= #{end}
+                </if>
+    </select>
+</mapper>
+```
+
+> ![](javaweb/49.png)
