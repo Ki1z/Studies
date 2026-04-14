@@ -347,3 +347,83 @@
 }
 ```
 
+### 2.2 添加员工
+
+#### 2.2.1 基本信息
+
+请求路径：`/emps`
+
+请求方式：`POST`
+
+接口描述：该接口用于添加员工信息
+
+#### 2.2.2 请求参数
+
+参数格式：`application/json`
+
+参数说明：
+
+| 名称                 | 类型     | 是否必须 | 备注                             |
+| -------------------- | -------- | -------- | -------------------------------- |
+| name                 | string   | 必须     | 员工姓名                         |
+| birth                | string   | 必须     | 员工出生日期，格式为"YYYY-MM-DD" |
+| sex                  | string   | 必须     | 性别                             |
+| avatarPath           | string   | 非必须   | 头像url                          |
+| deptName             | string   | 非必须   | 部门名称                         |
+| jobName              | string   | 非必须   | 职位名称                         |
+| boardDate            | string   | 非必须   | 入职日期                         |
+| empExpList           | object[] | 非必须   | 工作经历                         |
+| empExpList-startTime | string   | 非必须   | 开始时间                         |
+| empExpList-endTime   | string   | 非必须   | 离职时间                         |
+| empExpList-company   | string   | 非必须   | 所在公司名                       |
+| empExpList-job       | string   | 非必须   | 担任职位                         |
+
+请求数据样例：
+
+```json
+{
+    "name": "张三",
+    "birth": "2020-01-01",
+    "sex": "男",
+    "avatarPath": "http://example.eiousee.com/zhangsan.jpg",
+    "deptName": "学工部",
+    "jobName": "工程师",
+    "boardDate": "2020-01-01",
+    "empExps": [
+        {
+            "startTime": "2020-01-01",
+            "endTime": "2020-01-01",
+            "company": "艾欧希股份有限公司",
+            "job": "Java开发工程师"
+        },
+        {
+            "startTime": "2021-01-01",
+            "endTime": "2021-01-01",
+            "company": "艾欧希股份有限公司",
+            "job": "C++开发工程师"
+        }
+    ]
+}
+```
+
+#### 2.2.3 响应数据
+
+参数格式：`application/json`
+
+参数说明：
+
+| 参数名 | 类型   | 是否必须 | 备注                         |
+| ------ | ------ | -------- | ---------------------------- |
+| code   | number | 必须     | 响应码，1表示成功，0表示失败 |
+| msg    | string | 非必须   | 提示信息                     |
+| data   | object | 非必须   | 返回的数据体                 |
+
+响应数据样例：
+
+```json
+{
+    "code": 1,
+    "msg": "success",
+    "data": null
+}
+```

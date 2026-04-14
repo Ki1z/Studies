@@ -1,6 +1,6 @@
 # Java Web
 
-`更新时间：2026-4-11`
+`更新时间：2026-4-14`
 
 注释解释：
 
@@ -4147,3 +4147,293 @@ List<Employee> getEmpList(EmpQueryParam params);
 ```
 
 > ![](javaweb/49.png)
+
+这里的`WHERE`约束其实同样可以进行优化，使用`MyBatis`的`<where>`标签，就不需要第一行的`1=1`，`MyBatis`会自动决定是否需要`AND`，但是绝对不能去除`AND`，每个约束条件必须包含一个`AND`
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.eiousee.mapper.EmpMapper">
+<!--    员工列表条件查询-->
+    <select id="getEmpList" resultType="com.eiousee.pojo.Employee">
+            SELECT
+                e.id AS id,
+                e.name AS name,
+                birth, sex,
+                avatar_path,
+                d.name AS dept_name,
+                j.title AS job_name,
+                board_date,
+                e.update_time AS update_time
+            FROM emp_info AS e
+                LEFT JOIN dept AS d
+                    ON e.dept_id = d.id
+                LEFT JOIN job AS j
+                    ON e.job_id = j.id
+            <where>
+                <if test="name != null and name != ''">
+                    AND e.name LIKE CONCAT('%', #{name}, '%')
+                </if>
+                <if test="sex != null and sex != ''">
+                    AND e.sex = #{sex}
+                </if>
+                <if test="begin != null">
+                    AND e.board_date &gt;= #{begin}
+                </if>
+                <if test="end != null">
+                    AND e.board_date &lt;= #{end}
+                </if>
+            </where>
+    </select>
+</mapper>
+```
+
+### 新增员工功能
+
+现在来添加新增员工功能，用户通过`POST`请求，访问`/emps`接口来发送一个新增员工的请求。新增员工时允许添加员工曾经的工作经历，因此需要在`Employee`实体类中新增字段`List<EmpExp> empExpList`，并新增实体类`EmpExp`存储每条员工经历数据
+
+`Employee`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class Employee {
+    private Integer id;
+    private String name;
+    private LocalDate birth;
+    private String sex;
+    private String avatarPath;
+    private String deptName;
+    private String jobName;
+    private LocalDate boardDate;
+    private LocalDateTime updateTime;
+    // 工作经历
+    private List<EmpExp> empExpList;
+}
+```
+
+`EmpExp`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class EmpExp {
+    private Integer id;
+    private LocalDate startTime;
+    private LocalDate endTime;
+    private String company;
+    private String job;
+}
+```
+
+然后再完善相关结构
+
+`Controller`
+
+```java
+@PostMapping
+public Result addEmp(@RequestBody Employee employee) {
+    log.info("添加员工，参数：{}", employee);
+    return empService.addEmp(employee) > 0 ? Result.success() : Result.error("添加失败");
+}
+```
+
+`Service`
+
+```java
+@Override
+public Integer addEmp(Employee employee) {
+    
+}
+```
+
+`Mapper`
+
+```java
+Integer addEmp();
+```
+
+然后来考虑如何实现添加逻辑，数据从前端提交到后端后，`Spring`自动封装为先前定义好的`Employee`实体，然后通过后端将实体插入数据库中。但是这里需要注意，数据库中的每个员工记录存储的是部门id和职位id，而实体类中存储的是对应的部门名称和职位名称。因此需要先在数据库中查询出对应的部门id和职位id
+
+`Service`
+
+```java
+@Override
+public Integer addEmp(Employee employee) {
+    // 获取当前时间
+    employee.setUpdateTime(LocalDateTime.now());
+    // 获取员工部门id、职位id
+    Integer deptId = deptService.getDeptIdByName(employee.getDeptName());
+    Integer jobId = jobService.getJobIdByName(employee.getJobName());
+}
+```
+
+由于需要获取部门`id`和职位`id`，而部门和职位应属于不同的`Service`，因此在`EmpService`中注入对应的`Bean`
+
+```java
+private final EmpMapper empMapper;
+private final EmpExpMapper empExpMapper;
+private final DeptService deptService;
+private final JobService jobService;
+
+public EmpServiceImpl(EmpMapper empMapper, EmpExpMapper empExpMapper, DeptService deptService, JobService jobService) {
+    this.empMapper = empMapper;
+    this.empExpMapper = empExpMapper;
+    this.deptService = deptService;
+    this.jobService = jobService;
+}
+```
+
+然后实现对应逻辑
+
+`deptServiceImpl.java`
+
+```java
+@Override
+public Integer getDeptIdByName(String deptName) {
+    return deptMapper.getDeptIdByName(deptName);
+}
+```
+
+`DeptMapper.java`
+
+```java
+@Select("SELECT id FROM `dept` WHERE name = #{name}")
+Integer getDeptIdByName(String name);
+```
+
+`JobServiceImpl.java`
+
+```java
+@Override
+public Integer getJobIdByName(String jobName) {
+    return jobMapper.getJobIdByName(jobName);
+}
+```
+
+`JobMapper.java`
+
+```java
+@Select("SELECT id FROM `job` WHERE title = #{name}")
+Integer getJobIdByName(String name);
+```
+
+然后完善员工工作经历的插入逻辑，首先需要确保员工信息符合规定
+
+`Service`
+
+```java
+// 检查员工信息是否符合规定
+if (employee.getName().isEmpty() || employee.getBirth() == null) return 0;
+
+// 检查员工工作经历是否符合规定
+if (employee.getEmpExpList() != null && !employee.getEmpExpList().isEmpty()) {
+    for (EmpExp empExp : employee.getEmpExpList()) {
+        if (empExp.getStartTime().isAfter(empExp.getEndTime())) {
+            return 0;
+        }
+    }
+}
+```
+
+确认信息无误后，再先将员工插入`emp_info`表，并获取员工的`id`，将`id`添加到每段工作经历中，最后插入`emp_exp`表
+
+`Service`
+
+```java
+// 添加员工到emp_info表
+if (empMapper.addEmp(employee, deptId, jobId) > 0) {
+    if (employee.getEmpExpList() == null || employee.getEmpExpList().isEmpty()) {
+        return 1;
+    }
+    // 获取新增员工id，并添加到员工工作经历中
+    Integer id = empMapper.getEmpIdByNameBirthSex(employee.getName(), employee.getBirth(), employee.getSex());
+    for (EmpExp empExp : employee.getEmpExpList()) {
+        empExp.setId(id);
+    }
+    // 添加员工工作经历到emp_exp表
+    return empExpMapper.addEmpExp(employee.getEmpExpList());
+} else return 0;
+```
+
+完善`EmpExpMapper`，创建`xml`映射文件，然后在`xml`中使用`<foreach>`标签构建循环动态`sql`，遍历`List<EmpExp> empExpList`数组中的所有员工信息，然后插入到表中
+
+`EmpExpMapper.java`
+
+```java
+package com.eiousee.mapper;
+
+import com.eiousee.pojo.EmpExp;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+
+import java.util.List;
+
+@Mapper
+public interface EmpExpMapper {
+    Integer addEmpExp(List<EmpExp> empExpList);
+}
+```
+
+`EmpExpMapper.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.eiousee.mapper.EmpExpMapper">
+<!--    插入员工工作经历-->
+    <insert id="addEmpExp">
+        INSERT INTO emp_exp(id, start_time, end_time, company, job) VALUES
+        <foreach collection="empExpList" item="empExp" separator=",">
+            (#{empExp.id}, #{empExp.startTime}, #{empExp.endTime}, #{empExp.company}, #{empExp.job})
+        </foreach>
+    </insert>
+</mapper>
+```
+
+最后，别忘了补充`empMapper`的两个方法
+
+`EmpMapper.java`
+
+```java
+@Insert("""
+        INSERT INTO emp_info (name, birth, sex, avatar_path, dept_id, job_id, board_date, update_time)
+            VALUES (#{employee.name}, #{employee.birth}, #{employee.sex}, #{employee.avatarPath}, #{deptId}, #{jobId}, #{employee.boardDate}, #{employee.updateTime});
+        """)
+Integer addEmp(Employee employee, Integer deptId, Integer jobId);
+
+@Select("select id from emp_info where name = #{name} and birth = #{birth} and sex = #{sex} limit 1")
+Integer getEmpIdByNameBirthSex(String name, LocalDate birth, String sex);
+```
+
+> ![](javaweb/50.png)
+
+> ![](javaweb/51.png)
+
+> ![](javaweb/52.png)
