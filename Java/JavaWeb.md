@@ -1,6 +1,6 @@
 # Java Web
 
-`更新时间：2026-4-14`
+`更新时间：2026-4-15`
 
 注释解释：
 
@@ -4437,3 +4437,204 @@ Integer getEmpIdByNameBirthSex(String name, LocalDate birth, String sex);
 > ![](javaweb/51.png)
 
 > ![](javaweb/52.png)
+
+#### \<foreach\>标签
+
+上文的循环动态`sql`语句我们使用了`<foreach>`标签，现在来简要介绍一下
+
+```xml
+<foreach collection="" item="" separator="" open="" close="">
+	sql
+</foreach>
+```
+
+- `collection`：需要遍历的数组、列表等容器
+- `item`：遍历出的每一个元素
+- `separator`：每个遍历之间的分隔符
+- `open`：遍历开始前拼接的内容
+- `close`：遍历结束后拼接的字符
+
+#### 主键返回
+
+`MyBatis`提供了主键返回的功能，可以在数据插入数据库时，自动返回刚刚插入数据的主键，在我们的项目中，即是在插入员工数据时，自动返回员工 `id`。在需要返回主键的方法上添加`@Options`注解，设置注解值`useGeneratedKeys`为`true`，并设置主键字段`keyColumn = "id"`，以及存储的实例属性`keyProperty = "id"`。但是需要注意，`MyBatis`在解析多个参数时不会保留参数名，如果不设置`@Param("employee")`注解，则`keyProperty`应该设置为`keyProperty= "param1.id"`
+
+```java
+@Options(useGeneratedKeys = true, keyColumn = "id", keyProperty = "employee.id")
+@Insert("""
+        INSERT INTO emp_info (name, birth, sex, avatar_path, dept_id, job_id, board_date, update_time)
+            VALUES (#{employee.name}, #{employee.birth}, #{employee.sex}, #{employee.avatarPath}, #{deptId}, #{jobId}, #{employee.boardDate}, #{employee.updateTime});
+        """)
+Integer addEmp(@Param("employee") Employee employee, Integer deptId, Integer jobId);
+```
+
+然后修改`Service`中的相关代码，不再需要专门的`getEmpIdByNameBirthSex`方法
+
+```java
+// 添加员工到emp_info表
+if (empMapper.addEmp(employee, deptId, jobId) > 0) {
+    if (employee.getEmpExpList() == null || employee.getEmpExpList().isEmpty()) {
+        return 1;
+    }
+
+    // 获取新增员工id，并添加到员工工作经历中
+    Integer id = employee.getId();
+    for (EmpExp empExp : employee.getEmpExpList()) {
+        empExp.setId(id);
+    }
+    // 添加员工工作经历到emp_exp表
+    return empExpMapper.addEmpExp(employee.getEmpExpList());
+} else return 0;
+```
+
+> ![](javaweb/53.png)
+
+从图片中可以看出，后端连续执行了两条`INSERT`语句，中间并没有穿插`SELECT`查询员工`id`
+
+#### 事务管理
+
+在上文的代码中，我们在插入员工信息前执行了一次检查用户工作经历是否符合规定的操作
+
+```java
+// 检查员工工作经历是否符合规定
+if (employee.getEmpExpList() != null && !employee.getEmpExpList().isEmpty()) {
+    for (EmpExp empExp : employee.getEmpExpList()) {
+        if (empExp.getStartTime().isAfter(empExp.getEndTime())) {
+            return 0;
+        }
+    }
+}
+```
+
+这其实是为了避免已经在`emp_info`表中插入数据的情况下，`emp_exp`表无法插入信息，从而导致数据库信息不完整的问题
+
+```java
+// 添加员工到emp_info表
+if (empMapper.addEmp(employee, deptId, jobId) > 0) {
+    if (employee.getEmpExpList() == null || employee.getEmpExpList().isEmpty()) {
+        return 1;
+    }
+
+    // 获取新增员工id，并添加到员工工作经历中
+    Integer id = employee.getId();
+    for (EmpExp empExp : employee.getEmpExpList()) {
+        empExp.setId(id);
+    }
+    // 添加员工工作经历到emp_exp表
+    return empExpMapper.addEmpExp(employee.getEmpExpList());
+} else return 0;
+```
+
+在这段代码中，如果没有先前的检查，`empMapper.addEmp(employee, deptId, jobId)`执行成功，接着执行`empExpMapper.addEmpExp(employee.getEmpExpList())`，如果员工工作经历中存在异常数据，导致数据库`CHECK`约束警告，从而返回0。在前端看来，这是一次插入失败，但是`emp_info`中却又成功插入了数据
+
+##### 概念
+
+事务是一组操作的集合，它时一个不可分割的工作单位。事务会把所有的操作作为一个整体一起向系统提交或撤销操作请求，即这些操作要么同时成功，要么同时失败。而上文的员工插入操作中，员工信息插入与员工工作插入操作就属于同一个事务
+
+##### 事务控制
+
+在`MySQL`中，事务控制分为三个步骤
+
+1. 开启事务`START TRANSACTION;`或者`BEGIN;`
+
+2. 执行操作
+
+3. 提交事务`COMMIT;`或回滚事务`ROLLBACK;`
+
+##### Spring事务管理
+
+事务管理在项目中非常常见，因此`Spring`提供了专门用于事务管理的模块
+
+**@Transactional**
+
+事务注解，执行前会开启事务，执行成功则提交，出现异常则回滚。注解位置可以在`Service`层的方法、类、接口上，但一般只用于方法注解
+
+```java
+@Transactional
+public void method() {
+    methodBody;
+}
+```
+
+同时可以开启相关的日志
+
+`application.yml`
+
+```yml
+logging:
+  level:
+    # 事务管理日志级别
+    org.springframework.jdbc.support.JdbcTransactionManager: debug
+```
+
+有了事务控制，就不需要在代码中检测用户信息格式了
+
+**rollbackFor属性**
+
+`rollbackFor`属性是`@Transactional`注解的一个属性，能够设置触发事务回滚所需的异常级别，默认为`RuntimeException`
+
+```java
+@Transactional(rollbackFor = {Exception.class})
+```
+
+将回滚所需的异常级别设置为最低的`Exception`，任何异常都会导致回滚
+
+**propagation属性**
+
+`propagation`属性用于控制事务传播行为，指当一个事务方法被另一个事务方法调用时，这个事务方法应该如何进行事务控制。`propagation`的取值依赖于`Propagation`枚举类的值
+
+| 属性值          | 含义                                                         |
+| --------------- | ------------------------------------------------------------ |
+| `REQUIRED`      | 默认值，需要事务，如果当前有事务，则加入该事务，如果没有，则创建一个新事务 |
+| `REQUIRED_NEW`  | 需要新事务，无论当前是否有事务，总是创建新事务               |
+| `SUPPORTS`      | 支持事务，如果有事务，则加入事务中，没有则在无事务状态运行   |
+| `NOT_SUPPORTED` | 不支持事务，如果当前存在事务，则挂起该事务                   |
+| `MANDATORY`     | 必须存在事务，否则抛出异常                                   |
+| `NEVER`         | 不允许存在事务，否则抛出异常                                 |
+
+**举例**
+
+假设我们需要每次员工插入后都记录一个员工插入的日志，并将该日志插入数据库中
+
+```java
+@Transactional
+public void insertEmp() {
+    // 插入员工信息
+    empMapper.insertEmp();
+    
+    // 插入员工工作经历
+    empExpService.insertEmpExp();
+    
+    // 记录日志
+    empLogService.insertEmpLog();
+}
+```
+
+在上文的代码中，三个方法属于同一个事务，当`insertEmp()`或者`insertEmpExp()`任意一个方法执行失败，`insertEmpLog()`都不会执行，因此需要专门设置`insertEmpLog()`的`propagation`属性
+
+```java
+@Transactional(propagation = Propagation.REQUIRED_NEW)
+public void insertEmpLog() {
+    methodBody;
+}
+```
+
+让`insertEmpLog()`方法独立为一个事务，每次执行时，先挂起先前的员工信息插入事务，然后执行日志记录事务，执行完毕后再返回员工信息插入事务
+
+##### 事务的四大特性
+
+**原子性**
+
+事务是不可分割的最小单元，要么全部成功，要么全部失败
+
+**一致性**
+
+事务完成时，必须使所有的数据都保持一致状态
+
+**隔离性**
+
+数据库系统提供的隔离机制，保证事务在不受外部并发操作影响的独立环境下运行
+
+**持久性**
+
+事务一旦提交或回滚，它对数据库中的数据的改变就是永久的
+
