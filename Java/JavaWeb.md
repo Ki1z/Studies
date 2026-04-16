@@ -1,6 +1,6 @@
 # Java Web
 
-`更新时间：2026-4-15`
+`更新时间：2026-4-16`
 
 注释解释：
 
@@ -4637,4 +4637,529 @@ public void insertEmpLog() {
 **持久性**
 
 事务一旦提交或回滚，它对数据库中的数据的改变就是永久的
+
+#### 头像上传
+
+在`Spring`中，使用`MultipartFile`类型来接受用户上传的文件
+
+```java
+@PostMapping
+public void upload(MultipartFile file) {
+	mehtodBody;
+}
+```
+
+**示例**
+
+`upload.html`
+
+```html
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>文件上传</title>
+</head>
+<body>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        姓名：<input type="text" name="name"><br>
+        年龄：<input type="text" name="age"><br>
+        头像：<input type="file" name="file"><br>
+        <input type="submit" value="上传">
+    </form>
+</body>
+</html>
+```
+
+`UploadController.java`
+
+```java
+package com.eiousee.controller;
+
+import com.eiousee.pojo.Result;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+@Slf4j
+@RestController
+@RequestMapping("/upload")
+public class UploadController {
+    @PostMapping
+    public Result upload(String name, Integer age, MultipartFile file) {
+        log.info("上传文件，参数：name={}, age={}, file={}", name, age, file);
+
+        return Result.success();
+    }
+}
+```
+
+在16行断点，然后上传文件
+
+> ![](javaweb/54.png)
+
+可以看到，后端成功接收了图片文件，文件名为`eiousee.png`
+
+##### 本地存储
+
+所有上传的文件在`Tomcat`服务器中都是临时文件，所以必须要编写对应的保存文件的逻辑。`Spring`提供了`transferTo`方法来快捷转存文件，接收一个`File`类型的参数，原始文件名可以用`MultipartFile`实例中的`getOriginalFilename`方法获取
+
+```java
+package com.eiousee.controller;
+
+import com.eiousee.pojo.Result;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.File;
+import java.io.IOException;
+
+@Slf4j
+@RestController
+@RequestMapping("/upload")
+public class UploadController {
+    @PostMapping
+    public Result upload(String name, Integer age, MultipartFile file) throws IOException {
+        log.info("上传文件，参数：name={}, age={}, file={}", name, age, file);
+
+        String fileName = file.getOriginalFilename();
+        file.transferTo(new File("D:\\JetBrains_Files\\Java_Files\\webProject\\src\\main\\resources\\uploads\\" + fileName));
+
+        return Result.success();
+    }
+}
+```
+
+> ![](javaweb/55.png)
+
+**文件名去重**
+
+不同的用户可能会上传相同文件名的文件，如果直接使用源文件名来保存临时文件，很可能会导致文件名重复而被占用的问题，因此需要使用一些随机的字符串拼接在源文件名中来保证文件名不会重复。这里我是用`UUID`
+
+```java
+package com.eiousee.controller;
+
+import com.eiousee.pojo.Result;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.UUID;
+
+@Slf4j
+@RestController
+@RequestMapping("/upload")
+public class UploadController {
+    @PostMapping
+    public Result upload(String name, Integer age, MultipartFile file) throws IOException {
+        log.info("上传文件，参数：name={}, age={}, file={}", name, age, file);
+
+        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        file.transferTo(new File("D:\\JetBrains_Files\\Java_Files\\webProject\\src\\main\\resources\\uploads\\" + fileName));
+
+        return Result.success();
+    }
+}
+```
+
+> ![](javaweb/56.png)
+
+**文件大小限制**
+
+`Spring`默认限制了文件大小为`1MiB`，但是如果需要上传一些视频、音频等文件，文件大小很显然不够用。因此需要在`application.yml`中设定最大文件大小
+
+```yml
+spring:
+    servlet:
+      # 文件上传大小限制
+      multipart:
+      	# 单个文件大小限制
+        max-file-size: 10MB
+		# 请求表单大小限制
+        max-request-size: 100MB
+```
+
+##### OSS
+
+`OSS`全称`Object Storage Service`，中文名对象存储服务。是指使用`HTTP API`提供存储和检索非结构化数据和元数据的服务。这里我们使用阿里云`OSS`服务
+
+1. 开通阿里云`OSS`服务
+
+> ![](javaweb/57.png)
+
+2. 配置`AccessKey`
+
+> ![](javaweb/58.png)
+
+3. 在计算机中设置对应的环境变量
+
+```cmd
+# 设置OSS AccessKey
+set OSS_ACCESS_KEY_ID=xxxxxxxxxxxxxxxxxxxxxxx
+set OSS_ACCESS_KEY_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# 生效
+setx OSS_ACCESS_KEY_ID "%OSS_ACCESS_KEY_ID%"
+setx OSS_ACCESS_KEY_SECRET "%OSS_ACCESS_KEY_SECRET%"
+
+# 验证是否生效
+echo %OSS_ACCESS_KEY_ID%
+echo %OSS_ACCESS_KEY_SECRET%
+```
+
+4. 在`pom.xml`中引入依赖
+
+```xml
+<!--        阿里云OSS-->
+<dependency>
+    <groupId>com.aliyun</groupId>
+    <artifactId>alibabacloud-oss-v2</artifactId>
+    <version>0.3.2</version>
+</dependency>
+```
+
+5. 依据官方文档构建阿里云`OSS`工具类
+
+```java
+package com.eiousee.utils;
+
+import com.aliyun.sdk.service.oss2.OSSClient;
+import com.aliyun.sdk.service.oss2.OSSClientBuilder;
+import com.aliyun.sdk.service.oss2.credentials.CredentialsProvider;
+import com.aliyun.sdk.service.oss2.credentials.EnvironmentVariableCredentialsProvider;
+import com.aliyun.sdk.service.oss2.models.*;
+import com.aliyun.sdk.service.oss2.transport.BinaryData;
+
+public class AliyunOSS2Operator {
+    public static String putObject(String fileName, byte[] data) {
+        String region = "cn-beijing";
+        String bucket = "eiousee-java-web";
+
+        CredentialsProvider provider = new EnvironmentVariableCredentialsProvider();
+        OSSClientBuilder clientBuilder = OSSClient.newBuilder()
+                .credentialsProvider(provider)
+                .region(region);
+
+        try (OSSClient client = clientBuilder.build()) {
+            PutObjectResult result = client.putObject(PutObjectRequest.newBuilder()
+                            .bucket(bucket)
+                            .key(fileName)
+                            .body(BinaryData.fromBytes(data))
+                    .build());
+
+            System.out.printf("status code:%d, request id:%s, eTag:%s\n",
+                    result.statusCode(), result.requestId(), result.eTag());
+
+        } catch (Exception e) {
+            System.out.printf("error:\n%s", e);
+            return null;
+        }
+        return "https://" + bucket + ".oss-cn-beijing.aliyuncs.com/" + fileName;
+    }
+}
+```
+
+6. 然后完善`UploadController`
+
+```java
+package com.eiousee.controller;
+
+import com.eiousee.pojo.Result;
+import com.eiousee.service.UploadService;
+import com.eiousee.utils.AliyunOSS2Operator;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.UUID;
+
+@Slf4j
+@RestController
+@RequestMapping("/upload")
+public class UploadController {
+
+    private final UploadService uploadService;
+
+    public UploadController(UploadService uploadService) {
+        this.uploadService = uploadService;
+    }
+
+    @PostMapping
+    public Result upload(MultipartFile file) {
+        log.info("上传文件：{}", file);
+        return uploadService.putObject(file);
+    }
+}
+```
+
+7. 完善`UploadService`
+
+```java
+package com.eiousee.service.impl;
+
+import com.eiousee.pojo.Result;
+import com.eiousee.service.UploadService;
+import com.eiousee.utils.AliyunOSS2Operator;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.UUID;
+
+@Service
+public class UploadServiceImpl implements UploadService {
+    @Override
+    public Result putObject(MultipartFile file) {
+        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        String url;
+        try {
+            url = AliyunOSS2Operator.putObject(fileName, file.getBytes());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        if (url != null) {
+            return Result.success(url);
+        } else {
+            return Result.error("上传失败");
+        }
+    }
+}
+```
+
+> ![](javaweb/59.png)
+
+这里的`putObject`是静态方法，每次调用，都会创建一个`OSSClient`实例，实际上非常浪费资源，因此我们将`putObject`设置为实例方法，然后为`AliyunOSS2Operator`设置`@Component`注解，成为一个`Bean`，注入到`UploadService`中
+
+`AliyunOSS2Operator.java`
+
+```java
+package com.eiousee.utils;
+
+import com.aliyun.sdk.service.oss2.OSSClient;
+import com.aliyun.sdk.service.oss2.OSSClientBuilder;
+import com.aliyun.sdk.service.oss2.credentials.CredentialsProvider;
+import com.aliyun.sdk.service.oss2.credentials.EnvironmentVariableCredentialsProvider;
+import com.aliyun.sdk.service.oss2.models.*;
+import com.aliyun.sdk.service.oss2.transport.BinaryData;
+import org.springframework.stereotype.Component;
+
+@Component
+public class AliyunOSS2Operator {
+    public String putObject(String fileName, byte[] data) {
+        String region = "cn-beijing";
+        String bucket = "eiousee-java-web";
+
+        CredentialsProvider provider = new EnvironmentVariableCredentialsProvider();
+        OSSClientBuilder clientBuilder = OSSClient.newBuilder()
+                .credentialsProvider(provider)
+                .region(region);
+
+        try (OSSClient client = clientBuilder.build()) {
+            PutObjectResult result = client.putObject(PutObjectRequest.newBuilder()
+                            .bucket(bucket)
+                            .key(fileName)
+                            .body(BinaryData.fromBytes(data))
+                    .build());
+
+            System.out.printf("status code:%d, request id:%s, eTag:%s\n",
+                    result.statusCode(), result.requestId(), result.eTag());
+
+        } catch (Exception e) {
+            System.out.printf("error:\n%s", e);
+            return null;
+        }
+        return "https://" + bucket + ".oss-cn-beijing.aliyuncs.com/" + fileName;
+    }
+}
+```
+
+`UploadServiceImpl.java`
+
+```java
+package com.eiousee.service.impl;
+
+import com.eiousee.pojo.Result;
+import com.eiousee.service.UploadService;
+import com.eiousee.utils.AliyunOSS2Operator;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.UUID;
+
+@Service
+public class UploadServiceImpl implements UploadService {
+
+    private final AliyunOSS2Operator aliyunOSS2Operator;
+
+    public UploadServiceImpl(AliyunOSS2Operator aliyunOSS2Operator) {
+        this.aliyunOSS2Operator = aliyunOSS2Operator;
+    }
+
+    @Override
+    public Result putObject(MultipartFile file) {
+        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        String url;
+        try {
+            url = aliyunOSS2Operator.putObject(fileName, file.getBytes());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        if (url != null) {
+            return Result.success(url);
+        } else {
+            return Result.error("上传失败");
+        }
+    }
+}
+```
+
+##### OSS配置管理
+
+在上文的`AliyunOSS2Operator`类中，我们设置阿里云`OSS`的区域与`bucket`时，直接将对应的数据写在方法体中，如果需要经常更改，就会显得非常麻烦，因此我们可以在`application.yml`中设置相应的配置，然后使用`@Value`注解来注入配置文件中的值
+
+`application.yml`
+
+```yml
+# 阿里云OSS配置
+aliyun:
+  oss2:
+    region: cn-beijing
+    bucket: eiousee-java-web
+```
+
+`AliyunOSS2Operator.java`
+
+```java
+package com.eiousee.utils;
+
+import com.aliyun.sdk.service.oss2.OSSClient;
+import com.aliyun.sdk.service.oss2.OSSClientBuilder;
+import com.aliyun.sdk.service.oss2.credentials.CredentialsProvider;
+import com.aliyun.sdk.service.oss2.credentials.EnvironmentVariableCredentialsProvider;
+import com.aliyun.sdk.service.oss2.models.*;
+import com.aliyun.sdk.service.oss2.transport.BinaryData;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+@Component
+public class AliyunOSS2Operator {
+
+    @Value("${aliyun.oss2.region}")
+    private String region;
+    @Value("${aliyun.oss2.bucket}")
+    private String bucket;
+
+    public String putObject(String fileName, byte[] data) {
+        CredentialsProvider provider = new EnvironmentVariableCredentialsProvider();
+        OSSClientBuilder clientBuilder = OSSClient.newBuilder()
+                .credentialsProvider(provider)
+                .region(region);
+
+        try (OSSClient client = clientBuilder.build()) {
+            PutObjectResult result = client.putObject(PutObjectRequest.newBuilder()
+                            .bucket(bucket)
+                            .key(fileName)
+                            .body(BinaryData.fromBytes(data))
+                    .build());
+
+            System.out.printf("status code:%d, request id:%s, eTag:%s\n",
+                    result.statusCode(), result.requestId(), result.eTag());
+
+        } catch (Exception e) {
+            System.out.printf("error:\n%s", e);
+            return null;
+        }
+        return "https://" + bucket + ".oss-cn-beijing.aliyuncs.com/" + fileName;
+    }
+}
+```
+
+其实也可以通过一个配置实体类来存储配置信息，定义一个配置实体类，然后通过`@ConfigurationProperties`注解来指定需要解析的配置字段，然后将配置类加上`@Component`注册为一个`Bean`，最后注入到需要配置的类中
+
+`AliyunOSS2Properties.java`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+@Data
+@Component
+@ConfigurationProperties(prefix = "aliyun.oss2")
+public class AliyunOSS2Properties {
+    private String region;
+    private String bucket;
+}
+```
+
+`AliyunOSS2Operator.java`
+
+```java
+package com.eiousee.utils;
+
+import com.aliyun.sdk.service.oss2.OSSClient;
+import com.aliyun.sdk.service.oss2.OSSClientBuilder;
+import com.aliyun.sdk.service.oss2.credentials.CredentialsProvider;
+import com.aliyun.sdk.service.oss2.credentials.EnvironmentVariableCredentialsProvider;
+import com.aliyun.sdk.service.oss2.models.*;
+import com.aliyun.sdk.service.oss2.transport.BinaryData;
+import com.eiousee.pojo.AliyunOSS2Properties;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+@Component
+public class AliyunOSS2Operator {
+
+    private final AliyunOSS2Properties aliyunOSS2Properties;
+
+    public AliyunOSS2Operator(AliyunOSS2Properties aliyunOSS2Properties) {
+        this.aliyunOSS2Properties = aliyunOSS2Properties;
+    }
+
+    public String putObject(String fileName, byte[] data) {
+
+        String region = aliyunOSS2Properties.getRegion();
+        String bucket = aliyunOSS2Properties.getBucket();
+
+        CredentialsProvider provider = new EnvironmentVariableCredentialsProvider();
+        OSSClientBuilder clientBuilder = OSSClient.newBuilder()
+                .credentialsProvider(provider)
+                .region(region);
+
+        try (OSSClient client = clientBuilder.build()) {
+            PutObjectResult result = client.putObject(PutObjectRequest.newBuilder()
+                            .bucket(bucket)
+                            .key(fileName)
+                            .body(BinaryData.fromBytes(data))
+                    .build());
+
+            System.out.printf("status code:%d, request id:%s, eTag:%s\n",
+                    result.statusCode(), result.requestId(), result.eTag());
+
+        } catch (Exception e) {
+            System.out.printf("error:\n%s", e);
+            return null;
+        }
+        return "https://" + bucket + ".oss-cn-beijing.aliyuncs.com/" + fileName;
+    }
+}
+```
+
+### 批量删除员工功能
 
