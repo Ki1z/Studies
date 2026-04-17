@@ -1,6 +1,6 @@
 # Java Web
 
-`更新时间：2026-4-16`
+`更新时间：2026-4-17`
 
 注释解释：
 
@@ -5162,4 +5162,350 @@ public class AliyunOSS2Operator {
 ```
 
 ### 批量删除员工功能
+
+根据接口文档，我们来开发批量删除员工的功能。在接口文档中，使用了`?ids=1,2,3`的参数形式，对于这种形式，可以使用一个普通类型的数组来接收，也可以使用`List`集合来接收，但是在使用`List`集合时必须添加`@Param`注解
+
+`Controller`
+
+```java
+@DeleteMapping
+public Result deleteEmpByIds(Integer[] ids) {
+    log.info("删除员工，参数：{}", Arrays.toString(ids));
+    empService.deleteEmpByIds(ids);
+    return Result.success();
+}
+
+@DeleteMapping
+public Result deleteEmpByIds(@Param("ids") List<Integer> ids) {
+    log.info("删除员工，参数：{}", Arrays.toString(ids));
+    empService.deleteEmpByIds(ids);
+    return Result.success();
+}
+```
+
+这里我们就使用普通数组，然后构建`Service`，在`EmpMapper`中删除员工表中的数据，在`EmpExpMapper`中删除对应的员工工作经历表中的数据。并且为了保证事务的一致性，添加`@Transactional`注解，设定回滚级别为`Exception`
+
+`Service`
+
+```java
+@Override
+@Transactional(rollbackForClassName = "Exception")
+public void deleteEmpByIds(Integer[] ids) {
+    empMapper.deleteEmpByIds(ids);
+    empExpMapper.deleteEmpExpByIds(ids);
+}
+```
+
+然后完善相应的`Mapper`，这里传入的是数组参数，因此需要使用`<foreach>`标签构建动态`sql`，使用`IN`关键字，在遍历开始前添加`(`，在遍历完成后添加`)`
+
+`EmpExpMapper.xml`
+
+```xml
+<!--    删除员工工作经历-->
+<delete id="deleteEmpExpByIds">
+    DELETE FROM emp_exp WHERE id IN
+    <foreach item="id" collection="ids" separator="," open="(" close=")">
+        #{id}
+    </foreach>
+</delete>
+```
+
+`EmpMapper.xml`
+
+```xml
+<!--    员工批量删除 -->
+<delete id="deleteEmpByIds">
+    DELETE FROM emp_info WHERE id IN
+    <foreach item="id" collection="ids" separator="," open="(" close=")">
+        #{id}
+    </foreach>
+</delete>
+```
+
+### 修改员工功能
+
+#### 查询回显
+
+根据接口文档内容，使用路径参数`/emps/{id}`来指定需要编辑的员工
+
+`Controller`
+
+```java
+@GetMapping("/{id}")
+public Result getEmpById(@PathVariable Integer id) {
+    log.info("查询员工，参数：{}", id);
+    return Result.success(empService.getEmpById(id));
+}
+```
+
+然后在`Service`中调用`Mapper`实现查询
+
+```java
+@Override
+public Employee getEmpById(Integer id) {
+    Employee employee = empMapper.getEmpById(id);
+    employee.setEmpExpList(empExpMapper.getEmpExpListByEmpId(id));
+    return employee;
+}
+```
+
+最后在两个`Mapper`的映射文件中实现查询的逻辑
+
+`EmpMapper.xml`
+
+```xml
+<!--    根据id查询员工信息-->
+<select id="getEmpById" resultType="com.eiousee.pojo.Employee">
+    SELECT
+        e.name AS name,
+        birth, sex,
+        avatar_path,
+        d.name AS dept_name,
+        j.title AS job_name,
+        board_date
+    FROM emp_info AS e
+        LEFT JOIN dept AS d
+            ON e.dept_id = d.id
+        LEFT JOIN job AS j
+            ON e.job_id = j.id
+    WHERE e.id = #{id}
+</select>
+```
+
+`EmpExpMapper.xml`
+
+```xml
+<!--    根据员工id查询员工工作经历-->
+<select id="getEmpExpListByEmpId" resultType="com.eiousee.pojo.EmpExp">
+    SELECT
+        start_time, end_time, company, job
+    FROM emp_exp
+    WHERE id = #{id}
+</select>
+```
+
+#### ResultMap
+
+上文的结果查询中我们使用了两个`Mapper`进行查询，虽然结构简单，逻辑更清晰，但是在实际业务中会有两次的网络调用，对于一对多，且数据量较小的场景，使用连接查询的性能更好
+
+`EmpMapper.xml`
+
+```xml
+<!--    根据id查询员工信息和员工工作经历-->
+<select id="getEmpAndExpById" resultType="com.eiousee.pojo.Employee">
+    SELECT
+        e.name AS name,
+        birth, sex,
+        avatar_path,
+        d.name AS dept_name,
+        j.title AS job_name,
+        board_date,
+        ee.start_time AS start_time,
+        ee.end_time AS end_time,
+        ee.company AS company,
+        ee.job AS job
+    FROM emp_info AS e
+        LEFT JOIN dept AS d
+            ON e.dept_id = d.id
+        LEFT JOIN job AS j
+            ON e.job_id = j.id
+        LEFT JOIN emp_exp AS ee
+            ON e.id = ee.id
+    WHERE e.id = #{id}
+</select>
+```
+
+但是这里有个问题，我们设置的`resultType`是`Employee`，而`MyBatis`在进行封装的时候，并不会自动将每条查询结果的工作经历部分封装为`List<EmpExp>`，而是尝试直接将所有的字段全部封装到`Employee`的所有属性中，并且在员工拥有多条工作经历记录的情况下会抛出`TooManyResults`异常
+
+> ![](javaweb/60.png)
+
+于是我们需要使用`<ResultMap>`标签自定义一个封装类型
+
+```xml
+<!--    定义ResultMap-->
+<resultMap id="empResultMap" type="com.eiousee.pojo.Employee">
+    <id property="id" column="id"/>
+    <result property="name" column="name"/>
+    <result property="birth" column="birth"/>
+    <result property="sex" column="sex"/>
+    <result property="avatarPath" column="avatar_path"/>
+    <result property="deptName" column="dept_name"/>
+    <result property="jobName" column="job_name"/>
+    <result property="boardDate" column="board_date"/>
+    <collection property="empExpList" ofType="com.eiousee.pojo.EmpExp">
+        <result property="startTime" column="start_time"/>
+        <result property="endTime" column="end_time"/>
+        <result property="company" column="company"/>
+        <result property="job" column="job"/>
+    </collection>
+</resultMap>
+```
+
+然后将`resultType`改为`resultMap`
+
+```xml
+<!--    根据id查询员工信息和员工工作经历-->
+<select id="getEmpAndExpById" resultMap="empResultMap">
+```
+
+> ![](javaweb/61.png)
+
+#### 实现
+
+根据接口文档，`Controller`使用`Employee`实体类接收参数信息
+
+```java
+@PutMapping
+public Result updateEmp(@RequestBody Employee employee) {
+    log.info("更新员工，参数：{}", employee);
+    empService.updateEmp(employee);
+    return Result.success();
+}
+```
+
+在`Service`中，我们先根据员工基本信息，调用`EmpMapper`更新，然后删除所有的员工工作经历信息，再插入新的员工工作经历
+
+```java
+@Override
+@Transactional(rollbackForClassName = "Exception")
+public void updateEmp(Employee employee) {
+    employee.setUpdateTime(LocalDateTime.now());
+    empMapper.updateEmp(employee);
+    empExpMapper.deleteEmpExpByIds(new Integer[]{employee.getId()});
+
+    if (employee.getEmpExpList() != null && !employee.getEmpExpList().isEmpty()) {
+        empExpMapper.addEmpExp(employee.getEmpExpList());
+    }
+}
+```
+
+通过子查询获取部门`id`和员工职位`id`，然后再进行更新
+
+`EmpMapper.java`
+
+```java
+@Update("""
+        UPDATE
+            emp_info
+        SET
+            avatar_path = #{avatarPath},
+            board_date = #{boardDate},
+            update_time = #{updateTime},
+            dept_id = (SELECT id FROM dept WHERE name = #{deptName}),
+            job_id = (SELECT id FROM job WHERE title = #{jobName})
+        WHERE
+            id = #{id};
+        """)
+void updateEmp(Employee employee);
+```
+
+#### 更新优化
+
+在上文中，我们在每次更新时都直接将用户数据全部更新一次，实际上这是不必要的行为，我们可以使用`<set>`和`<if>`标签构建动态`sql`，每次更新只更新前端指定的字段。`<set>`标签会自动删除末尾多余的逗号，但是不会添加逗号，因此除最后一句外，其他语句必须添加逗号
+
+```xml
+<update id="updateEmp">
+	UPDATE
+    	emp_info
+    <set>
+    	<if test="avatarPath != null and avatarPath != ''">avatar_path = #{avatarPath},</if>
+        <if test="boardDate != null and boardDate != ''">board_date = #{boardDate},</if>
+        <if test="update_time != null">update_time = #{updateTime},</if>
+        <if test="deptName != null">dept_id = (SELECT id FROM dept WHERE name = #{deptName}),</if>
+        <if test="jobName != null">job_id = (SELECT id FROM job WHERE title = #{jobName})</if>
+    </set>
+    WHERE
+    	id = #{id};
+</update>
+```
+
+> ![](javaweb/62.png)
+
+### 全局异常处理器
+
+在上文的开发中，难免会出现服务端异常的情况，但是每次服务端出现异常，前端都无法正常接收错误消息，从而导致前端没有任何操作回显。因此`Spring`提供了全局异常处理器来解决错误回显的问题
+
+`Spring`中，使用`@RestControllerAdvice`来注解一个全局异常处理器类，然后使用`@ExceptionHandler`注解异常捕获方法
+
+```java
+package com.eiousee.exception;
+
+import com.eiousee.pojo.Result;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+@Slf4j
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+    @ExceptionHandler
+    public Result handleException(Exception e) {
+        log.error("服务器异常：{}", e.getMessage());
+        return Result.error("服务器异常");
+    }
+}
+```
+
+> ![](javaweb/63.png)
+
+#### 精确类型捕获
+
+上图中确实捕获到了异常，但是对于用户来说，并不知道具体的错误原因，因此可以在全局异常处理器类中添加更精确的异常捕获
+
+```java
+package com.eiousee.exception;
+
+import com.eiousee.pojo.Result;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.UncategorizedSQLException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.sql.SQLException;
+
+@Slf4j
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler
+    public Result handleException(Exception e) {
+        log.error("服务器异常：", e);
+        return Result.error("服务器异常");
+    }
+
+    @ExceptionHandler
+    public Result handleUncategorizedSQLException(UncategorizedSQLException e) {
+        log.error("SQL异常：", e);
+        if (e.getMessage().contains("'chk_date_order' is violated")) {
+            return Result.error("入职时间不能大于离职时间");
+        }
+        return Result.error("SQL异常");
+    }
+
+}
+```
+
+> ![](javaweb/64.png)
+
+一般来说，异常捕获越精确，用户的体验就越好。上文中的`UncategorizedSQLException`是`Spring`为非预期的`SQLException`提供的包装类，因此我们仍需要`if`来再次判断准确的错误类型。例如，我们为`name`添加唯一键，然后加上用户名重复的异常捕获
+
+```java
+@ExceptionHandler
+public Result handleDuplicateKeyException(DuplicateKeyException e) {
+    log.error("DuplicateKeyException异常：", e);
+    // 获取异常信息
+    String message = e.getMessage();
+    // 获取索引
+    int target = message.indexOf("Duplicate entry");
+    // 从索引截取字符串
+    String errMsg = message.substring(target);
+    return Result.error(errMsg.split(" ")[2] + "已存在");
+}
+```
+
+> ![](javaweb/65.png)
+
+这样用户就能清晰地得知错误地位置并及时更改
+
+### 职位统计功能
 

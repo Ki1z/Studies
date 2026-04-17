@@ -472,6 +472,209 @@
 }
 ```
 
+### 2.4 根据ID查询
+
+#### 2.4.1 基本信息
+
+请求路径：`/emps/{id}`
+
+请求方式：`GET`
+
+接口描述：该接口用于根据主键`ID`查询员工的信息
+
+#### 2.4.2 请求参数
+
+参数格式：路径参数
+
+参数说明：
+
+| 参数名 | 类型   | 是否必须 | 备注   |
+| ------ | ------ | -------- | ------ |
+| id     | number | 必须     | 员工ID |
+
+请求参数样例：`/emps/1`
+
+#### 2.4.3 响应数据
+
+参数格式：`application/json`
+
+参数说明：
+
+| 名称                 | 类型     | 是否必须 | 备注                         |
+| -------------------- | -------- | -------- | ---------------------------- |
+| code                 | number   | 是       | 响应码，1代表成功，0代表失败 |
+| msg                  | string   | 非必须   | 提示信息                     |
+| data                 | object   | 非必须   | 返回的数据，员工信息         |
+| data-id              | number   | 非必须   | 员工id                       |
+| data-name            | string   | 非必须   | 员工姓名                     |
+| data-birth           | string   | 非必须   | 员工出生日期                 |
+| data-sex             | string   | 非必须   | 员工性别                     |
+| data-avatarPath      | string   | 非必须   | 员工头像url                  |
+| data-deptName        | string   | 非必须   | 部门名称                     |
+| data-jobName         | string   | 非必须   | 职位名称                     |
+| data-boardDate       | string   | 非必须   | 入职日期                     |
+| data-empExpList      | object[] | 非必须   | 员工工作经历                 |
+| empExpList-startTime | string   | 非必须   | 开始时间                     |
+| empExpList-endTime   | string   | 非必须   | 离职时间                     |
+| empExpList-company   | string   | 非必须   | 公司名                       |
+| empExpList-job       | string   | 非必须   | 职位名称                     |
+
+响应数据样例：
+
+```json
+{
+    "code": 1,
+    "msg": "success",
+    "data": {
+        "id": 1,
+        "name": "张三",
+        "birth": "2010-01-01",
+        "sex": "男",
+        "avatarPath": "https://example.eiousee.com/zhangsan.jpg",
+        "deptName": "学工部",
+        "jobName": "主任",
+        "boardDate": "2020-01-01",
+        "empExpList": [
+            {
+                "startTime": "2011-01-01",
+                "endTime": "2011-01-01",
+                "company": "阿里巴巴",
+                "job": "Java开发"
+            },
+            {
+                "startTime": "2012-01-01",
+                "endTime": "2012-01-01",
+                "company": "腾讯",
+                "job": "Java开发"
+            }
+        ]
+    }
+}
+```
+
+### 2.5 修改员工
+
+#### 2.5.1 基本信息
+
+请求路径：`/emps`
+
+请求方式：`PUT`
+
+接口描述：该接口用于修改员工的数据信息
+
+#### 2.5.2 请求参数
+
+参数格式：`application/json`
+
+参数说明：
+
+| 名称                 | 类型     | 是否必须 | 备注                     |
+| -------------------- | -------- | -------- | ------------------------ |
+| id                   | number   | 必须     | 员工id                   |
+| avatarPath           | string   | 非必须   | 员工头像url              |
+| boardDate            | string   | 非必须   | 入职日期，格式YYYY-MM-DD |
+| deptName             | string   | 非必须   | 部门名称                 |
+| jobName              | string   | 非必须   | 职位名称                 |
+| empExpList           | object[] | 非必须   | 工作经历                 |
+| empExpList-id        | number   | 非必须   | 员工id                   |
+| empExpList-startTime | string   | 非必须   | 开始时间                 |
+| empExpList-endTime   | string   | 非必须   | 离职时间                 |
+| empExpList-company   | string   | 非必须   | 公司名                   |
+| empExpList-job       | string   | 非必须   | 职位名称                 |
+
+请求数据样例：
+
+```json
+{
+	"id": 1,
+    "avatarPath": "https://example.eiousee.com/zhangsan.jpg",
+    "deptName": "学工部",
+    "jobName": "主任",
+    "boardDate": "2020-01-01",
+    "empExpList": [
+        {
+            "id": 1,
+            "startTime": "2011-01-01",
+            "endTime": "2011-01-01",
+            "company": "阿里巴巴",
+            "job": "Java开发"
+        },
+        {
+            "id": 1,
+            "startTime": "2012-01-01",
+            "endTime": "2012-01-01",
+            "company": "腾讯",
+            "job": "Java开发"
+        }
+    ]
+}
+```
+
+#### 2.5.3 响应数据
+
+参数格式：`application/json`
+
+参数说明：
+
+| 参数名 | 类型   | 是否必须 | 备注                         |
+| ------ | ------ | -------- | ---------------------------- |
+| code   | number | 必须     | 响应码，1表示成功，0表示失败 |
+| msg    | string | 非必须   | 提示信息                     |
+| data   | object | 非必须   | 返回的数据体                 |
+
+响应数据样例：
+
+```json
+{
+    "code": 1,
+    "msg": "success",
+    "data": null
+}
+```
+
+## 5. 数据统计
+
+### 5.2 员工职位人数统计
+
+#### 5.2.1 基本信息
+
+请求路径：`/report/empJobData`
+
+请求方式：`GET`
+
+接口描述：统计各个职位的员工人数
+
+#### 5.2.2 请求参数
+
+无
+
+#### 5.2.3 响应数据
+
+参数格式：`application/json`
+
+参数说明：
+
+| 参数名         | 类型     | 是否必须 | 备注                         |
+| -------------- | -------- | -------- | ---------------------------- |
+| code           | number   | 是       | 响应码，1表示成功，0表示失败 |
+| msg            | string   | 非必须   | 提示信息                     |
+| data           | object   | 非必须   | 返回的数据体                 |
+| data-titleList | string[] | 是       | 职位列表                     |
+| data-dataList  | number[] | 是       | 人数列表                     |
+
+响应数据样例：
+
+```json
+{
+    "code": 1,
+    "msg": "success",
+    "data": {
+        "titleList": ["助教", "讲师", "副教授"],
+        "dataList": [1, 1, 2]
+    }
+}
+```
+
 
 
 ## 6. 其他接口
