@@ -5509,3 +5509,83 @@ public Result handleDuplicateKeyException(DuplicateKeyException e) {
 
 ### 职位统计功能
 
+根据接口文档开发员工职位统计功能，首先构造返回的实体类`ReportData`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class ReportData {
+    private List<String> titleList;
+    private List<Integer> dataList;
+}
+```
+
+然后同步构建`Controller`
+
+```java
+@GetMapping("/empJobData")
+public Result getEmpJobData() {
+    log.info("查询员工职位统计数据");
+    return Result.success(reportService.getEmpJobData());
+}
+```
+
+然后构建`sql`语句，再决定`Service`如何实现
+
+```xml
+<select id="getEmpJobData" resultType="com.eiousee.pojo.ReportCount">
+    SELECT
+        j.title AS title,
+        COUNT(e.job_id) AS empCount
+    FROM
+        job j
+            LEFT JOIN emp_info e ON j.id = e.job_id
+    GROUP BY
+        j.id, j.title
+    ORDER BY
+        COUNT(e.job_id)
+</select>
+```
+
+数据库中返回的数据是表格的形式，但前端需要的是两个数组的形式，因此我们还需要构建一个实体类`ReportCount`来封装每条记录，然后提取每条记录中的职位名和员工人数，封装到`ReportData`中
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class ReportCount {
+    private String title;
+    private Integer empCount;
+}
+```
+
+所以在`Service`中，我们实现这个逻辑，最后返回`ReportData`实例
+
+```java
+@Override
+public ReportData getEmpJobData() {
+    List<ReportCount> reportCountList = reportMapper.getEmpJobData();
+    List<String> jobList = reportCountList.stream().map(ReportCount::getTitle).toList();
+    List<Integer> dataList = reportCountList.stream().map(ReportCount::getEmpCount).toList();
+    return new ReportData(jobList, dataList);
+}
+```
+
+由于接口文档中有关部门人数统计和性别人数统计的接口完全相同，因此省略相关步骤
+
+> ![](javaweb/66.png)
