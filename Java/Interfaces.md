@@ -1151,21 +1151,23 @@
 
 参数说明：
 
-| 名称               | 类型     | 是否必须 | 备注                         |
-| ------------------ | -------- | -------- | ---------------------------- |
-| code               | number   | 必须     | 响应码，1表示成功，0表示失败 |
-| msg                | string   | 非必须   | 提示信息                     |
-| data               | object   | 必须     | 返回的数据体                 |
-| data-total         | number   | 必须     | 总记录数                     |
-| data-rows          | object[] | 必须     | 数据列表                     |
-| rows-id            | number   | 非必须   | 学号                         |
-| rows-name          | string   | 非必须   | 学生姓名                     |
-| rows-sex           | string   | 非必须   | 性别                         |
-| rows-birth         | string   | 非必须   | 出生日期                     |
-| rows-className     | string   | 非必须   | 班级名称                     |
-| rows-majorName     | string   | 非必须   | 专业名称                     |
-| rows-educationName | string   | 非必须   | 学历                         |
-| rows-updateTime    | string   | 非必须   | 最后修改时间                 |
+| 名称                 | 类型     | 是否必须 | 备注                         |
+| -------------------- | -------- | -------- | ---------------------------- |
+| code                 | number   | 必须     | 响应码，1表示成功，0表示失败 |
+| msg                  | string   | 非必须   | 提示信息                     |
+| data                 | object   | 必须     | 返回的数据体                 |
+| data-total           | number   | 必须     | 总记录数                     |
+| data-rows            | object[] | 必须     | 数据列表                     |
+| rows-id              | number   | 非必须   | 学号                         |
+| rows-name            | string   | 非必须   | 学生姓名                     |
+| rows-sex             | string   | 非必须   | 性别                         |
+| rows-birth           | string   | 非必须   | 出生日期                     |
+| rows-className       | string   | 非必须   | 班级名称                     |
+| rows-majorName       | string   | 非必须   | 专业名称                     |
+| rows-educationName   | string   | 非必须   | 学历                         |
+| rows-updateTime      | string   | 非必须   | 最后修改时间                 |
+| rows-disciplineCount | number   | 非必须   | 违纪次数                     |
+| rows-deductionPoints | number   | 非必须   | 违纪总分数                   |
 
 响应数据样例：
 
@@ -1184,7 +1186,9 @@
                 "className": "软件工程1班",
                 "majorName": "软件工程",
                 "educationName": "初中及以下",
-                "updateTime": "2020-01-01T00:00:00"
+                "updateTime": "2020-01-01T00:00:00",
+                "disciplineCount": 2,
+                "deductionPoints": 2.5
             },
             {
                 "id": 2020010102,
@@ -1194,7 +1198,9 @@
                 "className": "软件工程1班",
                 "majorName": "软件工程",
                 "educationName": "初中及以下",
-                "updateTime": "2020-01-01T00:00:00"
+                "updateTime": "2020-01-01T00:00:00",
+                "disciplineCount": 0,
+                "deductionPoints": 0.0
             }
         ]
     }
@@ -1392,7 +1398,238 @@
 }
 ```
 
+### 4.6 根据ID查询
 
+#### 4.6.1 基本信息
+
+请求路径：`/student/{id}`
+
+请求方式：`GET`
+
+接口描述：该接口用于根据主键ID查询学员的信息
+
+#### 4.6.2 请求参数
+
+参数格式：路径参数
+
+参数说明：
+
+| 参数名 | 类型   | 是否必须 | 备注 |
+| ------ | ------ | -------- | ---- |
+| id     | number | 必须     | 学号 |
+
+请求参数样例：`/student/8`
+
+#### 4.6.3 响应数据
+
+参数格式：`application/json`
+
+参数说明：
+
+| 名称                  | 类型   | 是否必须 | 备注                         |
+| --------------------- | ------ | -------- | ---------------------------- |
+| code                  | number | 必须     | 响应码，1表示成功，0表示失败 |
+| msg                   | string | 非必须   | 提示信息                     |
+| data                  | object | 必须     | 返回的数据体                 |
+| data-id               | number | 非必须   | 学号                         |
+| data-name             | string | 非必须   | 学生姓名                     |
+| data-sex              | string | 非必须   | 性别                         |
+| data-birth            | string | 非必须   | 出生日期                     |
+| data-className        | string | 非必须   | 班级名称                     |
+| data-majorName        | string | 非必须   | 专业名称                     |
+| data-educationName    | string | 非必须   | 学历                         |
+| data-updateTime       | string | 非必须   | 最后修改时间                 |
+| data-disciplineCount  | number | 非必须   | 违纪次数                     |
+| data-disciplinePoints | number | 非必须   | 违纪总分数                   |
+
+### 4.7 修改学生
+
+#### 4.7.1 基本信息
+
+请求路径：`/student`
+
+请求方式：`PUT`
+
+接口描述：该接口用于修改学员的数据信息
+
+#### 4.7.2 请求参数
+
+参数格式：`application/json`
+
+参数说明：
+
+| 参数名        | 类型   | 是否必须 | 备注     |
+| ------------- | ------ | -------- | -------- |
+| id            | number | 是       | 学号     |
+| name          | string | 是       | 姓名     |
+| sex           | string | 是       | 性别     |
+| birth         | string | 非必须   | 出生日期 |
+| className     | string | 非必须   | 班级名称 |
+| majorName     | string | 非必须   | 专业名称 |
+| educationName | string | 非必须   | 学历     |
+
+请求参数样例：
+
+```json
+{
+    "id": 2020010101,
+    "name": "张三一",
+    "sex": "男",
+    "birth": "2020-01-01",
+    "className": "软件工程1班",
+    "majorName": "软件工程",
+    "educationName": "本科"
+}
+```
+
+#### 4.7.3 响应数据
+
+参数格式：`application/json`
+
+参数说明：
+
+| 参数名 | 类型   | 是否必须 | 备注                           |
+| ------ | ------ | -------- | ------------------------------ |
+| code   | number | 必须     | 响应码，1 代表成功，0 代表失败 |
+| msg    | string | 非必须   | 提示信息                       |
+| data   | object | 非必须   | 返回的数据                     |
+
+响应数据样例：
+
+```JSON
+{
+    "code":1,
+    "msg":"success",
+    "data":null
+}
+```
+
+### 4.8 根据学生ID获取违纪信息
+
+#### 4.8.1 基本信息
+
+请求路径：`/student/{id}/discipline`
+
+请求方式：`GET`
+
+接口描述：根据学生ID获取学生违纪信息
+
+#### 4.8.2 请求参数
+
+参数格式：路径参数
+
+参数说明：
+
+| 参数名 | 类型   | 是否必须 | 备注 |
+| ------ | ------ | -------- | ---- |
+| id     | number | 必须     | 学号 |
+
+请求参数样例：`/student/2020010101/discipline`
+
+#### 4.8.3 响应数据
+
+参数格式：`application/json`
+
+参数说明：
+
+| 参数名                | 类型     | 是否必须 | 备注                           |
+| --------------------- | -------- | -------- | ------------------------------ |
+| code                  | number   | 必须     | 响应码，1 代表成功，0 代表失败 |
+| msg                   | string   | 非必须   | 提示信息                       |
+| data                  | object[] | 必须     | 返回的数据                     |
+| data-studentId        | number   | 非必须   | 学号                           |
+| data-disciplineDate   | string   | 非必须   | 违纪日期                       |
+| data-disciplineReason | string   | 非必须   | 违纪原因                       |
+| data-deductionPoints  | number   | 非必须   | 违纪扣分                       |
+
+响应数据样例：
+
+```json
+{
+    "code": 1,
+    "msg": "success",
+    "data": [
+        {
+            "studentId": 2020010101,
+            "disciplineDate": "2026-04-15",
+            "disciplineReason": "旷课",
+            "deductionPoints": 1.0
+        },
+        {
+            "studentId": 2020010101,
+            "disciplineDate": "2026-04-10",
+            "disciplineReason": "上课玩手机",
+            "deductionPoints": 1.5
+        }
+    ]
+}
+```
+
+### 4.9 更新违纪信息
+
+#### 4.9.1 基本信息
+
+请求路径：`/student/{id}/discipline`
+
+请求方式：`PUT`
+
+接口描述：根据学生ID更新学生违纪信息
+
+#### 4.9.2 请求参数
+
+参数格式：`application/json`
+
+参数说明：
+
+| 参数名           | 类型   | 是否必须 | 备注     |
+| ---------------- | ------ | -------- | -------- |
+| studentId        | number | 非必须   | 学号     |
+| disciplineDate   | string | 非必须   | 违纪日期 |
+| disciplineReason | string | 非必须   | 违纪原因 |
+| deductionPoints  | number | 非必须   | 违纪扣分 |
+
+请求参数样例：
+
+`/student/2020010101/discipline`
+
+```json
+[
+     {
+        "studentId": 2020010101,
+        "disciplineDate": "2026-04-15",
+        "disciplineReason": "旷课",
+        "deductionPoints": 2.0
+    },
+    {
+        "studentId": 2020010101,
+        "disciplineDate": "2026-04-10",
+        "disciplineReason": "上课玩手机",
+        "deductionPoints": 1.0
+    }
+]
+```
+
+#### 4.9.3 响应数据
+
+参数格式：`application/json`
+
+参数说明：
+
+| 参数名 | 类型   | 是否必须 | 备注                           |
+| ------ | ------ | -------- | ------------------------------ |
+| code   | number | 必须     | 响应码，1 代表成功，0 代表失败 |
+| msg    | string | 非必须   | 提示信息                       |
+| data   | object | 非必须   | 返回的数据                     |
+
+响应数据样例：
+
+```JSON
+{
+    "code":1,
+    "msg":"success",
+    "data":null
+}
+```
 
 
 
