@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.eiousee.mapper.EmpMapper">
+    <!--    员工列表条件查询-->
+    <select id="getEmpList" resultType="com.eiousee.pojo.Employee">
+            SELECT
+                e.id AS id,
+                e.name AS name,
+                birth, sex,
+                avatar_path,
+                d.name AS dept_name,
+                j.title AS job_name,
+                board_date,
+                e.update_time AS update_time
+            FROM emp_info AS e
+                LEFT JOIN dept AS d
+                    ON e.dept_id = d.id
+                LEFT JOIN job AS j
+                    ON e.job_id = j.id
+            <where>
+                <if test="name != null and name != ''">
+                    AND e.name LIKE CONCAT('%', #{name}, '%')
+                </if>
+                <if test="sex != null and sex != ''">
+                    AND e.sex = #{sex}
+                </if>
+                <if test="begin != null">
+                    AND e.board_date &gt;= #{begin}
+                </if>
+                <if test="end != null">
+                    AND e.board_date &lt;= #{end}
+                </if>
+            </where>
+    </select>
+
+<!--    根据id查询员工信息-->
+    <select id="getEmpById" resultType="com.eiousee.pojo.Employee">
+        SELECT
+            e.name AS name,
+            birth, sex,
+            avatar_path,
+            d.name AS dept_name,
+            j.title AS job_name,
+            board_date
+        FROM emp_info AS e
+            LEFT JOIN dept AS d
+                ON e.dept_id = d.id
+            LEFT JOIN job AS j
+                ON e.job_id = j.id
+        WHERE e.id = #{id}
+    </select>
+
+    <!--    员工批量删除 -->
+    <delete id="deleteEmpByIds">
+        DELETE FROM emp_info WHERE id IN
+        <foreach item="id" collection="ids" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+<!--    定义ResultMap-->
+    <resultMap id="empResultMap" type="com.eiousee.pojo.Employee">
+        <result property="name" column="name"/>
+        <result property="birth" column="birth"/>
+        <result property="sex" column="sex"/>
+        <result property="avatarPath" column="avatar_path"/>
+        <result property="deptName" column="dept_name"/>
+        <result property="jobName" column="job_name"/>
+        <result property="boardDate" column="board_date"/>
+        <collection property="empExpList" ofType="com.eiousee.pojo.EmpExp">
+            <result property="startTime" column="start_time"/>
+            <result property="endTime" column="end_time"/>
+            <result property="company" column="company"/>
+            <result property="job" column="job"/>
+        </collection>
+    </resultMap>
+
+    <!--    根据id查询员工信息和员工工作经历-->
+    <select id="getEmpAndExpById" resultMap="empResultMap">
+        SELECT
+            e.name AS name,
+            birth, sex,
+            avatar_path,
+            d.name AS dept_name,
+            j.title AS job_name,
+            board_date,
+            ee.start_time AS start_time,
+            ee.end_time AS end_time,
+            ee.company AS company,
+            ee.job AS job
+        FROM emp_info AS e
+            LEFT JOIN dept AS d
+                ON e.dept_id = d.id
+            LEFT JOIN job AS j
+                ON e.job_id = j.id
+            LEFT JOIN emp_exp AS ee
+                ON e.id = ee.id
+        WHERE e.id = #{id}
+    </select>
+</mapper>

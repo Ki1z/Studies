@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>班级管理</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <link rel="stylesheet" href="css/class_test.css">
+</head>
+<body>
+<div id="app">
+  <!-- 导航栏 -->
+  <nav class="navbar">
+    <span class="navbar-title">员工管理系统</span>
+    <div class="navbar-links">
+      <a href="dept_test.html">部门管理</a>
+      <a href="emps_test.html">员工管理</a>
+      <a href="class_test.html" class="active">班级管理</a>
+      <a href="student_test.html">学生管理</a>
+      <a href="report_test.html">数据统计</a>
+    </div>
+  </nav>
+
+  <!-- 消息提示 -->
+  <div v-if="msg" :class="['toast', msgType]">{{ msgText }}</div>
+
+  <div class="container">
+    <h2>班级管理</h2>
+
+    <!-- 搜索区 -->
+    <div class="search-bar">
+      <input v-model="query.className" placeholder="班级名称">
+      <input type="date" v-model="query.begin">
+      <input type="date" v-model="query.end">
+      <button class="btn btn-primary" @click="searchClass">查询</button>
+      <button class="btn" style="background:#ddd; color:#333" @click="resetQuery">重置</button>
+    </div>
+
+    <!-- 操作区 -->
+    <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+      <button class="btn btn-success" @click="openAdd">+ 新增班级</button>
+      <span>共 {{ total }} 条</span>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <span style="font-size: 13px; color: #666;">每页</span>
+        <select v-model.number="pageSize" @change="searchClass" style="padding: 4px; border: 1px solid #ddd; border-radius: 4px;">
+          <option :value="5">5</option>
+          <option :value="10">10</option>
+          <option :value="20">20</option>
+          <option :value="50">50</option>
+        </select>
+        <span style="font-size: 13px; color: #666;">条</span>
+      </div>
+    </div>
+
+    <!-- 表格 -->
+    <table>
+      <thead>
+      <tr>
+        <th>班级号</th>
+        <th>班级名称</th>
+        <th>教室</th>
+        <th>班主任</th>
+        <th>开课时间</th>
+        <th>结课时间</th>
+        <th>状态</th>
+        <th>更新时间</th>
+        <th>操作</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr v-for="row in list" :key="row.id">
+        <td>{{ row.id }}</td>
+        <td>{{ row.className }}</td>
+        <td>{{ row.classroom }}</td>
+        <td>{{ row.teacherName }}</td>
+        <td>{{ row.startDate }}</td>
+        <td>{{ row.endDate }}</td>
+        <td>{{ row.classStatus }}</td>
+        <td>{{ row.updateTime }}</td>
+        <td>
+          <button class="btn btn-primary" style="padding: 4px 8px; font-size: 12px;" @click="openEdit(row.id)">编辑</button>
+          <button class="btn btn-danger" style="padding: 4px 8px; font-size: 12px;" @click="del(row.id)">删除</button>
+        </td>
+      </tr>
+      </tbody>
+    </table>
+
+    <!-- 分页 -->
+    <div class="pagination">
+      <button @click="changePage(page-1)" :disabled="page<=1">上一页</button>
+      <span>第 {{ page }} / {{ Math.ceil(total/pageSize) || 1 }} 页</span>
+      <button @click="changePage(page+1)" :disabled="page>=Math.ceil(total/pageSize)">下一页</button>
+    </div>
+  </div>
+
+  <!-- 删除确认弹窗 -->
+  <div class="modal-mask" v-if="showConfirmModal">
+    <div class="modal" style="width: 360px; text-align: center;">
+      <h3 style="color: #ff4d4f;">确认删除</h3>
+      <p style="font-size: 15px; color: #333;">确定删除该班级吗？</p>
+      <p style="font-size: 13px; color: #999;">此操作不可恢复</p>
+      <div style="display: flex; justify-content: center; gap: 10px; margin-top: 20px;">
+        <button class="btn" style="background: #ddd; color: #333;" @click="showConfirmModal=false">取消</button>
+        <button class="btn btn-danger" @click="confirmDel">确定删除</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新增/编辑弹窗 -->
+  <div class="modal-mask" v-if="showModal">
+    <div class="modal">
+      <h3>{{ isEdit ? '编辑班级' : '新增班级' }}</h3>
+      <div class="form-row">
+        <div class="form-group"><label>班级号</label><input v-model="form.id" :disabled="isEdit" placeholder="如：20200101"></div>
+        <div class="form-group"><label>班级名称</label><input v-model="form.className"></div>
+        <div class="form-group"><label>教室</label><input v-model="form.classroom"></div>
+        <div class="form-group"><label>班主任</label>
+          <select v-model="form.teacherName">
+            <option :value="null">请选择班主任</option>
+            <option v-for="name in teacherList" :key="name" :value="name">{{ name }}</option>
+          </select>
+        </div>
+        <div class="form-group"><label>开课时间</label><input type="date" v-model="form.startDate"></div>
+        <div class="form-group"><label>结课时间</label><input type="date" v-model="form.endDate"></div>
+        <div class="form-group"><label>班级状态</label>
+          <select v-model="form.classStatus">
+            <option v-for="s in statusList" :key="s" :value="s">{{ s }}</option>
+          </select>
+        </div>
+      </div>
+      <div style="text-align: right; margin-top: 20px;">
+        <button class="btn" style="background: #ddd; color: #333;" @click="showModal=false">取消</button>
+        <button class="btn btn-primary" @click="submit">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const { createApp, ref, onMounted } = Vue;
+  createApp({
+    setup() {
+      const list = ref([]);
+      const total = ref(0);
+      const page = ref(1);
+      const pageSize = ref(10);
+      const statusList = ref([]);
+      const teacherList = ref([]);
+
+      // 消息提示
+      const msg = ref(false);
+      const msgText = ref('');
+      const msgType = ref('success');
+      const showToast = (text, type) => {
+        msgText.value = text;
+        msgType.value = type;
+        msg.value = true;
+        setTimeout(() => msg.value = false, 2000);
+      };
+
+      // 查询参数
+      const query = ref({ className: '', begin: '', end: '' });
+
+      // 表单
+      const defaultForm = { id: null, className: null, classroom: null, teacherName: null, startDate: null, endDate: null, classStatus: null };
+      const form = ref({ ...defaultForm });
+      const showModal = ref(false);
+      const isEdit = ref(false);
+
+      // 删除确认
+      const showConfirmModal = ref(false);
+      const delId = ref(null);
+
+      // 初始化
+      onMounted(async () => {
+        await Promise.all([fetchStatus(), fetchTeachers(), fetchClass()]);
+        showToast('查询成功，共 ' + total.value + ' 条数据', 'success');
+      });
+
+      // 获取班级状态列表
+      const fetchStatus = async () => {
+        const res = await axios.get('/class/status');
+        if (res.data.code === 1) statusList.value = res.data.data;
+      };
+
+      // 获取班主任列表
+      const fetchTeachers = async () => {
+        const res = await axios.get('/emps/names');
+        if (res.data.code === 1) teacherList.value = res.data.data;
+      };
+
+      // 获取列表（静默）
+      const fetchClass = async () => {
+        const params = { page: page.value, pageSize: pageSize.value, ...query.value };
+        const res = await axios.get('/class', { params });
+        if (res.data.code === 1) {
+          list.value = res.data.data.rows;
+          total.value = res.data.data.total;
+        } else {
+          showToast(res.data.msg || '查询失败', 'error');
+        }
+      };
+
+      // 手动查询（带提示）
+      const searchClass = async () => {
+        page.value = 1;
+        await fetchClass();
+        showToast('查询成功，共 ' + total.value + ' 条数据', 'success');
+      };
+
+      // 提交表单
+      const submit = async () => {
+        if (isEdit.value) {
+          const res = await axios.put('/class', form.value);
+          if (res.data.code === 1) {
+            showToast('修改成功', 'success');
+            showModal.value = false;
+            fetchClass();
+          } else {
+            showToast(res.data.msg, 'error');
+          }
+        } else {
+          const res = await axios.post('/class', form.value);
+          if (res.data.code === 1) {
+            showToast('添加成功', 'success');
+            showModal.value = false;
+            fetchClass();
+          } else {
+            showToast(res.data.msg, 'error');
+          }
+        }
+      };
+
+      // 删除
+      const del = (id) => { delId.value = id; showConfirmModal.value = true; };
+      const confirmDel = async () => {
+        const res = await axios.delete(`/class/${delId.value}`);
+        if (res.data.code === 1) {
+          showToast('删除成功', 'success');
+          showConfirmModal.value = false;
+          fetchClass();
+        } else {
+          showToast(res.data.msg || '删除失败', 'error');
+        }
+      };
+
+      // 编辑回显
+      const openEdit = async (id) => {
+        try {
+          const res = await axios.get(`/class/${id}`);
+          if (res.data.code === 1) {
+            form.value = res.data.data;
+            isEdit.value = true;
+            showModal.value = true;
+          } else {
+            showToast(res.data.msg || '查询失败', 'error');
+          }
+        } catch (err) {
+          showToast('查询异常', 'error');
+        }
+      };
+
+      // 新增
+      const openAdd = () => { form.value = { ...defaultForm }; isEdit.value = false; showModal.value = true; };
+
+      // 操作辅助
+      const resetQuery = () => { query.value = { className: null, begin: null, end: null }; fetchClass(); };
+      const changePage = (p) => { if (p > 0) { page.value = p; fetchClass(); } };
+
+      return { list, total, page, pageSize, statusList, teacherList, query, form, showModal, isEdit, showConfirmModal, msg, msgText, msgType, searchClass, resetQuery, changePage, openAdd, openEdit, submit, del, confirmDel };
+    }
+  }).mount('#app');
+</script>
+</body>
+</html>

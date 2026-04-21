@@ -1,0 +1,240 @@
+2026-04-19 13:07:53 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 15752 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-19 13:07:53 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-19 13:07:54 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-19 13:07:54 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-19 13:07:54 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-19 13:07:54 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-19 13:07:54 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-19 13:07:54 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 976 ms
+2026-04-19 13:07:55 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-19 13:07:55 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-19 13:07:55 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 2.16 seconds (process running for 2.981)
+2026-04-19 13:08:18 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-19 13:08:18 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-19 13:08:18 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 2 ms
+2026-04-19 13:08:18 [http-nio-80-exec-1] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource class/list/id=1.
+2026-04-19 13:08:49 [http-nio-80-exec-3] INFO  com.eiousee.controller.ClassController - 查询班级列表
+2026-04-19 13:08:49 [http-nio-80-exec-3] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-19 13:09:17 [http-nio-80-exec-4] INFO  com.eiousee.controller.ClassController - 查询班级列表
+2026-04-19 13:09:33 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-19 13:09:34 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-19 13:09:34 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-19 13:09:34 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-19 20:55:48 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 44616 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-19 20:55:48 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-19 20:55:49 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-19 20:55:49 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-19 20:55:49 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-19 20:55:49 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-19 20:55:49 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-19 20:55:49 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 1060 ms
+2026-04-19 20:55:49 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-19 20:55:49 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.context.ApplicationContextException: Failed to start bean 'webServerStartStop'
+2026-04-19 20:55:49 [main] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-0} closing ...
+2026-04-19 20:55:49 [main] INFO  o.s.b.a.logging.ConditionEvaluationReportLogger - 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2026-04-19 20:55:49 [main] ERROR o.s.b.diagnostics.LoggingFailureAnalysisReporter - 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Web server failed to start. Port 80 was already in use.
+
+Action:
+
+Identify and stop the process that's listening on port 80 or configure this application to listen on another port.
+
+2026-04-19 20:56:00 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 41316 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-19 20:56:00 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-19 20:56:01 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-19 20:56:01 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-19 20:56:01 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-19 20:56:01 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-19 20:56:01 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-19 20:56:01 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 857 ms
+2026-04-19 20:56:02 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-19 20:56:02 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-19 20:56:02 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.904 seconds (process running for 2.572)
+2026-04-19 20:56:22 [http-nio-80-exec-2] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-19 20:56:22 [http-nio-80-exec-2] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-19 20:56:22 [http-nio-80-exec-2] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 3 ms
+2026-04-19 20:56:22 [http-nio-80-exec-2] INFO  com.eiousee.controller.ClassController - 查询班级列表
+2026-04-19 20:56:22 [http-nio-80-exec-2] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-19 21:13:53 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-19 21:13:53 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-19 21:13:53 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-19 21:13:53 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-19 21:13:58 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 37456 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-19 21:13:58 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-19 21:13:59 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-19 21:13:59 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-19 21:13:59 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-19 21:13:59 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-19 21:14:00 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-19 21:14:00 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 1029 ms
+2026-04-19 21:14:00 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-19 21:14:00 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-19 21:14:00 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 2.318 seconds (process running for 3.125)
+2026-04-19 21:14:05 [http-nio-80-exec-3] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-19 21:14:05 [http-nio-80-exec-3] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-19 21:14:05 [http-nio-80-exec-3] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-19 21:14:05 [http-nio-80-exec-3] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-19 21:15:36 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-19 21:15:36 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-19 21:15:36 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-19 21:15:36 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-19 21:15:40 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 44664 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-19 21:15:40 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-19 21:15:41 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-19 21:15:41 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-19 21:15:41 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-19 21:15:41 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-19 21:15:41 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-19 21:15:41 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 840 ms
+2026-04-19 21:15:42 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-19 21:15:42 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-19 21:15:42 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.841 seconds (process running for 2.483)
+2026-04-19 21:16:00 [http-nio-80-exec-2] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-19 21:16:00 [http-nio-80-exec-2] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-19 21:16:00 [http-nio-80-exec-2] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 2 ms
+2026-04-19 21:16:00 [http-nio-80-exec-2] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-19 21:44:07 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-19 21:44:07 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-19 21:44:07 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-19 21:44:07 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-19 21:44:12 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 8552 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-19 21:44:12 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-19 21:44:13 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-19 21:44:13 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-19 21:44:13 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-19 21:44:13 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-19 21:44:13 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-19 21:44:13 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 956 ms
+2026-04-19 21:44:14 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-19 21:44:14 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-19 21:44:14 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 2.158 seconds (process running for 2.993)
+2026-04-19 21:44:42 [http-nio-80-exec-2] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-19 21:44:42 [http-nio-80-exec-2] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-19 21:44:42 [http-nio-80-exec-2] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-19 21:44:42 [http-nio-80-exec-2] INFO  com.eiousee.controller.StudentController - 获取学生列表
+2026-04-19 21:44:42 [http-nio-80-exec-2] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-19 21:44:49 [http-nio-80-exec-1] INFO  com.eiousee.controller.StudentController - 获取学生列表
+2026-04-19 21:45:08 [http-nio-80-exec-4] INFO  com.eiousee.controller.StudentController - 获取学生列表
+2026-04-19 21:48:25 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-19 21:48:25 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-19 21:48:25 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-19 21:48:25 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-19 21:48:28 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 42696 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-19 21:48:28 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-19 21:48:28 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-19 21:48:28 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-19 21:48:28 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-19 21:48:28 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-19 21:48:28 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-19 21:48:28 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 836 ms
+2026-04-19 21:48:29 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-19 21:48:29 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-19 21:48:29 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.837 seconds (process running for 2.485)
+2026-04-19 21:48:35 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-19 21:48:35 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-19 21:48:35 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-19 21:48:35 [http-nio-80-exec-1] INFO  com.eiousee.controller.StudentController - 获取学生列表
+2026-04-19 21:48:35 [http-nio-80-exec-1] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-19 21:48:55 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-19 21:48:55 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-19 21:48:55 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-19 21:48:55 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-19 21:48:58 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 19672 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-19 21:48:58 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-19 21:48:58 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-19 21:48:58 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-19 21:48:58 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-19 21:48:58 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-19 21:48:59 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-19 21:48:59 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 865 ms
+2026-04-19 21:48:59 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-19 21:48:59 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-19 21:48:59 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.856 seconds (process running for 2.492)
+2026-04-19 21:49:05 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-19 21:49:05 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-19 21:49:05 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 0 ms
+2026-04-19 21:49:05 [http-nio-80-exec-1] INFO  com.eiousee.controller.StudentController - 获取学生列表
+2026-04-19 21:49:05 [http-nio-80-exec-1] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-19 21:53:34 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-19 21:53:34 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-19 21:53:34 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-19 21:53:34 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-19 21:53:38 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 43900 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-19 21:53:38 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-19 21:53:39 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-19 21:53:39 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-19 21:53:39 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-19 21:53:39 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-19 21:53:39 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-19 21:53:39 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 831 ms
+2026-04-19 21:53:40 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-19 21:53:40 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-19 21:53:40 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.839 seconds (process running for 2.482)
+2026-04-19 21:53:46 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-19 21:53:46 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-19 21:53:46 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-19 21:53:46 [http-nio-80-exec-1] INFO  com.eiousee.controller.StudentController - 获取学生列表
+2026-04-19 21:53:46 [http-nio-80-exec-1] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-19 22:18:05 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-19 22:18:05 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-19 22:18:05 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-19 22:18:05 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-19 22:18:09 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 2592 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-19 22:18:09 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-19 22:18:10 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-19 22:18:10 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-19 22:18:10 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-19 22:18:10 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-19 22:18:10 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-19 22:18:10 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 812 ms
+2026-04-19 22:18:11 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-19 22:18:11 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-19 22:18:11 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.825 seconds (process running for 2.451)
+2026-04-19 22:18:38 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-19 22:18:38 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-19 22:18:38 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 0 ms
+2026-04-19 22:18:38 [http-nio-80-exec-1] INFO  com.eiousee.controller.StudentController - 根据id删除学生：[1, 2, 3]
+2026-04-19 22:18:38 [http-nio-80-exec-1] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-19 22:18:47 [http-nio-80-exec-3] INFO  com.eiousee.controller.StudentController - 根据id删除学生：[2020010101]
+2026-04-19 22:55:58 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-19 22:55:58 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-19 22:55:58 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-19 22:55:58 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-19 22:56:03 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 43420 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-19 22:56:03 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-19 22:56:04 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-19 22:56:04 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-19 22:56:04 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-19 22:56:04 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-19 22:56:04 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-19 22:56:04 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 993 ms
+2026-04-19 22:56:05 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-19 22:56:05 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-19 22:56:05 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 2.152 seconds (process running for 2.897)
+2026-04-19 22:56:45 [http-nio-80-exec-2] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-19 22:56:45 [http-nio-80-exec-2] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-19 22:56:45 [http-nio-80-exec-2] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 2 ms
+2026-04-19 22:56:45 [http-nio-80-exec-2] INFO  com.eiousee.controller.StudentController - 添加学生：Student(id=2020010101, name=张三一, sex=男, birth=2020-01-01, className=软件工程1班, majorName=软件工程, educationName=本科, updateTime=null)
+2026-04-19 22:56:45 [http-nio-80-exec-2] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-19 22:56:57 [http-nio-80-exec-3] INFO  com.eiousee.controller.StudentController - 添加学生：Student(id=2020010101, name=张三一, sex=男, birth=2020-01-01, className=软件工程1班, majorName=软件工程, educationName=本科, updateTime=null)
+2026-04-19 22:56:57 [http-nio-80-exec-3] ERROR com.eiousee.exception.GlobalExceptionHandler - DuplicateKeyException异常：
+### Error updating database.  Cause: java.sql.SQLIntegrityConstraintViolationException: Duplicate entry '2020010101' for key 'student.PRIMARY'
+### The error may exist in com/eiousee/mapper/StudentMapper.java (best guess)
+### The error may involve com.eiousee.mapper.StudentMapper.addStudent-Inline
+### The error occurred while setting parameters
+### SQL: INSERT INTO student(id, name, sex, birth, class_id, major_id, education_id, update_time) VALUES (         ?,         ?,         ?,         ?,         (SELECT id FROM class WHERE class_name = ?),         (SELECT id FROM major WHERE major_name = ?),         (SELECT id FROM education WHERE education_name = ?),         ? )
+### Cause: java.sql.SQLIntegrityConstraintViolationException: Duplicate entry '2020010101' for key 'student.PRIMARY'
+; Duplicate entry '2020010101' for key 'student.PRIMARY'
+2026-04-19 22:58:15 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-19 22:58:15 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-19 22:58:15 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-19 22:58:15 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed

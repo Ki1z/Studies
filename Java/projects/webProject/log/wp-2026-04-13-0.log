@@ -1,0 +1,429 @@
+2026-04-13 14:20:51 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 33008 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-13 14:20:51 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-13 14:20:52 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-13 14:20:52 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-13 14:20:52 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-13 14:20:52 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-13 14:20:52 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-13 14:20:52 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 1012 ms
+2026-04-13 14:20:52 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-13 14:20:52 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-13 14:20:52 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 2.172 seconds (process running for 3.1)
+2026-04-13 14:21:10 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-13 14:21:10 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-13 14:21:10 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-13 14:21:15 [http-nio-80-exec-2] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-13 14:21:16 [http-nio-80-exec-2] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-13 14:21:22 [http-nio-80-exec-3] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=张, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-13 14:38:48 [http-nio-80-exec-8] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-13 15:43:10 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-13 15:43:10 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-13 15:43:10 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-13 15:43:10 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-13 16:14:20 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 36548 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-13 16:14:20 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-13 16:14:21 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-13 16:14:21 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-13 16:14:21 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-13 16:14:21 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-13 16:14:21 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-13 16:14:21 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 1078 ms
+2026-04-13 16:14:22 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-13 16:14:22 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-13 16:14:22 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 2.281 seconds (process running for 3.127)
+2026-04-13 16:15:40 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-13 16:15:40 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-13 16:15:40 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-13 16:15:40 [http-nio-80-exec-1] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=哈哈哈, birth=2020-01-01, sex=男, avatarPath=, deptName=null, jobName=null, boardDate=2020-01-01, updateTime=null, empExpList=null)
+2026-04-13 16:15:40 [http-nio-80-exec-1] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-13 16:15:41 [http-nio-80-exec-1] ERROR o.a.c.c.C.[.[localhost].[/].[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.mybatis.spring.MyBatisSystemException: 
+### Error updating database.  Cause: org.apache.ibatis.reflection.ReflectionException: There is no getter for property named 'employee' in 'class com.eiousee.pojo.Employee'
+### The error may exist in com/eiousee/mapper/EmpMapper.java (best guess)
+### The error may involve com.eiousee.mapper.EmpMapper.addEmp-Inline
+### The error occurred while setting parameters
+### SQL: INSERT INTO emp_info (name, birth, sex, avatar_path, dept_id, job_id, board_date, update_time)     VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+### Cause: org.apache.ibatis.reflection.ReflectionException: There is no getter for property named 'employee' in 'class com.eiousee.pojo.Employee'] with root cause
+org.apache.ibatis.reflection.ReflectionException: There is no getter for property named 'employee' in 'class com.eiousee.pojo.Employee'
+	at org.apache.ibatis.reflection.Reflector.getGetInvoker(Reflector.java:385)
+	at org.apache.ibatis.reflection.MetaClass.getGetInvoker(MetaClass.java:160)
+	at org.apache.ibatis.reflection.wrapper.BeanWrapper.getBeanProperty(BeanWrapper.java:156)
+	at org.apache.ibatis.reflection.wrapper.BeanWrapper.get(BeanWrapper.java:50)
+	at org.apache.ibatis.reflection.MetaObject.getValue(MetaObject.java:115)
+	at org.apache.ibatis.reflection.MetaObject.metaObjectForProperty(MetaObject.java:123)
+	at org.apache.ibatis.reflection.wrapper.BaseWrapper.getChildValue(BaseWrapper.java:117)
+	at org.apache.ibatis.reflection.wrapper.BeanWrapper.get(BeanWrapper.java:46)
+	at org.apache.ibatis.reflection.MetaObject.getValue(MetaObject.java:115)
+	at org.apache.ibatis.scripting.defaults.DefaultParameterHandler.setParameters(DefaultParameterHandler.java:82)
+	at org.apache.ibatis.executor.statement.PreparedStatementHandler.parameterize(PreparedStatementHandler.java:97)
+	at org.apache.ibatis.executor.statement.RoutingStatementHandler.parameterize(RoutingStatementHandler.java:65)
+	at org.apache.ibatis.executor.SimpleExecutor.prepareStatement(SimpleExecutor.java:91)
+	at org.apache.ibatis.executor.SimpleExecutor.doUpdate(SimpleExecutor.java:49)
+	at org.apache.ibatis.executor.BaseExecutor.update(BaseExecutor.java:117)
+	at org.apache.ibatis.executor.CachingExecutor.update(CachingExecutor.java:76)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.ibatis.plugin.Plugin.invoke(Plugin.java:61)
+	at jdk.proxy2/jdk.proxy2.$Proxy83.update(Unknown Source)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.update(DefaultSqlSession.java:197)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.insert(DefaultSqlSession.java:184)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.mybatis.spring.SqlSessionTemplate$SqlSessionInterceptor.invoke(SqlSessionTemplate.java:333)
+	at jdk.proxy2/jdk.proxy2.$Proxy70.insert(Unknown Source)
+	at org.mybatis.spring.SqlSessionTemplate.insert(SqlSessionTemplate.java:224)
+	at org.apache.ibatis.binding.MapperMethod.execute(MapperMethod.java:62)
+	at org.apache.ibatis.binding.MapperProxy$PlainMethodInvoker.invoke(MapperProxy.java:141)
+	at org.apache.ibatis.binding.MapperProxy.invoke(MapperProxy.java:86)
+	at jdk.proxy2/jdk.proxy2.$Proxy73.addEmp(Unknown Source)
+	at com.eiousee.service.impl.EmpServiceImpl.addEmp(EmpServiceImpl.java:41)
+	at com.eiousee.controller.EmpController.addEmp(EmpController.java:32)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:258)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:991)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:896)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:88)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:492)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:113)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:83)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:72)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:399)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1775)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:973)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:491)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+2026-04-13 16:24:49 [http-nio-80-exec-4] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=哈哈哈, birth=2020-01-01, sex=男, avatarPath=null, deptName=学工部, jobName=工程师, boardDate=2020-01-01, updateTime=null, empExpList=null)
+2026-04-13 16:24:49 [http-nio-80-exec-4] ERROR o.a.c.c.C.[.[localhost].[/].[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.mybatis.spring.MyBatisSystemException: 
+### Error updating database.  Cause: org.apache.ibatis.reflection.ReflectionException: There is no getter for property named 'employee' in 'class com.eiousee.pojo.Employee'
+### The error may exist in com/eiousee/mapper/EmpMapper.java (best guess)
+### The error may involve com.eiousee.mapper.EmpMapper.addEmp-Inline
+### The error occurred while setting parameters
+### SQL: INSERT INTO emp_info (name, birth, sex, avatar_path, dept_id, job_id, board_date, update_time)     VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+### Cause: org.apache.ibatis.reflection.ReflectionException: There is no getter for property named 'employee' in 'class com.eiousee.pojo.Employee'] with root cause
+org.apache.ibatis.reflection.ReflectionException: There is no getter for property named 'employee' in 'class com.eiousee.pojo.Employee'
+	at org.apache.ibatis.reflection.Reflector.getGetInvoker(Reflector.java:385)
+	at org.apache.ibatis.reflection.MetaClass.getGetInvoker(MetaClass.java:160)
+	at org.apache.ibatis.reflection.wrapper.BeanWrapper.getBeanProperty(BeanWrapper.java:156)
+	at org.apache.ibatis.reflection.wrapper.BeanWrapper.get(BeanWrapper.java:50)
+	at org.apache.ibatis.reflection.MetaObject.getValue(MetaObject.java:115)
+	at org.apache.ibatis.reflection.MetaObject.metaObjectForProperty(MetaObject.java:123)
+	at org.apache.ibatis.reflection.wrapper.BaseWrapper.getChildValue(BaseWrapper.java:117)
+	at org.apache.ibatis.reflection.wrapper.BeanWrapper.get(BeanWrapper.java:46)
+	at org.apache.ibatis.reflection.MetaObject.getValue(MetaObject.java:115)
+	at org.apache.ibatis.scripting.defaults.DefaultParameterHandler.setParameters(DefaultParameterHandler.java:82)
+	at org.apache.ibatis.executor.statement.PreparedStatementHandler.parameterize(PreparedStatementHandler.java:97)
+	at org.apache.ibatis.executor.statement.RoutingStatementHandler.parameterize(RoutingStatementHandler.java:65)
+	at org.apache.ibatis.executor.SimpleExecutor.prepareStatement(SimpleExecutor.java:91)
+	at org.apache.ibatis.executor.SimpleExecutor.doUpdate(SimpleExecutor.java:49)
+	at org.apache.ibatis.executor.BaseExecutor.update(BaseExecutor.java:117)
+	at org.apache.ibatis.executor.CachingExecutor.update(CachingExecutor.java:76)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.ibatis.plugin.Plugin.invoke(Plugin.java:61)
+	at jdk.proxy2/jdk.proxy2.$Proxy83.update(Unknown Source)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.update(DefaultSqlSession.java:197)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.insert(DefaultSqlSession.java:184)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.mybatis.spring.SqlSessionTemplate$SqlSessionInterceptor.invoke(SqlSessionTemplate.java:333)
+	at jdk.proxy2/jdk.proxy2.$Proxy70.insert(Unknown Source)
+	at org.mybatis.spring.SqlSessionTemplate.insert(SqlSessionTemplate.java:224)
+	at org.apache.ibatis.binding.MapperMethod.execute(MapperMethod.java:62)
+	at org.apache.ibatis.binding.MapperProxy$PlainMethodInvoker.invoke(MapperProxy.java:141)
+	at org.apache.ibatis.binding.MapperProxy.invoke(MapperProxy.java:86)
+	at jdk.proxy2/jdk.proxy2.$Proxy73.addEmp(Unknown Source)
+	at com.eiousee.service.impl.EmpServiceImpl.addEmp(EmpServiceImpl.java:41)
+	at com.eiousee.controller.EmpController.addEmp(EmpController.java:32)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:258)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:991)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:896)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:88)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:492)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:113)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:83)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:72)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:399)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1775)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:973)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:491)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+2026-04-13 16:24:54 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-13 16:24:54 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-13 16:24:54 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-13 16:24:54 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-13 16:24:58 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 36928 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-13 16:24:58 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-13 16:24:59 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-13 16:24:59 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-13 16:24:59 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-13 16:24:59 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-13 16:24:59 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-13 16:24:59 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 930 ms
+2026-04-13 16:24:59 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-13 16:25:00 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-13 16:25:00 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.953 seconds (process running for 2.635)
+2026-04-13 16:25:04 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-13 16:25:04 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-13 16:25:04 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-13 16:25:04 [http-nio-80-exec-1] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=哈哈哈, birth=2020-01-01, sex=男, avatarPath=null, deptName=学工部, jobName=工程师, boardDate=2020-01-01, updateTime=null, empExpList=null)
+2026-04-13 16:25:04 [http-nio-80-exec-1] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-13 16:25:12 [http-nio-80-exec-6] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-13 16:25:14 [http-nio-80-exec-7] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-13 16:25:14 [http-nio-80-exec-4] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-13 16:25:21 [http-nio-80-exec-5] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-13 16:25:21 [http-nio-80-exec-8] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-13 16:42:21 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-13 16:42:21 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-13 16:42:21 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-13 16:42:21 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-13 16:42:25 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 36888 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-13 16:42:25 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-13 16:42:26 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-13 16:42:26 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-13 16:42:26 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-13 16:42:26 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-13 16:42:26 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-13 16:42:26 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 922 ms
+2026-04-13 16:42:27 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-13 16:42:27 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-13 16:42:27 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.899 seconds (process running for 2.553)
+2026-04-13 16:44:13 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-13 16:44:13 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-13 16:44:13 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-13 16:44:13 [http-nio-80-exec-1] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-04-13 16:44:13 [http-nio-80-exec-1] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-13 16:50:20 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-13 16:50:20 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-13 16:50:20 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-13 16:50:20 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-13 16:50:22 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 31412 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-13 16:50:22 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-13 16:50:23 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-13 16:50:23 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-13 16:50:23 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-13 16:50:23 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-13 16:50:23 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-13 16:50:23 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 921 ms
+2026-04-13 16:50:24 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-13 16:50:24 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-13 16:50:24 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.997 seconds (process running for 2.693)
+2026-04-13 16:50:29 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-13 16:50:29 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-13 16:50:29 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-13 16:50:29 [http-nio-80-exec-5] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-04-13 16:50:29 [http-nio-80-exec-2] INFO  com.eiousee.controller.DeptController - 查询所有部门数据
+2026-04-13 16:50:29 [http-nio-80-exec-4] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-13 16:50:29 [http-nio-80-exec-2] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-13 16:50:34 [http-nio-80-exec-3] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-13 16:50:37 [http-nio-80-exec-6] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-13 16:50:54 [http-nio-80-exec-7] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=, birth=null, sex=男, avatarPath=, deptName=, jobName=, boardDate=null, updateTime=null, empExpList=null)
+2026-04-13 16:50:54 [http-nio-80-exec-8] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-13 16:50:56 [http-nio-80-exec-9] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-13 16:51:47 [http-nio-80-exec-2] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-13 16:51:49 [http-nio-80-exec-4] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-13 16:53:33 [http-nio-80-exec-6] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=布丁, birth=2004-02-16, sex=男, avatarPath=, deptName=教研部, jobName=主任, boardDate=2026-04-08, updateTime=null, empExpList=null)
+2026-04-13 16:53:33 [http-nio-80-exec-7] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-13 16:53:35 [http-nio-80-exec-8] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-13 16:59:25 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-13 16:59:25 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-13 16:59:25 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-13 16:59:25 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-13 16:59:28 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 19200 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-13 16:59:28 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-13 16:59:29 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-13 16:59:29 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-13 16:59:29 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-13 16:59:29 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-13 16:59:29 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-13 16:59:29 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 808 ms
+2026-04-13 16:59:30 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-13 16:59:30 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-13 16:59:30 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.688 seconds (process running for 2.329)
+2026-04-13 16:59:36 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-13 16:59:36 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-13 16:59:36 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-13 17:01:37 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-13 17:01:37 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-13 17:01:37 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-0} closing ...
+2026-04-13 17:01:39 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 38800 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-13 17:01:39 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-13 17:01:40 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-13 17:01:40 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-13 17:01:40 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-13 17:01:40 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-13 17:01:40 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-13 17:01:40 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 841 ms
+2026-04-13 17:01:41 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-13 17:01:41 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-13 17:01:41 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.757 seconds (process running for 2.372)
+2026-04-13 17:01:45 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-13 17:01:45 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-13 17:01:45 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-13 17:01:45 [http-nio-80-exec-5] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-04-13 17:01:45 [http-nio-80-exec-3] INFO  com.eiousee.controller.DeptController - 查询所有部门数据
+2026-04-13 17:01:45 [http-nio-80-exec-6] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-13 17:01:45 [http-nio-80-exec-5] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-13 17:01:49 [http-nio-80-exec-4] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-13 17:02:41 [http-nio-80-exec-7] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=严宇, birth=2020-02-02, sex=男, avatarPath=, deptName=学工部, jobName=副主任, boardDate=2010-01-01, updateTime=null, empExpList=[EmpExp(id=null, startTime=2012-01-01, endTime=2010-01-01, company=布丁科技, job=HR)])
+2026-04-13 17:02:42 [http-nio-80-exec-7] ERROR o.a.c.c.C.[.[localhost].[/].[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.springframework.jdbc.UncategorizedSQLException: 
+### Error updating database.  Cause: java.sql.SQLException: Check constraint 'chk_date_order' is violated.
+### The error may exist in file [D:\JetBrains_Files\Java_Files\webProject\target\classes\mapper\EmpExpMapper.xml]
+### The error may involve defaultParameterMap
+### The error occurred while setting parameters
+### SQL: INSERT INTO emp_exp(id, start_time, end_time, company, job) VALUES                        (?, ?, ?, ?, ?)
+### Cause: java.sql.SQLException: Check constraint 'chk_date_order' is violated.
+; uncategorized SQLException; SQL state [HY000]; error code [3819]; Check constraint 'chk_date_order' is violated.] with root cause
+java.sql.SQLException: Check constraint 'chk_date_order' is violated.
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:130)
+	at com.mysql.cj.jdbc.exceptions.SQLExceptionsMapping.translateException(SQLExceptionsMapping.java:122)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.executeInternal(ClientPreparedStatement.java:916)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.execute(ClientPreparedStatement.java:354)
+	at com.alibaba.druid.pool.DruidPooledPreparedStatement.execute(DruidPooledPreparedStatement.java:483)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.ibatis.logging.jdbc.PreparedStatementLogger.invoke(PreparedStatementLogger.java:58)
+	at jdk.proxy3/jdk.proxy3.$Proxy86.execute(Unknown Source)
+	at org.apache.ibatis.executor.statement.PreparedStatementHandler.update(PreparedStatementHandler.java:48)
+	at org.apache.ibatis.executor.statement.RoutingStatementHandler.update(RoutingStatementHandler.java:75)
+	at org.apache.ibatis.executor.SimpleExecutor.doUpdate(SimpleExecutor.java:50)
+	at org.apache.ibatis.executor.BaseExecutor.update(BaseExecutor.java:117)
+	at org.apache.ibatis.executor.CachingExecutor.update(CachingExecutor.java:76)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.ibatis.plugin.Plugin.invoke(Plugin.java:61)
+	at jdk.proxy2/jdk.proxy2.$Proxy84.update(Unknown Source)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.update(DefaultSqlSession.java:197)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.insert(DefaultSqlSession.java:184)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.mybatis.spring.SqlSessionTemplate$SqlSessionInterceptor.invoke(SqlSessionTemplate.java:333)
+	at jdk.proxy2/jdk.proxy2.$Proxy70.insert(Unknown Source)
+	at org.mybatis.spring.SqlSessionTemplate.insert(SqlSessionTemplate.java:224)
+	at org.apache.ibatis.binding.MapperMethod.execute(MapperMethod.java:62)
+	at org.apache.ibatis.binding.MapperProxy$PlainMethodInvoker.invoke(MapperProxy.java:141)
+	at org.apache.ibatis.binding.MapperProxy.invoke(MapperProxy.java:86)
+	at jdk.proxy2/jdk.proxy2.$Proxy74.addEmpExp(Unknown Source)
+	at com.eiousee.service.impl.EmpServiceImpl.addEmp(EmpServiceImpl.java:62)
+	at com.eiousee.controller.EmpController.addEmp(EmpController.java:32)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:258)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:991)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:896)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:88)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:492)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:113)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:83)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:72)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:399)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1775)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:973)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:491)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+2026-04-13 17:03:33 [http-nio-80-exec-10] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=严宇, birth=2020-02-02, sex=男, avatarPath=, deptName=学工部, jobName=副主任, boardDate=2010-01-01, updateTime=null, empExpList=[EmpExp(id=null, startTime=2012-01-01, endTime=2020-01-01, company=布丁科技, job=HR)])
+2026-04-13 17:03:33 [http-nio-80-exec-1] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-13 17:24:51 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-13 17:24:51 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-13 17:24:51 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-13 17:24:51 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed

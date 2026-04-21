@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.eiousee.mapper.ReportMapper">
+    <select id="getEmpJobData" resultType="com.eiousee.pojo.ReportCount">
+        SELECT
+            j.title AS title,
+            COUNT(e.job_id) AS objectCount
+        FROM
+            job j
+                LEFT JOIN emp_info e ON j.id = e.job_id
+        GROUP BY
+            j.id, j.title
+        ORDER BY
+            COUNT(e.job_id)
+    </select>
+
+    <select id="getEmpDeptData" resultType="com.eiousee.pojo.ReportCount">
+        SELECT
+            d.name AS title,
+            COUNT(e.dept_id) AS objectCount
+        FROM
+            dept d
+                LEFT JOIN emp_info e
+                          ON d.id = e.dept_id
+        GROUP BY
+            d.id, d.name
+        ORDER BY
+            COUNT(e.dept_id)
+    </select>
+
+    <select id="getEmpSexData" resultType="com.eiousee.pojo.ReportCount">
+        SELECT
+            CONCAT(sex, '性') AS title,
+            COUNT(sex) AS objectCount
+        FROM
+            emp_info
+        GROUP BY
+            sex
+    </select>
+
+    <select id="getClassSizeData" resultType="com.eiousee.pojo.ReportCount">
+        SELECT
+            c.class_name AS title,
+            COUNT(s.class_id) AS objectCount
+        FROM
+            class c
+                LEFT JOIN student s
+                          ON c.id = s.class_id
+        GROUP BY
+            c.id, c.class_name
+        ORDER BY
+            COUNT(s.class_id)
+        LIMIT 7
+    </select>
+
+    <select id="getEducationData" resultType="com.eiousee.pojo.ReportCount">
+        SELECT
+            e.education_name AS title,
+            COUNT(s.education_id) AS objectCount
+        FROM
+            education e
+                LEFT JOIN student s
+                          ON e.id = s.education_id
+        GROUP BY
+            e.id, e.education_name
+        ORDER BY
+            COUNT(s.education_id)
+    </select>
+</mapper>

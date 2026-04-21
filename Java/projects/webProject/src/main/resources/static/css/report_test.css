@@ -1,0 +1,89 @@
+body { font-family: sans-serif; padding: 0; margin: 0; background: #f0f2f5; }
+html { scroll-behavior: smooth; }
+
+/* 导航栏 */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  padding: 0 30px;
+  height: 56px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.navbar-title { font-size: 18px; font-weight: bold; color: #333; }
+.navbar-links { display: flex; gap: 0; }
+.navbar-links a {
+  text-decoration: none;
+  color: #666;
+  padding: 16px 24px;
+  font-size: 15px;
+  border-bottom: 3px solid transparent;
+  transition: color 0.2s, border-color 0.2s;
+}
+.navbar-links a:hover { color: #1890ff; }
+.navbar-links a.active { color: #1890ff; border-bottom-color: #1890ff; font-weight: bold; }
+
+/* 页面主体 */
+.page-body {
+  display: flex;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 20px 20px;
+  gap: 20px;
+}
+
+/* 左侧导航 */
+.side-nav {
+  position: sticky;
+  top: 76px;
+  width: 150px;
+  min-width: 150px;
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  padding: 15px 0;
+  height: fit-content;
+  align-self: flex-start;
+}
+.side-link {
+  display: block;
+  padding: 14px 20px;
+  text-decoration: none;
+  color: #666;
+  font-size: 14px;
+  border-left: 3px solid transparent;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+.side-link:hover { color: #1890ff; background: #f0f7ff; }
+.side-link.active { color: #1890ff; border-left-color: #1890ff; background: #f0f7ff; font-weight: bold; }
+
+/* 右侧图表区 */
+.chart-area { flex: 1; min-width: 0; }
+
+.chart-card {
+  background: #fff;
+  padding: 25px 30px;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  margin-bottom: 25px;
+}
+.chart-card h3 {
+  text-align: center;
+  color: #333;
+  margin: 0 0 20px;
+  font-size: 20px;
+  font-weight: bold;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #1890ff;
+  display: inline-block;
+  width: auto;
+  min-width: 200px;
+}
+.chart-card { text-align: center; }
+.chart-card > div:last-child { text-align: left; }

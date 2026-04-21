@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.eiousee.mapper.EmpExpMapper">
+<!--    插入员工工作经历-->
+    <insert id="addEmpExp">
+        INSERT INTO emp_exp(id, start_time, end_time, company, job) VALUES
+        <foreach collection="empExpList" item="empExp" separator=",">
+            (#{empExp.id}, #{empExp.startTime}, #{empExp.endTime}, #{empExp.company}, #{empExp.job})
+        </foreach>
+    </insert>
+
+<!--    删除员工工作经历-->
+    <delete id="deleteEmpExpByIds">
+        DELETE FROM emp_exp WHERE id IN
+        <foreach item="id" collection="ids" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+<!--    根据员工id查询员工工作经历-->
+    <select id="getEmpExpListByEmpId" resultType="com.eiousee.pojo.EmpExp">
+        SELECT
+            start_time, end_time, company, job
+        FROM emp_exp
+        WHERE id = #{id}
+    </select>
+</mapper>

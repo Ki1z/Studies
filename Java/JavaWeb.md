@@ -1,6 +1,6 @@
 # Java Web
 
-`更新时间：2026-4-17`
+`更新时间：2026-4-21`
 
 注释解释：
 
@@ -5589,3 +5589,205 @@ public ReportData getEmpJobData() {
 由于接口文档中有关部门人数统计和性别人数统计的接口完全相同，因此省略相关步骤
 
 > ![](javaweb/66.png)
+
+### 班级管理
+
+根据[接口文档](./Interfaces.md)中的班级管理接口，开发完整的班级管理功能
+
+#### 查询班级
+
+条件分页查询班级信息，先定义查询参数实体类`ClassQueryParam`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.time.LocalDate;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class ClassQueryParam {
+    private String className;
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    private LocalDate begin;
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    private LocalDate end;
+    private Integer page = 1;
+    private Integer pageSize = 10;
+}
+```
+
+然后在`Controller`中接收查询参数，封装为`ClassQueryParam`，调用`classService`的查询方法，并传递查询参数，最后返回`Result`结果
+
+```java
+@GetMapping
+public Result list(ClassQueryParam queryParam) {
+    log.info("查询班级列表：{}", queryParam);
+    return Result.success(classService.list(queryParam));
+}
+```
+
+在`Service`中先调用`PageHelper`的`startPage`方法，传入`ClassQueryParam`查询参数中的分页控制字段，然后调用`classMapper`的查询方法正常查询，最后使用`page`实例来接收查询的结果，并封装为`PageResult`
+
+```java
+@Override
+public PageResult<ClassPojo> list(ClassQueryParam queryParam) {
+    Page<ClassPojo> page = PageHelper.startPage(queryParam.getPage(), queryParam.getPageSize());
+    List<ClassPojo> list = classMapper.list(queryParam);
+    return new PageResult<>(page.getTotal(), page.getResult());
+}
+```
+
+查询语句比较复杂，因此使用`xml`映射文件来编写动态`sql`
+
+```xml
+<!--    条件查询班级列表-->
+<select id="list" resultType="com.eiousee.pojo.ClassPojo">
+    SELECT
+        c.id AS id,
+        class_name,
+        classroom,
+        e.name AS teacherName,
+        start_date,
+        end_date,
+        cs.status_name AS classStatus,
+        c.update_time AS updateTime
+    FROM
+        class c
+            LEFT JOIN emp_info e ON c.teacher_id = e.id
+            LEFT JOIN class_status cs ON c.status = cs.id
+    <where>
+        <if test="className != null and className != ''">
+            class_name LIKE CONCAT('%', #{className}, '%')
+        </if>
+        <if test="begin != null">
+            AND start_date &gt;= #{begin}
+        </if>
+        <if test="end != null">
+            AND end_date &lt;= #{end}
+        </if>
+    </where>
+</select>
+```
+
+> ![](javaweb/67.png)
+
+#### 根据id删除班级
+
+在`Controller`中接收`id`，然后调用`classService`的`deleteClassById`方法，根据返回值判断删除是否成功
+
+```java
+@DeleteMapping("/{id}")
+public Result deleteClassById(@PathVariable Integer id) {
+    log.info("删除班级：{}", id);
+    return classService.deleteClassById(id) > 0 ? Result.success() : Result.error("未找到该班级");
+}
+```
+
+`Service`中也直接调用`Mapper`
+
+```java
+@Override
+public Integer deleteClassById(Integer id) {
+    return classMapper.deleteClassById(id);
+}
+```
+
+`Mapper`执行删除操作，然后返回影响的行数，来判断是否删除成功
+
+```java
+@Delete("delete from class where id = #{id}")
+Integer deleteClassById(Integer id);
+```
+
+#### 添加班级
+
+使用班级实体类`ClassPojo`来接收前端参数，并传递给`classService.addClass()`，然后通过返回值来判断是否插入成功
+
+```java
+@PostMapping
+public Result addClass(@RequestBody ClassPojo classPojo) {
+    log.info("添加班级：{}", classPojo);
+    return classService.addClass(classPojo) > 0 ? Result.success() : Result.error("添加班级失败");
+}
+```
+
+在`Service`中为`classPojo`的`updateTime`字段设置当前时间，然后调用`Mapper`执行`INSERT`语句
+
+```java
+@Override
+public Integer addClass(ClassPojo classPojo) {
+    classPojo.setUpdateTime(LocalDateTime.now());
+    return classMapper.addClass(classPojo);
+}
+```
+
+`sql`语句比较复杂，因此使用`xml`映射文件
+
+```xml
+<!--    添加班级-->
+<insert id="addClass">
+    INSERT INTO
+        class(id, class_name, teacher_id, classroom, start_date, end_date, status, update_time)
+    VALUES (
+           #{id},
+           #{className},
+           (SELECT id FROM emp_info WHERE name = #{teacherName}),
+           #{classroom},
+           #{startDate},
+           #{endDate},
+           (SELECT id FROM class_status WHERE status_name = #{classStatus}),
+           #{updateTime}
+       )
+</insert>
+```
+
+#### 更新班级信息
+
+与新增类似，通过`ClassPojo`实体类接收前端参数，然后调用`Service`继续向上传递，并通过返回值来判断是否更新成功
+
+```java
+@PutMapping
+public Result updateClass(@RequestBody ClassPojo classPojo) {
+    log.info("更新班级：{}", classPojo);
+    return classService.updateClass(classPojo) > 0 ? Result.success() : Result.error("更新班级失败");
+}
+```
+
+`Service`
+
+```java
+@Override
+public Integer updateClass(ClassPojo classPojo) {
+    classPojo.setUpdateTime(LocalDateTime.now());
+    return classMapper.updateClass(classPojo);
+}
+```
+
+`Mapper`
+
+```xml
+<!--    更新班级信息-->
+<update id="updateClass">
+    UPDATE
+        class
+    SET
+        class_name = #{className},
+        teacher_id = (SELECT id FROM emp_info WHERE name = #{teacherName}),
+        classroom = #{classroom},
+        start_date = #{startDate},
+        end_date = #{endDate},
+        status = (SELECT id FROM class_status WHERE status_name = #{classStatus}),
+        update_time = #{updateTime}
+    WHERE
+        id = #{id}
+</update>
+```
+
+学生管理与员工管理功能类似，因此此处省略学生管理内容，详细代码可查询[项目文件](./projects/webProject)
+

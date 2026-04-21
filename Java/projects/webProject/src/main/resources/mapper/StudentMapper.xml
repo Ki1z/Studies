@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.eiousee.mapper.StudentMapper">
+    <!--    分页查询学生信息-->
+    <select id="list" resultType="com.eiousee.pojo.Student">
+        SELECT
+            s.id AS id,
+            s.name AS name,
+            s.sex AS sex,
+            s.birth AS birth,
+            c.class_name AS className,
+            m.major_name AS majorName,
+            e.education_name AS educationName,
+            s.update_time AS updateTime,
+            COUNT(sd.student_id) AS disciplineCount,
+            SUM(sd.deduction_points) AS deductionPoints
+        FROM student s
+                 LEFT JOIN class c ON s.class_id = c.id
+                 LEFT JOIN major m ON s.major_id = m.id
+                 LEFT JOIN education e ON s.education_id = e.id
+                 LEFT JOIN student_discipline sd ON s.id = sd.student_id
+        <where>
+            <if test="name != null and name != ''">
+                AND s.name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="educationName != null and educationName != ''">
+                AND e.education_name = #{educationName}
+            </if>
+            <if test="className != null and className != ''">
+                AND c.class_name = #{className}
+            </if>
+        </where>
+        GROUP BY s.id
+    </select>
+<!--根据id查询学生信息-->
+    <select id="getStudentById" resultType="com.eiousee.pojo.Student">
+        SELECT
+            s.id AS id,
+            s.name AS name,
+            s.sex AS sex,
+            s.birth AS birth,
+            c.class_name AS className,
+            m.major_name AS majorName,
+            e.education_name AS educationName,
+            s.update_time AS updateTime,
+            COUNT(sd.student_id) AS disciplineCount,
+            SUM(sd.deduction_points) AS deductionPoints
+        FROM student s
+            LEFT JOIN class c ON s.class_id = c.id
+            LEFT JOIN major m ON s.major_id = m.id
+            LEFT JOIN education e ON s.education_id = e.id
+            LEFT JOIN student_discipline sd ON s.id = sd.student_id
+        WHERE s.id = #{id}
+        GROUP BY s.id
+    </select>
+    <!--根据id批量删除学生-->
+    <delete id="deleteStudentByIds">
+        DELETE FROM student WHERE id IN
+        <foreach item="id" collection="ids" separator="," open="(" close=")" index="">
+            #{id}
+        </foreach>
+    </delete>
+<!--更新学生信息-->
+    <update id="updateStudent">
+        UPDATE
+            student
+        SET
+            class_id = (SELECT id FROM class WHERE class_name = #{className}),
+            major_id = (SELECT id FROM major WHERE major_name = #{majorName}),
+            education_id = (SELECT id FROM education WHERE education_name = #{educationName}),
+            update_time = #{updateTime}
+        WHERE
+            id = #{id}
+    </update>
+    <!--根据学生ID查询违纪信息-->
+    <select id="getStudentDiscipline" resultType="com.eiousee.pojo.StudentDiscipline">
+        SELECT
+            student_id AS studentId,
+            discipline_date AS disciplineDate,
+            discipline_reason AS disciplineReason,
+            deduction_points AS deductionPoints
+        FROM student_discipline
+        WHERE student_id = #{id}
+    </select>
+
+    <insert id="updateStudentDiscipline">
+        INSERT INTO student_discipline(student_id, discipline_date, discipline_reason, deduction_points) VALUES
+        <foreach item="item" index="index" collection="studentDiscipline" separator=",">
+            (#{item.studentId}, #{item.disciplineDate}, #{item.disciplineReason}, #{item.deductionPoints})
+        </foreach>
+    </insert>
+</mapper>

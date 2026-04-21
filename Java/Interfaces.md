@@ -1296,7 +1296,7 @@
 
 #### 4.4.1 基本信息
 
-请求路径：`/student/{ids}`
+请求路径：`/student?ids={ids}`
 
 请求方式：`DELETE`
 
@@ -1312,7 +1312,7 @@
 | ------ | ---- | ---- | -------- | ------------ |
 | ids    | 数组 | 1    | 必须     | 学员的ID数组 |
 
-请求参数样例：`/student/1,2,3`
+请求参数样例：`/student?ids=1,2,3`
 
 #### 4.4.3 响应数据
 
@@ -1426,21 +1426,42 @@
 
 参数说明：
 
-| 名称                  | 类型   | 是否必须 | 备注                         |
-| --------------------- | ------ | -------- | ---------------------------- |
-| code                  | number | 必须     | 响应码，1表示成功，0表示失败 |
-| msg                   | string | 非必须   | 提示信息                     |
-| data                  | object | 必须     | 返回的数据体                 |
-| data-id               | number | 非必须   | 学号                         |
-| data-name             | string | 非必须   | 学生姓名                     |
-| data-sex              | string | 非必须   | 性别                         |
-| data-birth            | string | 非必须   | 出生日期                     |
-| data-className        | string | 非必须   | 班级名称                     |
-| data-majorName        | string | 非必须   | 专业名称                     |
-| data-educationName    | string | 非必须   | 学历                         |
-| data-updateTime       | string | 非必须   | 最后修改时间                 |
-| data-disciplineCount  | number | 非必须   | 违纪次数                     |
-| data-disciplinePoints | number | 非必须   | 违纪总分数                   |
+| 名称                 | 类型   | 是否必须 | 备注                         |
+| -------------------- | ------ | -------- | ---------------------------- |
+| code                 | number | 必须     | 响应码，1表示成功，0表示失败 |
+| msg                  | string | 非必须   | 提示信息                     |
+| data                 | object | 必须     | 返回的数据体                 |
+| data-id              | number | 非必须   | 学号                         |
+| data-name            | string | 非必须   | 学生姓名                     |
+| data-sex             | string | 非必须   | 性别                         |
+| data-birth           | string | 非必须   | 出生日期                     |
+| data-className       | string | 非必须   | 班级名称                     |
+| data-majorName       | string | 非必须   | 专业名称                     |
+| data-educationName   | string | 非必须   | 学历                         |
+| data-updateTime      | string | 非必须   | 最后修改时间                 |
+| data-disciplineCount | number | 非必须   | 违纪次数                     |
+| data-deductionPoints | number | 非必须   | 违纪总分数                   |
+
+响应数据样例：
+
+```json
+{
+    "code": 1,
+    "msg": "success",
+    "data": {
+        "id": 2020010101,
+        "name": "张三一",
+        "sex": "男",
+        "birth": "1990-01-01",
+        "className": "软件工程1班",
+        "majorName": "软件工程",
+        "educationName": "本科",
+        "updateTime": "2020-01-01T00:00:00",
+        "disciplineCount": 3,
+        "deductionPoints": 4.5
+    }
+}
+```
 
 ### 4.7 修改学生
 
@@ -1757,6 +1778,124 @@
     }
 }
 ```
+
+### 5.4 班级人数统计
+
+#### 5.4.1 基本信息
+
+请求路径：`/report/classSizeData`
+
+请求方式：`GET`
+
+接口描述：统计各个班的学生人数
+
+#### 5.4.2 请求参数
+
+无
+
+#### 5.4.3 响应数据
+
+参数格式：`application/json`
+
+参数说明：
+
+| 参数名         | 类型     | 是否必须 | 备注                         |
+| -------------- | -------- | -------- | ---------------------------- |
+| code           | number   | 是       | 响应码，1表示成功，0表示失败 |
+| msg            | string   | 非必须   | 提示信息                     |
+| data           | object   | 非必须   | 返回的数据体                 |
+| data-titleList | string[] | 是       | 班级列表                     |
+| data-dataList  | number[] | 是       | 学生人数列表                 |
+
+响应数据样例：
+
+```json
+{
+    "code": 1,
+    "msg": "success",
+    "data": {
+        "titleList": [
+            "网络工程1班",
+            "网络空间安全1班",
+            "计算机科学1班",
+            "计算机科学2班",
+            "软件工程3班",
+            "软件工程2班",
+            "软件工程1班"
+        ],
+        "dataList": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            2
+        ]
+    }
+}
+```
+
+### 5.5 学历统计
+
+#### 5.4.1 基本信息
+
+请求路径：`/report/educationData`
+
+请求方式：`GET`
+
+接口描述：统计各个学历层次学生人数
+
+#### 5.4.2 请求参数
+
+无
+
+#### 5.4.3 响应数据
+
+参数格式：`application/json`
+
+参数说明：
+
+| 参数名         | 类型     | 是否必须 | 备注                         |
+| -------------- | -------- | -------- | ---------------------------- |
+| code           | number   | 是       | 响应码，1表示成功，0表示失败 |
+| msg            | string   | 非必须   | 提示信息                     |
+| data           | object   | 非必须   | 返回的数据体                 |
+| data-titleList | string[] | 是       | 学历                         |
+| data-dataList  | number[] | 是       | 学生人数列表                 |
+
+响应数据样例：
+
+```json
+{
+    "code": 1,
+    "msg": "success",
+    "data": {
+        "titleList": [
+            "大专",
+            "硕士",
+            "博士",
+            "非全日制硕士",
+            "非全日制博士",
+            "初中及以下",
+            "高中或高职",
+            "本科"
+        ],
+        "dataList": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1,
+            1
+        ]
+    }
+}
+```
+
+
 
 
 

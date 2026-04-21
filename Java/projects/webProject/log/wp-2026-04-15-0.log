@@ -1,0 +1,1170 @@
+2026-04-15 08:43:22 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 29760 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-15 08:43:22 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 08:43:23 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-15 08:43:23 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-15 08:43:23 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-15 08:43:23 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-15 08:43:23 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-15 08:43:23 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 975 ms
+2026-04-15 08:43:24 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-15 08:43:24 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-15 08:43:24 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 2.067 seconds (process running for 2.86)
+2026-04-15 08:43:35 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-15 08:43:35 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-15 08:43:35 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-15 08:43:36 [http-nio-80-exec-2] INFO  com.eiousee.controller.DeptController - 查询所有部门数据
+2026-04-15 08:43:36 [http-nio-80-exec-4] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-04-15 08:43:36 [http-nio-80-exec-3] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-15 08:43:37 [http-nio-80-exec-4] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-15 08:43:39 [http-nio-80-exec-5] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-15 08:44:28 [http-nio-80-exec-7] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=布丁, birth=2020-01-11, sex=男, avatarPath=, deptName=学工部, jobName=助教, boardDate=2020-01-01, updateTime=null, empExpList=[EmpExp(id=null, startTime=2020-01-01, endTime=2021-01-01, company=布丁科技有限公司, job=董事长)])
+2026-04-15 08:44:28 [http-nio-80-exec-7] ERROR o.a.c.c.C.[.[localhost].[/].[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.mybatis.spring.MyBatisSystemException: 
+### Error updating database.  Cause: org.apache.ibatis.executor.ExecutorException: Error getting generated key or setting result to parameter object. Cause: org.apache.ibatis.executor.ExecutorException: Could not determine which parameter to assign generated keys to. Note that when there are multiple parameters, 'keyProperty' must include the parameter name (e.g. 'param.id'). Specified key properties are [id] and available parameters are [jobId, deptId, employee, param3, param1, param2]
+### The error may exist in com/eiousee/mapper/EmpMapper.java (best guess)
+### The error may involve com.eiousee.mapper.EmpMapper.addEmp-Inline
+### The error occurred while setting parameters
+### SQL: INSERT INTO emp_info (name, birth, sex, avatar_path, dept_id, job_id, board_date, update_time)     VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+### Cause: org.apache.ibatis.executor.ExecutorException: Error getting generated key or setting result to parameter object. Cause: org.apache.ibatis.executor.ExecutorException: Could not determine which parameter to assign generated keys to. Note that when there are multiple parameters, 'keyProperty' must include the parameter name (e.g. 'param.id'). Specified key properties are [id] and available parameters are [jobId, deptId, employee, param3, param1, param2]] with root cause
+org.apache.ibatis.executor.ExecutorException: Could not determine which parameter to assign generated keys to. Note that when there are multiple parameters, 'keyProperty' must include the parameter name (e.g. 'param.id'). Specified key properties are [id] and available parameters are [jobId, deptId, employee, param3, param1, param2]
+	at org.apache.ibatis.executor.keygen.Jdbc3KeyGenerator.getAssignerForParamMap(Jdbc3KeyGenerator.java:189)
+	at org.apache.ibatis.executor.keygen.Jdbc3KeyGenerator.assignKeysToParamMap(Jdbc3KeyGenerator.java:157)
+	at org.apache.ibatis.executor.keygen.Jdbc3KeyGenerator.assignKeys(Jdbc3KeyGenerator.java:97)
+	at org.apache.ibatis.executor.keygen.Jdbc3KeyGenerator.processBatch(Jdbc3KeyGenerator.java:85)
+	at org.apache.ibatis.executor.keygen.Jdbc3KeyGenerator.processAfter(Jdbc3KeyGenerator.java:71)
+	at org.apache.ibatis.executor.statement.PreparedStatementHandler.update(PreparedStatementHandler.java:52)
+	at org.apache.ibatis.executor.statement.RoutingStatementHandler.update(RoutingStatementHandler.java:75)
+	at org.apache.ibatis.executor.SimpleExecutor.doUpdate(SimpleExecutor.java:50)
+	at org.apache.ibatis.executor.BaseExecutor.update(BaseExecutor.java:117)
+	at org.apache.ibatis.executor.CachingExecutor.update(CachingExecutor.java:76)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.ibatis.plugin.Plugin.invoke(Plugin.java:61)
+	at jdk.proxy2/jdk.proxy2.$Proxy84.update(Unknown Source)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.update(DefaultSqlSession.java:197)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.insert(DefaultSqlSession.java:184)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.mybatis.spring.SqlSessionTemplate$SqlSessionInterceptor.invoke(SqlSessionTemplate.java:333)
+	at jdk.proxy2/jdk.proxy2.$Proxy71.insert(Unknown Source)
+	at org.mybatis.spring.SqlSessionTemplate.insert(SqlSessionTemplate.java:224)
+	at org.apache.ibatis.binding.MapperMethod.execute(MapperMethod.java:62)
+	at org.apache.ibatis.binding.MapperProxy$PlainMethodInvoker.invoke(MapperProxy.java:141)
+	at org.apache.ibatis.binding.MapperProxy.invoke(MapperProxy.java:86)
+	at jdk.proxy2/jdk.proxy2.$Proxy74.addEmp(Unknown Source)
+	at com.eiousee.service.impl.EmpServiceImpl.addEmp(EmpServiceImpl.java:70)
+	at com.eiousee.controller.EmpController.addEmp(EmpController.java:32)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:258)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:991)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:896)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:88)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:492)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:113)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:83)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:72)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:399)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1775)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:973)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:491)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+2026-04-15 08:49:50 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-15 08:49:50 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-15 08:49:50 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-15 08:49:50 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-15 08:49:54 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 28728 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-15 08:49:54 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 08:49:55 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-15 08:49:55 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-15 08:49:55 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-15 08:49:55 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-15 08:49:55 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-15 08:49:55 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 817 ms
+2026-04-15 08:49:55 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-15 08:49:55 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-15 08:49:55 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.687 seconds (process running for 2.286)
+2026-04-15 08:50:10 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-15 08:50:10 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-15 08:50:10 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-0} closing ...
+2026-04-15 08:50:13 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 29924 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-15 08:50:13 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 08:50:14 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-15 08:50:14 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-15 08:50:14 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-15 08:50:14 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-15 08:50:14 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-15 08:50:14 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 790 ms
+2026-04-15 08:50:15 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-15 08:50:15 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-15 08:50:15 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.719 seconds (process running for 2.367)
+2026-04-15 08:50:37 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-15 08:50:37 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-15 08:50:37 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 0 ms
+2026-04-15 08:50:37 [http-nio-80-exec-1] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=布丁, birth=2020-01-11, sex=男, avatarPath=, deptName=学工部, jobName=助教, boardDate=2020-01-01, updateTime=null, empExpList=[EmpExp(id=null, startTime=2020-01-01, endTime=2021-01-01, company=布丁科技有限公司, job=董事长)])
+2026-04-15 08:50:37 [http-nio-80-exec-1] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-15 08:50:37 [http-nio-80-exec-2] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-15 09:09:49 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-15 09:09:49 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-15 09:09:49 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-15 09:09:49 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-15 09:09:52 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 22028 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-15 09:09:52 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 09:09:53 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-15 09:09:53 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-15 09:09:53 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-15 09:09:53 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-15 09:09:53 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-15 09:09:53 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 821 ms
+2026-04-15 09:09:53 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-15 09:09:53 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-15 09:09:53 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.733 seconds (process running for 2.48)
+2026-04-15 09:09:59 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-15 09:09:59 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-15 09:09:59 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-15 09:10:01 [http-nio-80-exec-2] INFO  com.eiousee.controller.DeptController - 查询所有部门数据
+2026-04-15 09:10:01 [http-nio-80-exec-3] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-04-15 09:10:01 [http-nio-80-exec-4] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-15 09:10:01 [http-nio-80-exec-2] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-15 09:10:10 [http-nio-80-exec-5] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-15 09:59:43 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-15 09:59:43 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-15 09:59:43 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-15 09:59:43 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-15 14:26:32 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 26940 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-15 14:26:32 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 14:26:33 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-15 14:26:33 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-15 14:26:33 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-15 14:26:33 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-15 14:26:33 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-15 14:26:33 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 979 ms
+2026-04-15 14:26:33 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-15 14:26:33 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.context.ApplicationContextException: Failed to start bean 'webServerStartStop'
+2026-04-15 14:26:33 [main] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-0} closing ...
+2026-04-15 14:26:33 [main] INFO  o.s.b.a.logging.ConditionEvaluationReportLogger - 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2026-04-15 14:26:33 [main] ERROR o.s.b.diagnostics.LoggingFailureAnalysisReporter - 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+Web server failed to start. Port 80 was already in use.
+
+Action:
+
+Identify and stop the process that's listening on port 80 or configure this application to listen on another port.
+
+2026-04-15 14:26:43 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 32016 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-15 14:26:43 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 14:26:44 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-15 14:26:44 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-15 14:26:44 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-15 14:26:44 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-15 14:26:44 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-15 14:26:44 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 798 ms
+2026-04-15 14:26:45 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-15 14:26:45 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-15 14:26:45 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.692 seconds (process running for 2.303)
+2026-04-15 14:26:57 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-15 14:26:57 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-15 14:26:57 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 0 ms
+2026-04-15 14:26:57 [http-nio-80-exec-3] INFO  com.eiousee.controller.DeptController - 查询所有部门数据
+2026-04-15 14:26:57 [http-nio-80-exec-2] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-04-15 14:26:57 [http-nio-80-exec-5] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-15 14:26:57 [http-nio-80-exec-2] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-15 14:27:02 [http-nio-80-exec-8] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-15 14:27:06 [http-nio-80-exec-7] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=, birth=null, sex=男, avatarPath=null, deptName=, jobName=, boardDate=null, updateTime=null, empExpList=[])
+2026-04-15 14:27:06 [http-nio-80-exec-7] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:27:06 [http-nio-80-exec-7] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@5151a033] for JDBC transaction
+2026-04-15 14:27:06 [http-nio-80-exec-7] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@5151a033] to manual commit
+2026-04-15 14:27:06 [http-nio-80-exec-7] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-15 14:27:06 [http-nio-80-exec-7] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@5151a033]
+2026-04-15 14:27:06 [http-nio-80-exec-7] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@5151a033] after transaction
+2026-04-15 14:27:06 [http-nio-80-exec-9] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-15 14:27:25 [http-nio-80-exec-10] INFO  com.eiousee.controller.EmpController - 删除员工，参数：15
+2026-04-15 14:27:25 [http-nio-80-exec-1] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-15 14:30:53 [http-nio-80-exec-9] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-04-15 14:30:53 [http-nio-80-exec-7] INFO  com.eiousee.controller.DeptController - 查询所有部门数据
+2026-04-15 14:30:53 [http-nio-80-exec-10] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-15 14:30:54 [http-nio-80-exec-1] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-15 14:31:05 [http-nio-80-exec-6] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=, birth=null, sex=男, avatarPath=null, deptName=, jobName=, boardDate=null, updateTime=null, empExpList=[])
+2026-04-15 14:31:05 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:31:05 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@21ab3c04] for JDBC transaction
+2026-04-15 14:31:05 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@21ab3c04] to manual commit
+2026-04-15 14:31:05 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction rollback
+2026-04-15 14:31:05 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Rolling back JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@21ab3c04]
+2026-04-15 14:31:05 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@21ab3c04] after transaction
+2026-04-15 14:31:05 [http-nio-80-exec-6] ERROR o.a.c.c.C.[.[localhost].[/].[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.springframework.dao.DataIntegrityViolationException: 
+### Error updating database.  Cause: java.sql.SQLIntegrityConstraintViolationException: Column 'birth' cannot be null
+### The error may exist in com/eiousee/mapper/EmpMapper.java (best guess)
+### The error may involve com.eiousee.mapper.EmpMapper.addEmp-Inline
+### The error occurred while setting parameters
+### SQL: INSERT INTO emp_info (name, birth, sex, avatar_path, dept_id, job_id, board_date, update_time)     VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+### Cause: java.sql.SQLIntegrityConstraintViolationException: Column 'birth' cannot be null
+; Column 'birth' cannot be null] with root cause
+java.sql.SQLIntegrityConstraintViolationException: Column 'birth' cannot be null
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:118)
+	at com.mysql.cj.jdbc.exceptions.SQLExceptionsMapping.translateException(SQLExceptionsMapping.java:122)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.executeInternal(ClientPreparedStatement.java:916)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.execute(ClientPreparedStatement.java:354)
+	at com.alibaba.druid.pool.DruidPooledPreparedStatement.execute(DruidPooledPreparedStatement.java:483)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.ibatis.logging.jdbc.PreparedStatementLogger.invoke(PreparedStatementLogger.java:58)
+	at jdk.proxy3/jdk.proxy3.$Proxy88.execute(Unknown Source)
+	at org.apache.ibatis.executor.statement.PreparedStatementHandler.update(PreparedStatementHandler.java:48)
+	at org.apache.ibatis.executor.statement.RoutingStatementHandler.update(RoutingStatementHandler.java:75)
+	at org.apache.ibatis.executor.SimpleExecutor.doUpdate(SimpleExecutor.java:50)
+	at org.apache.ibatis.executor.BaseExecutor.update(BaseExecutor.java:117)
+	at org.apache.ibatis.executor.CachingExecutor.update(CachingExecutor.java:76)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.ibatis.plugin.Plugin.invoke(Plugin.java:61)
+	at jdk.proxy2/jdk.proxy2.$Proxy85.update(Unknown Source)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.update(DefaultSqlSession.java:197)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.insert(DefaultSqlSession.java:184)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.mybatis.spring.SqlSessionTemplate$SqlSessionInterceptor.invoke(SqlSessionTemplate.java:333)
+	at jdk.proxy2/jdk.proxy2.$Proxy71.insert(Unknown Source)
+	at org.mybatis.spring.SqlSessionTemplate.insert(SqlSessionTemplate.java:224)
+	at org.apache.ibatis.binding.MapperMethod.execute(MapperMethod.java:62)
+	at org.apache.ibatis.binding.MapperProxy$PlainMethodInvoker.invoke(MapperProxy.java:141)
+	at org.apache.ibatis.binding.MapperProxy.invoke(MapperProxy.java:86)
+	at jdk.proxy2/jdk.proxy2.$Proxy75.addEmp(Unknown Source)
+	at com.eiousee.service.impl.EmpServiceImpl.addEmp(EmpServiceImpl.java:86)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:360)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:728)
+	at com.eiousee.service.impl.EmpServiceImpl$$SpringCGLIB$$0.addEmp(<generated>)
+	at com.eiousee.controller.EmpController.addEmp(EmpController.java:32)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:258)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:991)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:896)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:88)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:492)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:113)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:83)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:72)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:399)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1775)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:973)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:491)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+2026-04-15 14:32:58 [http-nio-80-exec-3] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=, birth=2020-02-20, sex=男, avatarPath=null, deptName=, jobName=, boardDate=null, updateTime=null, empExpList=[])
+2026-04-15 14:32:58 [http-nio-80-exec-3] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:32:58 [http-nio-80-exec-3] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@21ab3c04] for JDBC transaction
+2026-04-15 14:32:58 [http-nio-80-exec-3] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@21ab3c04] to manual commit
+2026-04-15 14:32:58 [http-nio-80-exec-3] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-15 14:32:58 [http-nio-80-exec-3] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@21ab3c04]
+2026-04-15 14:32:58 [http-nio-80-exec-3] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@21ab3c04] after transaction
+2026-04-15 14:32:58 [http-nio-80-exec-5] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-15 14:33:32 [http-nio-80-exec-8] INFO  com.eiousee.controller.EmpController - 删除员工，参数：15
+2026-04-15 14:33:32 [http-nio-80-exec-9] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-15 14:38:21 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-15 14:38:21 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-15 14:38:21 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-15 14:38:21 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-15 14:38:24 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 3872 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-15 14:38:24 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 14:38:25 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-15 14:38:25 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-15 14:38:25 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-15 14:38:25 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-15 14:38:25 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-15 14:38:25 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 913 ms
+2026-04-15 14:38:25 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-15 14:38:25 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-15 14:38:25 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.909 seconds (process running for 2.565)
+2026-04-15 14:38:29 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-15 14:38:29 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-15 14:38:29 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-15 14:38:30 [http-nio-80-exec-3] INFO  com.eiousee.controller.DeptController - 查询所有部门数据
+2026-04-15 14:38:30 [http-nio-80-exec-4] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-04-15 14:38:30 [http-nio-80-exec-5] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-15 14:38:30 [http-nio-80-exec-3] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-15 14:38:35 [http-nio-80-exec-6] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=null, birth=null, sex=null, avatarPath=null, deptName=null, jobName=null, boardDate=null, updateTime=null, empExpList=[])
+2026-04-15 14:38:35 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:38:35 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc] for JDBC transaction
+2026-04-15 14:38:35 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc] to manual commit
+2026-04-15 14:38:36 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction rollback
+2026-04-15 14:38:36 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Rolling back JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc]
+2026-04-15 14:38:36 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc] after transaction
+2026-04-15 14:38:36 [http-nio-80-exec-6] ERROR o.a.c.c.C.[.[localhost].[/].[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.springframework.dao.DataIntegrityViolationException: 
+### Error updating database.  Cause: java.sql.SQLIntegrityConstraintViolationException: Column 'name' cannot be null
+### The error may exist in com/eiousee/mapper/EmpMapper.java (best guess)
+### The error may involve com.eiousee.mapper.EmpMapper.addEmp-Inline
+### The error occurred while setting parameters
+### SQL: INSERT INTO emp_info (name, birth, sex, avatar_path, dept_id, job_id, board_date, update_time)     VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+### Cause: java.sql.SQLIntegrityConstraintViolationException: Column 'name' cannot be null
+; Column 'name' cannot be null] with root cause
+java.sql.SQLIntegrityConstraintViolationException: Column 'name' cannot be null
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:118)
+	at com.mysql.cj.jdbc.exceptions.SQLExceptionsMapping.translateException(SQLExceptionsMapping.java:122)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.executeInternal(ClientPreparedStatement.java:916)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.execute(ClientPreparedStatement.java:354)
+	at com.alibaba.druid.pool.DruidPooledPreparedStatement.execute(DruidPooledPreparedStatement.java:483)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.ibatis.logging.jdbc.PreparedStatementLogger.invoke(PreparedStatementLogger.java:58)
+	at jdk.proxy3/jdk.proxy3.$Proxy88.execute(Unknown Source)
+	at org.apache.ibatis.executor.statement.PreparedStatementHandler.update(PreparedStatementHandler.java:48)
+	at org.apache.ibatis.executor.statement.RoutingStatementHandler.update(RoutingStatementHandler.java:75)
+	at org.apache.ibatis.executor.SimpleExecutor.doUpdate(SimpleExecutor.java:50)
+	at org.apache.ibatis.executor.BaseExecutor.update(BaseExecutor.java:117)
+	at org.apache.ibatis.executor.CachingExecutor.update(CachingExecutor.java:76)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.ibatis.plugin.Plugin.invoke(Plugin.java:61)
+	at jdk.proxy2/jdk.proxy2.$Proxy85.update(Unknown Source)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.update(DefaultSqlSession.java:197)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.insert(DefaultSqlSession.java:184)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.mybatis.spring.SqlSessionTemplate$SqlSessionInterceptor.invoke(SqlSessionTemplate.java:333)
+	at jdk.proxy2/jdk.proxy2.$Proxy71.insert(Unknown Source)
+	at org.mybatis.spring.SqlSessionTemplate.insert(SqlSessionTemplate.java:224)
+	at org.apache.ibatis.binding.MapperMethod.execute(MapperMethod.java:62)
+	at org.apache.ibatis.binding.MapperProxy$PlainMethodInvoker.invoke(MapperProxy.java:141)
+	at org.apache.ibatis.binding.MapperProxy.invoke(MapperProxy.java:86)
+	at jdk.proxy2/jdk.proxy2.$Proxy75.addEmp(Unknown Source)
+	at com.eiousee.service.impl.EmpServiceImpl.addEmp(EmpServiceImpl.java:86)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:360)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:728)
+	at com.eiousee.service.impl.EmpServiceImpl$$SpringCGLIB$$0.addEmp(<generated>)
+	at com.eiousee.controller.EmpController.addEmp(EmpController.java:32)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:258)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:991)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:896)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:88)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:492)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:113)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:83)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:72)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:399)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1775)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:973)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:491)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+2026-04-15 14:38:55 [http-nio-80-exec-7] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=沐沐, birth=null, sex=null, avatarPath=null, deptName=null, jobName=null, boardDate=null, updateTime=null, empExpList=[])
+2026-04-15 14:38:55 [http-nio-80-exec-7] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:38:55 [http-nio-80-exec-7] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc] for JDBC transaction
+2026-04-15 14:38:55 [http-nio-80-exec-7] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc] to manual commit
+2026-04-15 14:38:55 [http-nio-80-exec-7] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction rollback
+2026-04-15 14:38:55 [http-nio-80-exec-7] DEBUG o.s.jdbc.support.JdbcTransactionManager - Rolling back JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc]
+2026-04-15 14:38:55 [http-nio-80-exec-7] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc] after transaction
+2026-04-15 14:38:55 [http-nio-80-exec-7] ERROR o.a.c.c.C.[.[localhost].[/].[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.springframework.dao.DataIntegrityViolationException: 
+### Error updating database.  Cause: java.sql.SQLIntegrityConstraintViolationException: Column 'birth' cannot be null
+### The error may exist in com/eiousee/mapper/EmpMapper.java (best guess)
+### The error may involve com.eiousee.mapper.EmpMapper.addEmp-Inline
+### The error occurred while setting parameters
+### SQL: INSERT INTO emp_info (name, birth, sex, avatar_path, dept_id, job_id, board_date, update_time)     VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+### Cause: java.sql.SQLIntegrityConstraintViolationException: Column 'birth' cannot be null
+; Column 'birth' cannot be null] with root cause
+java.sql.SQLIntegrityConstraintViolationException: Column 'birth' cannot be null
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:118)
+	at com.mysql.cj.jdbc.exceptions.SQLExceptionsMapping.translateException(SQLExceptionsMapping.java:122)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.executeInternal(ClientPreparedStatement.java:916)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.execute(ClientPreparedStatement.java:354)
+	at com.alibaba.druid.pool.DruidPooledPreparedStatement.execute(DruidPooledPreparedStatement.java:483)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.ibatis.logging.jdbc.PreparedStatementLogger.invoke(PreparedStatementLogger.java:58)
+	at jdk.proxy3/jdk.proxy3.$Proxy88.execute(Unknown Source)
+	at org.apache.ibatis.executor.statement.PreparedStatementHandler.update(PreparedStatementHandler.java:48)
+	at org.apache.ibatis.executor.statement.RoutingStatementHandler.update(RoutingStatementHandler.java:75)
+	at org.apache.ibatis.executor.SimpleExecutor.doUpdate(SimpleExecutor.java:50)
+	at org.apache.ibatis.executor.BaseExecutor.update(BaseExecutor.java:117)
+	at org.apache.ibatis.executor.CachingExecutor.update(CachingExecutor.java:76)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.ibatis.plugin.Plugin.invoke(Plugin.java:61)
+	at jdk.proxy2/jdk.proxy2.$Proxy85.update(Unknown Source)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.update(DefaultSqlSession.java:197)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.insert(DefaultSqlSession.java:184)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.mybatis.spring.SqlSessionTemplate$SqlSessionInterceptor.invoke(SqlSessionTemplate.java:333)
+	at jdk.proxy2/jdk.proxy2.$Proxy71.insert(Unknown Source)
+	at org.mybatis.spring.SqlSessionTemplate.insert(SqlSessionTemplate.java:224)
+	at org.apache.ibatis.binding.MapperMethod.execute(MapperMethod.java:62)
+	at org.apache.ibatis.binding.MapperProxy$PlainMethodInvoker.invoke(MapperProxy.java:141)
+	at org.apache.ibatis.binding.MapperProxy.invoke(MapperProxy.java:86)
+	at jdk.proxy2/jdk.proxy2.$Proxy75.addEmp(Unknown Source)
+	at com.eiousee.service.impl.EmpServiceImpl.addEmp(EmpServiceImpl.java:86)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:360)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:728)
+	at com.eiousee.service.impl.EmpServiceImpl$$SpringCGLIB$$0.addEmp(<generated>)
+	at com.eiousee.controller.EmpController.addEmp(EmpController.java:32)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:258)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:991)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:896)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:88)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:492)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:113)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:83)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:72)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:399)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1775)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:973)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:491)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+2026-04-15 14:39:29 [http-nio-80-exec-8] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=沐沐, birth=2020-01-01, sex=null, avatarPath=null, deptName=null, jobName=null, boardDate=null, updateTime=null, empExpList=[])
+2026-04-15 14:39:29 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:39:29 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc] for JDBC transaction
+2026-04-15 14:39:29 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc] to manual commit
+2026-04-15 14:39:29 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction rollback
+2026-04-15 14:39:29 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Rolling back JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc]
+2026-04-15 14:39:29 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc] after transaction
+2026-04-15 14:39:29 [http-nio-80-exec-8] ERROR o.a.c.c.C.[.[localhost].[/].[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.springframework.dao.DataIntegrityViolationException: 
+### Error updating database.  Cause: java.sql.SQLIntegrityConstraintViolationException: Column 'sex' cannot be null
+### The error may exist in com/eiousee/mapper/EmpMapper.java (best guess)
+### The error may involve com.eiousee.mapper.EmpMapper.addEmp-Inline
+### The error occurred while setting parameters
+### SQL: INSERT INTO emp_info (name, birth, sex, avatar_path, dept_id, job_id, board_date, update_time)     VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+### Cause: java.sql.SQLIntegrityConstraintViolationException: Column 'sex' cannot be null
+; Column 'sex' cannot be null] with root cause
+java.sql.SQLIntegrityConstraintViolationException: Column 'sex' cannot be null
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:118)
+	at com.mysql.cj.jdbc.exceptions.SQLExceptionsMapping.translateException(SQLExceptionsMapping.java:122)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.executeInternal(ClientPreparedStatement.java:916)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.execute(ClientPreparedStatement.java:354)
+	at com.alibaba.druid.pool.DruidPooledPreparedStatement.execute(DruidPooledPreparedStatement.java:483)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.ibatis.logging.jdbc.PreparedStatementLogger.invoke(PreparedStatementLogger.java:58)
+	at jdk.proxy3/jdk.proxy3.$Proxy88.execute(Unknown Source)
+	at org.apache.ibatis.executor.statement.PreparedStatementHandler.update(PreparedStatementHandler.java:48)
+	at org.apache.ibatis.executor.statement.RoutingStatementHandler.update(RoutingStatementHandler.java:75)
+	at org.apache.ibatis.executor.SimpleExecutor.doUpdate(SimpleExecutor.java:50)
+	at org.apache.ibatis.executor.BaseExecutor.update(BaseExecutor.java:117)
+	at org.apache.ibatis.executor.CachingExecutor.update(CachingExecutor.java:76)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.ibatis.plugin.Plugin.invoke(Plugin.java:61)
+	at jdk.proxy2/jdk.proxy2.$Proxy85.update(Unknown Source)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.update(DefaultSqlSession.java:197)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.insert(DefaultSqlSession.java:184)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.mybatis.spring.SqlSessionTemplate$SqlSessionInterceptor.invoke(SqlSessionTemplate.java:333)
+	at jdk.proxy2/jdk.proxy2.$Proxy71.insert(Unknown Source)
+	at org.mybatis.spring.SqlSessionTemplate.insert(SqlSessionTemplate.java:224)
+	at org.apache.ibatis.binding.MapperMethod.execute(MapperMethod.java:62)
+	at org.apache.ibatis.binding.MapperProxy$PlainMethodInvoker.invoke(MapperProxy.java:141)
+	at org.apache.ibatis.binding.MapperProxy.invoke(MapperProxy.java:86)
+	at jdk.proxy2/jdk.proxy2.$Proxy75.addEmp(Unknown Source)
+	at com.eiousee.service.impl.EmpServiceImpl.addEmp(EmpServiceImpl.java:86)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:360)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:728)
+	at com.eiousee.service.impl.EmpServiceImpl$$SpringCGLIB$$0.addEmp(<generated>)
+	at com.eiousee.controller.EmpController.addEmp(EmpController.java:32)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:258)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:991)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:896)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:88)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:492)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:113)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:83)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:72)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:399)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1775)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:973)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:491)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+2026-04-15 14:39:54 [http-nio-80-exec-9] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=沐沐, birth=2020-01-01, sex=女, avatarPath=null, deptName=null, jobName=null, boardDate=null, updateTime=null, empExpList=[EmpExp(id=null, startTime=2019-01-01, endTime=2020-01-01, company=, job=)])
+2026-04-15 14:39:54 [http-nio-80-exec-9] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:39:54 [http-nio-80-exec-9] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc] for JDBC transaction
+2026-04-15 14:39:54 [http-nio-80-exec-9] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc] to manual commit
+2026-04-15 14:39:54 [http-nio-80-exec-9] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-15 14:39:54 [http-nio-80-exec-9] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc]
+2026-04-15 14:39:54 [http-nio-80-exec-9] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc] after transaction
+2026-04-15 14:39:54 [http-nio-80-exec-10] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-15 14:39:55 [http-nio-80-exec-1] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-15 14:43:59 [http-nio-80-exec-3] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=agdagd, birth=2020-01-01, sex=null, avatarPath=null, deptName=null, jobName=null, boardDate=null, updateTime=null, empExpList=[EmpExp(id=null, startTime=2020-01-01, endTime=2019-01-01, company=, job=)])
+2026-04-15 14:43:59 [http-nio-80-exec-3] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:44:00 [http-nio-80-exec-3] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc] for JDBC transaction
+2026-04-15 14:44:00 [http-nio-80-exec-3] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc] to manual commit
+2026-04-15 14:44:00 [http-nio-80-exec-3] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction rollback
+2026-04-15 14:44:00 [http-nio-80-exec-3] DEBUG o.s.jdbc.support.JdbcTransactionManager - Rolling back JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc]
+2026-04-15 14:44:00 [http-nio-80-exec-3] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc] after transaction
+2026-04-15 14:44:00 [http-nio-80-exec-3] ERROR o.a.c.c.C.[.[localhost].[/].[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.springframework.dao.DataIntegrityViolationException: 
+### Error updating database.  Cause: java.sql.SQLIntegrityConstraintViolationException: Column 'sex' cannot be null
+### The error may exist in com/eiousee/mapper/EmpMapper.java (best guess)
+### The error may involve com.eiousee.mapper.EmpMapper.addEmp-Inline
+### The error occurred while setting parameters
+### SQL: INSERT INTO emp_info (name, birth, sex, avatar_path, dept_id, job_id, board_date, update_time)     VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+### Cause: java.sql.SQLIntegrityConstraintViolationException: Column 'sex' cannot be null
+; Column 'sex' cannot be null] with root cause
+java.sql.SQLIntegrityConstraintViolationException: Column 'sex' cannot be null
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:118)
+	at com.mysql.cj.jdbc.exceptions.SQLExceptionsMapping.translateException(SQLExceptionsMapping.java:122)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.executeInternal(ClientPreparedStatement.java:916)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.execute(ClientPreparedStatement.java:354)
+	at com.alibaba.druid.pool.DruidPooledPreparedStatement.execute(DruidPooledPreparedStatement.java:483)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.ibatis.logging.jdbc.PreparedStatementLogger.invoke(PreparedStatementLogger.java:58)
+	at jdk.proxy3/jdk.proxy3.$Proxy88.execute(Unknown Source)
+	at org.apache.ibatis.executor.statement.PreparedStatementHandler.update(PreparedStatementHandler.java:48)
+	at org.apache.ibatis.executor.statement.RoutingStatementHandler.update(RoutingStatementHandler.java:75)
+	at org.apache.ibatis.executor.SimpleExecutor.doUpdate(SimpleExecutor.java:50)
+	at org.apache.ibatis.executor.BaseExecutor.update(BaseExecutor.java:117)
+	at org.apache.ibatis.executor.CachingExecutor.update(CachingExecutor.java:76)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.ibatis.plugin.Plugin.invoke(Plugin.java:61)
+	at jdk.proxy2/jdk.proxy2.$Proxy85.update(Unknown Source)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.update(DefaultSqlSession.java:197)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.insert(DefaultSqlSession.java:184)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.mybatis.spring.SqlSessionTemplate$SqlSessionInterceptor.invoke(SqlSessionTemplate.java:333)
+	at jdk.proxy2/jdk.proxy2.$Proxy71.insert(Unknown Source)
+	at org.mybatis.spring.SqlSessionTemplate.insert(SqlSessionTemplate.java:224)
+	at org.apache.ibatis.binding.MapperMethod.execute(MapperMethod.java:62)
+	at org.apache.ibatis.binding.MapperProxy$PlainMethodInvoker.invoke(MapperProxy.java:141)
+	at org.apache.ibatis.binding.MapperProxy.invoke(MapperProxy.java:86)
+	at jdk.proxy2/jdk.proxy2.$Proxy75.addEmp(Unknown Source)
+	at com.eiousee.service.impl.EmpServiceImpl.addEmp(EmpServiceImpl.java:86)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:360)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:728)
+	at com.eiousee.service.impl.EmpServiceImpl$$SpringCGLIB$$0.addEmp(<generated>)
+	at com.eiousee.controller.EmpController.addEmp(EmpController.java:32)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:258)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:991)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:896)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:88)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:492)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:113)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:83)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:72)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:399)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1775)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:973)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:491)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+2026-04-15 14:44:07 [http-nio-80-exec-4] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=agdagd, birth=2020-01-01, sex=男, avatarPath=null, deptName=null, jobName=null, boardDate=null, updateTime=null, empExpList=[EmpExp(id=null, startTime=2020-01-01, endTime=2019-01-01, company=, job=)])
+2026-04-15 14:44:07 [http-nio-80-exec-4] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:44:07 [http-nio-80-exec-4] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc] for JDBC transaction
+2026-04-15 14:44:07 [http-nio-80-exec-4] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc] to manual commit
+2026-04-15 14:44:07 [http-nio-80-exec-4] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction rollback
+2026-04-15 14:44:07 [http-nio-80-exec-4] DEBUG o.s.jdbc.support.JdbcTransactionManager - Rolling back JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc]
+2026-04-15 14:44:07 [http-nio-80-exec-4] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@79ecc2dc] after transaction
+2026-04-15 14:44:07 [http-nio-80-exec-4] ERROR o.a.c.c.C.[.[localhost].[/].[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.springframework.jdbc.UncategorizedSQLException: 
+### Error updating database.  Cause: java.sql.SQLException: Check constraint 'chk_date_order' is violated.
+### The error may exist in file [D:\JetBrains_Files\Java_Files\webProject\target\classes\mapper\EmpExpMapper.xml]
+### The error may involve defaultParameterMap
+### The error occurred while setting parameters
+### SQL: INSERT INTO emp_exp(id, start_time, end_time, company, job) VALUES                        (?, ?, ?, ?, ?)
+### Cause: java.sql.SQLException: Check constraint 'chk_date_order' is violated.
+; uncategorized SQLException; SQL state [HY000]; error code [3819]; Check constraint 'chk_date_order' is violated.] with root cause
+java.sql.SQLException: Check constraint 'chk_date_order' is violated.
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:130)
+	at com.mysql.cj.jdbc.exceptions.SQLExceptionsMapping.translateException(SQLExceptionsMapping.java:122)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.executeInternal(ClientPreparedStatement.java:916)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.execute(ClientPreparedStatement.java:354)
+	at com.alibaba.druid.pool.DruidPooledPreparedStatement.execute(DruidPooledPreparedStatement.java:483)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.ibatis.logging.jdbc.PreparedStatementLogger.invoke(PreparedStatementLogger.java:58)
+	at jdk.proxy3/jdk.proxy3.$Proxy88.execute(Unknown Source)
+	at org.apache.ibatis.executor.statement.PreparedStatementHandler.update(PreparedStatementHandler.java:48)
+	at org.apache.ibatis.executor.statement.RoutingStatementHandler.update(RoutingStatementHandler.java:75)
+	at org.apache.ibatis.executor.SimpleExecutor.doUpdate(SimpleExecutor.java:50)
+	at org.apache.ibatis.executor.BaseExecutor.update(BaseExecutor.java:117)
+	at org.apache.ibatis.executor.CachingExecutor.update(CachingExecutor.java:76)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.ibatis.plugin.Plugin.invoke(Plugin.java:61)
+	at jdk.proxy2/jdk.proxy2.$Proxy85.update(Unknown Source)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.update(DefaultSqlSession.java:197)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.insert(DefaultSqlSession.java:184)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.mybatis.spring.SqlSessionTemplate$SqlSessionInterceptor.invoke(SqlSessionTemplate.java:333)
+	at jdk.proxy2/jdk.proxy2.$Proxy71.insert(Unknown Source)
+	at org.mybatis.spring.SqlSessionTemplate.insert(SqlSessionTemplate.java:224)
+	at org.apache.ibatis.binding.MapperMethod.execute(MapperMethod.java:62)
+	at org.apache.ibatis.binding.MapperProxy$PlainMethodInvoker.invoke(MapperProxy.java:141)
+	at org.apache.ibatis.binding.MapperProxy.invoke(MapperProxy.java:86)
+	at jdk.proxy2/jdk.proxy2.$Proxy76.addEmpExp(Unknown Source)
+	at com.eiousee.service.impl.EmpServiceImpl.addEmp(EmpServiceImpl.java:89)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:360)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:728)
+	at com.eiousee.service.impl.EmpServiceImpl$$SpringCGLIB$$0.addEmp(<generated>)
+	at com.eiousee.controller.EmpController.addEmp(EmpController.java:32)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:258)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:991)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:896)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:88)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:492)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:113)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:83)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:72)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:399)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1775)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:973)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:491)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+2026-04-15 14:44:23 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-15 14:44:23 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-15 14:44:23 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-15 14:44:23 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-15 14:44:25 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 28340 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-15 14:44:25 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 14:44:26 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-15 14:44:26 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-15 14:44:26 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-15 14:44:26 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-15 14:44:26 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-15 14:44:26 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 818 ms
+2026-04-15 14:44:27 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-15 14:44:27 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-15 14:44:27 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.739 seconds (process running for 2.399)
+2026-04-15 14:44:31 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-15 14:44:31 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-15 14:44:31 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-15 14:44:32 [http-nio-80-exec-4] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-04-15 14:44:32 [http-nio-80-exec-3] INFO  com.eiousee.controller.DeptController - 查询所有部门数据
+2026-04-15 14:44:32 [http-nio-80-exec-5] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-15 14:44:32 [http-nio-80-exec-4] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-15 14:46:46 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-15 14:46:46 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-15 14:46:46 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-15 14:46:46 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-15 14:46:48 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 27324 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-15 14:46:48 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 14:46:49 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-15 14:46:49 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-15 14:46:49 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-15 14:46:49 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-15 14:46:49 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-15 14:46:49 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 804 ms
+2026-04-15 14:46:50 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-15 14:46:50 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-15 14:46:50 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.702 seconds (process running for 2.35)
+2026-04-15 14:46:57 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-15 14:46:57 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-15 14:46:57 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-15 14:46:57 [http-nio-80-exec-3] INFO  com.eiousee.controller.DeptController - 查询所有部门数据
+2026-04-15 14:46:57 [http-nio-80-exec-4] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-04-15 14:46:57 [http-nio-80-exec-5] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-15 14:46:58 [http-nio-80-exec-4] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-15 14:49:01 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-15 14:49:01 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-15 14:49:01 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-15 14:49:01 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-15 14:49:05 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 34440 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-15 14:49:05 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 14:49:06 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-15 14:49:06 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-15 14:49:06 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-15 14:49:06 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-15 14:49:06 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-15 14:49:06 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 925 ms
+2026-04-15 14:49:07 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-15 14:49:07 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-15 14:49:07 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.895 seconds (process running for 2.564)
+2026-04-15 14:49:13 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-15 14:49:13 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-15 14:49:13 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 0 ms
+2026-04-15 14:49:13 [http-nio-80-exec-4] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-04-15 14:49:13 [http-nio-80-exec-3] INFO  com.eiousee.controller.DeptController - 查询所有部门数据
+2026-04-15 14:49:13 [http-nio-80-exec-5] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-15 14:49:13 [http-nio-80-exec-4] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-15 14:49:15 [http-nio-80-exec-6] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=null, birth=null, sex=null, avatarPath=null, deptName=null, jobName=null, boardDate=null, updateTime=null, empExpList=[])
+2026-04-15 14:49:15 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:49:15 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] for JDBC transaction
+2026-04-15 14:49:15 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] to manual commit
+2026-04-15 14:49:15 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-15 14:49:15 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89]
+2026-04-15 14:49:15 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] after transaction
+2026-04-15 14:49:18 [http-nio-80-exec-7] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=null, birth=null, sex=null, avatarPath=null, deptName=null, jobName=null, boardDate=null, updateTime=null, empExpList=[])
+2026-04-15 14:49:18 [http-nio-80-exec-7] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:49:18 [http-nio-80-exec-7] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] for JDBC transaction
+2026-04-15 14:49:18 [http-nio-80-exec-7] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] to manual commit
+2026-04-15 14:49:18 [http-nio-80-exec-7] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-15 14:49:18 [http-nio-80-exec-7] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89]
+2026-04-15 14:49:18 [http-nio-80-exec-7] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] after transaction
+2026-04-15 14:49:38 [http-nio-80-exec-8] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=null, birth=null, sex=null, avatarPath=null, deptName=null, jobName=null, boardDate=null, updateTime=null, empExpList=[])
+2026-04-15 14:49:38 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:49:38 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] for JDBC transaction
+2026-04-15 14:49:38 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] to manual commit
+2026-04-15 14:49:38 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-15 14:49:38 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89]
+2026-04-15 14:49:38 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] after transaction
+2026-04-15 14:49:39 [http-nio-80-exec-9] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=null, birth=null, sex=null, avatarPath=null, deptName=null, jobName=null, boardDate=null, updateTime=null, empExpList=[])
+2026-04-15 14:49:39 [http-nio-80-exec-9] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:49:39 [http-nio-80-exec-9] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] for JDBC transaction
+2026-04-15 14:49:39 [http-nio-80-exec-9] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] to manual commit
+2026-04-15 14:49:39 [http-nio-80-exec-9] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-15 14:49:39 [http-nio-80-exec-9] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89]
+2026-04-15 14:49:39 [http-nio-80-exec-9] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] after transaction
+2026-04-15 14:49:39 [http-nio-80-exec-10] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=null, birth=null, sex=null, avatarPath=null, deptName=null, jobName=null, boardDate=null, updateTime=null, empExpList=[])
+2026-04-15 14:49:39 [http-nio-80-exec-10] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:49:39 [http-nio-80-exec-10] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] for JDBC transaction
+2026-04-15 14:49:39 [http-nio-80-exec-10] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] to manual commit
+2026-04-15 14:49:39 [http-nio-80-exec-10] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-15 14:49:39 [http-nio-80-exec-10] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89]
+2026-04-15 14:49:39 [http-nio-80-exec-10] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] after transaction
+2026-04-15 14:49:39 [http-nio-80-exec-1] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=null, birth=null, sex=null, avatarPath=null, deptName=null, jobName=null, boardDate=null, updateTime=null, empExpList=[])
+2026-04-15 14:49:39 [http-nio-80-exec-1] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:49:39 [http-nio-80-exec-1] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] for JDBC transaction
+2026-04-15 14:49:39 [http-nio-80-exec-1] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] to manual commit
+2026-04-15 14:49:39 [http-nio-80-exec-1] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-15 14:49:39 [http-nio-80-exec-1] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89]
+2026-04-15 14:49:39 [http-nio-80-exec-1] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] after transaction
+2026-04-15 14:50:15 [http-nio-80-exec-4] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=沐沐, birth=null, sex=null, avatarPath=null, deptName=null, jobName=null, boardDate=null, updateTime=null, empExpList=[])
+2026-04-15 14:50:15 [http-nio-80-exec-4] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:50:15 [http-nio-80-exec-4] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] for JDBC transaction
+2026-04-15 14:50:15 [http-nio-80-exec-4] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] to manual commit
+2026-04-15 14:50:15 [http-nio-80-exec-4] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-15 14:50:15 [http-nio-80-exec-4] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89]
+2026-04-15 14:50:15 [http-nio-80-exec-4] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] after transaction
+2026-04-15 14:50:18 [http-nio-80-exec-5] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=沐沐, birth=null, sex=女, avatarPath=null, deptName=null, jobName=null, boardDate=null, updateTime=null, empExpList=[])
+2026-04-15 14:50:18 [http-nio-80-exec-5] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:50:18 [http-nio-80-exec-5] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] for JDBC transaction
+2026-04-15 14:50:18 [http-nio-80-exec-5] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] to manual commit
+2026-04-15 14:50:18 [http-nio-80-exec-5] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-15 14:50:18 [http-nio-80-exec-5] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89]
+2026-04-15 14:50:18 [http-nio-80-exec-5] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] after transaction
+2026-04-15 14:50:18 [http-nio-80-exec-6] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=沐沐, birth=null, sex=女, avatarPath=null, deptName=null, jobName=null, boardDate=null, updateTime=null, empExpList=[])
+2026-04-15 14:50:18 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:50:18 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] for JDBC transaction
+2026-04-15 14:50:18 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] to manual commit
+2026-04-15 14:50:18 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-15 14:50:18 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89]
+2026-04-15 14:50:18 [http-nio-80-exec-6] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] after transaction
+2026-04-15 14:51:28 [http-nio-80-exec-8] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=沐沐, birth=2016-12-26, sex=女, avatarPath=null, deptName=咨询部, jobName=副主任, boardDate=2020-06-09, updateTime=null, empExpList=[EmpExp(id=null, startTime=2018-02-22, endTime=2010-01-17, company=布丁科技有限公司, job=秘书长)])
+2026-04-15 14:51:28 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:51:28 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] for JDBC transaction
+2026-04-15 14:51:28 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] to manual commit
+2026-04-15 14:51:28 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-15 14:51:28 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89]
+2026-04-15 14:51:28 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@6e9a1b89] after transaction
+2026-04-15 14:56:46 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-15 14:56:46 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-15 14:56:46 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-15 14:56:46 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-15 14:56:50 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 35480 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-15 14:56:50 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-15 14:56:51 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-15 14:56:51 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-15 14:56:51 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-15 14:56:51 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-15 14:56:51 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-15 14:56:51 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 804 ms
+2026-04-15 14:56:51 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-15 14:56:51 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-15 14:56:51 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.729 seconds (process running for 2.364)
+2026-04-15 14:56:56 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-15 14:56:56 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-15 14:56:56 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-15 14:56:56 [http-nio-80-exec-1] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=沐沐, birth=2016-12-26, sex=女, avatarPath=null, deptName=咨询部, jobName=副主任, boardDate=2020-06-09, updateTime=null, empExpList=[EmpExp(id=null, startTime=2018-02-22, endTime=2010-01-17, company=布丁科技有限公司, job=秘书长)])
+2026-04-15 14:56:56 [http-nio-80-exec-1] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:56:56 [http-nio-80-exec-1] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-15 14:56:56 [http-nio-80-exec-1] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@3d685ff3] for JDBC transaction
+2026-04-15 14:56:56 [http-nio-80-exec-1] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@3d685ff3] to manual commit
+2026-04-15 14:56:56 [http-nio-80-exec-1] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction rollback
+2026-04-15 14:56:56 [http-nio-80-exec-1] DEBUG o.s.jdbc.support.JdbcTransactionManager - Rolling back JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@3d685ff3]
+2026-04-15 14:56:56 [http-nio-80-exec-1] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@3d685ff3] after transaction
+2026-04-15 14:56:56 [http-nio-80-exec-1] ERROR o.a.c.c.C.[.[localhost].[/].[dispatcherServlet] - Servlet.service() for servlet [dispatcherServlet] in context with path [] threw exception [Request processing failed: org.springframework.jdbc.UncategorizedSQLException: 
+### Error updating database.  Cause: java.sql.SQLException: Check constraint 'chk_date_order' is violated.
+### The error may exist in file [D:\JetBrains_Files\Java_Files\webProject\target\classes\mapper\EmpExpMapper.xml]
+### The error may involve defaultParameterMap
+### The error occurred while setting parameters
+### SQL: INSERT INTO emp_exp(id, start_time, end_time, company, job) VALUES                        (?, ?, ?, ?, ?)
+### Cause: java.sql.SQLException: Check constraint 'chk_date_order' is violated.
+; uncategorized SQLException; SQL state [HY000]; error code [3819]; Check constraint 'chk_date_order' is violated.] with root cause
+java.sql.SQLException: Check constraint 'chk_date_order' is violated.
+	at com.mysql.cj.jdbc.exceptions.SQLError.createSQLException(SQLError.java:130)
+	at com.mysql.cj.jdbc.exceptions.SQLExceptionsMapping.translateException(SQLExceptionsMapping.java:122)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.executeInternal(ClientPreparedStatement.java:916)
+	at com.mysql.cj.jdbc.ClientPreparedStatement.execute(ClientPreparedStatement.java:354)
+	at com.alibaba.druid.pool.DruidPooledPreparedStatement.execute(DruidPooledPreparedStatement.java:483)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.ibatis.logging.jdbc.PreparedStatementLogger.invoke(PreparedStatementLogger.java:58)
+	at jdk.proxy3/jdk.proxy3.$Proxy88.execute(Unknown Source)
+	at org.apache.ibatis.executor.statement.PreparedStatementHandler.update(PreparedStatementHandler.java:48)
+	at org.apache.ibatis.executor.statement.RoutingStatementHandler.update(RoutingStatementHandler.java:75)
+	at org.apache.ibatis.executor.SimpleExecutor.doUpdate(SimpleExecutor.java:50)
+	at org.apache.ibatis.executor.BaseExecutor.update(BaseExecutor.java:117)
+	at org.apache.ibatis.executor.CachingExecutor.update(CachingExecutor.java:76)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.apache.ibatis.plugin.Plugin.invoke(Plugin.java:61)
+	at jdk.proxy2/jdk.proxy2.$Proxy86.update(Unknown Source)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.update(DefaultSqlSession.java:197)
+	at org.apache.ibatis.session.defaults.DefaultSqlSession.insert(DefaultSqlSession.java:184)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.mybatis.spring.SqlSessionTemplate$SqlSessionInterceptor.invoke(SqlSessionTemplate.java:333)
+	at jdk.proxy2/jdk.proxy2.$Proxy71.insert(Unknown Source)
+	at org.mybatis.spring.SqlSessionTemplate.insert(SqlSessionTemplate.java:224)
+	at org.apache.ibatis.binding.MapperMethod.execute(MapperMethod.java:62)
+	at org.apache.ibatis.binding.MapperProxy$PlainMethodInvoker.invoke(MapperProxy.java:141)
+	at org.apache.ibatis.binding.MapperProxy.invoke(MapperProxy.java:86)
+	at jdk.proxy2/jdk.proxy2.$Proxy76.addEmpExp(Unknown Source)
+	at com.eiousee.service.impl.EmpServiceImpl.addEmp(EmpServiceImpl.java:62)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.aop.support.AopUtils.invokeJoinpointUsingReflection(AopUtils.java:360)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.invokeJoinpoint(ReflectiveMethodInvocation.java:196)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:163)
+	at org.springframework.transaction.interceptor.TransactionAspectSupport.invokeWithinTransaction(TransactionAspectSupport.java:380)
+	at org.springframework.transaction.interceptor.TransactionInterceptor.invoke(TransactionInterceptor.java:119)
+	at org.springframework.aop.framework.ReflectiveMethodInvocation.proceed(ReflectiveMethodInvocation.java:184)
+	at org.springframework.aop.framework.CglibAopProxy$DynamicAdvisedInterceptor.intercept(CglibAopProxy.java:728)
+	at com.eiousee.service.impl.EmpServiceImpl$$SpringCGLIB$$0.addEmp(<generated>)
+	at com.eiousee.controller.EmpController.addEmp(EmpController.java:32)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:258)
+	at org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:191)
+	at org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.invokeHandlerMethod(RequestMappingHandlerAdapter.java:991)
+	at org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerAdapter.handleInternal(RequestMappingHandlerAdapter.java:896)
+	at org.springframework.web.servlet.mvc.method.AbstractHandlerMethodAdapter.handle(AbstractHandlerMethodAdapter.java:87)
+	at org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089)
+	at org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979)
+	at org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014)
+	at org.springframework.web.servlet.FrameworkServlet.doPost(FrameworkServlet.java:914)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:590)
+	at org.springframework.web.servlet.FrameworkServlet.service(FrameworkServlet.java:885)
+	at jakarta.servlet.http.HttpServlet.service(HttpServlet.java:658)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:193)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.tomcat.websocket.server.WsFilter.doFilter(WsFilter.java:51)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.RequestContextFilter.doFilterInternal(RequestContextFilter.java:100)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.FormContentFilter.doFilterInternal(FormContentFilter.java:93)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.springframework.web.filter.CharacterEncodingFilter.doFilterInternal(CharacterEncodingFilter.java:201)
+	at org.springframework.web.filter.OncePerRequestFilter.doFilter(OncePerRequestFilter.java:116)
+	at org.apache.catalina.core.ApplicationFilterChain.internalDoFilter(ApplicationFilterChain.java:162)
+	at org.apache.catalina.core.ApplicationFilterChain.doFilter(ApplicationFilterChain.java:138)
+	at org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:165)
+	at org.apache.catalina.core.StandardContextValve.invoke(StandardContextValve.java:88)
+	at org.apache.catalina.authenticator.AuthenticatorBase.invoke(AuthenticatorBase.java:492)
+	at org.apache.catalina.core.StandardHostValve.invoke(StandardHostValve.java:113)
+	at org.apache.catalina.valves.ErrorReportValve.invoke(ErrorReportValve.java:83)
+	at org.apache.catalina.core.StandardEngineValve.invoke(StandardEngineValve.java:72)
+	at org.apache.catalina.connector.CoyoteAdapter.service(CoyoteAdapter.java:342)
+	at org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:399)
+	at org.apache.coyote.AbstractProcessorLight.process(AbstractProcessorLight.java:63)
+	at org.apache.coyote.AbstractProtocol$ConnectionHandler.process(AbstractProtocol.java:903)
+	at org.apache.tomcat.util.net.NioEndpoint$SocketProcessor.doRun(NioEndpoint.java:1775)
+	at org.apache.tomcat.util.net.SocketProcessorBase.run(SocketProcessorBase.java:52)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:973)
+	at org.apache.tomcat.util.threads.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:491)
+	at org.apache.tomcat.util.threads.TaskThread$WrappingRunnable.run(TaskThread.java:63)
+	at java.base/java.lang.Thread.run(Thread.java:1583)
+2026-04-15 14:59:50 [http-nio-80-exec-3] INFO  com.eiousee.controller.EmpController - 添加员工，参数：Employee(id=null, name=沐沐, birth=2016-12-26, sex=女, avatarPath=null, deptName=咨询部, jobName=副主任, boardDate=2020-06-09, updateTime=null, empExpList=[EmpExp(id=null, startTime=2018-02-22, endTime=2020-01-17, company=布丁科技有限公司, job=秘书长)])
+2026-04-15 14:59:50 [http-nio-80-exec-3] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.addEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT
+2026-04-15 14:59:50 [http-nio-80-exec-3] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@3d685ff3] for JDBC transaction
+2026-04-15 14:59:50 [http-nio-80-exec-3] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@3d685ff3] to manual commit
+2026-04-15 14:59:50 [http-nio-80-exec-3] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-15 14:59:50 [http-nio-80-exec-3] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@3d685ff3]
+2026-04-15 14:59:50 [http-nio-80-exec-3] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@3d685ff3] after transaction
+2026-04-15 14:59:50 [http-nio-80-exec-2] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-15 14:59:52 [http-nio-80-exec-4] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-15 16:55:56 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-15 16:55:56 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-15 16:55:56 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-15 16:55:56 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed

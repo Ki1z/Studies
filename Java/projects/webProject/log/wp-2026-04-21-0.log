@@ -1,0 +1,464 @@
+2026-04-21 09:19:21 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 26848 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-21 09:19:21 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-21 09:19:22 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-21 09:19:22 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-21 09:19:22 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-21 09:19:22 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-21 09:19:22 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-21 09:19:22 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 998 ms
+2026-04-21 09:19:23 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-21 09:19:23 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-21 09:19:23 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 2.241 seconds (process running for 3.032)
+2026-04-21 09:20:16 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-21 09:20:16 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-21 09:20:16 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-21 09:20:16 [http-nio-80-exec-1] INFO  com.eiousee.controller.ReportController - 查询班级人数统计数据
+2026-04-21 09:20:16 [http-nio-80-exec-1] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-21 09:26:11 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-21 09:26:11 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-21 09:26:11 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-21 09:26:11 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-21 09:26:15 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 32024 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-21 09:26:15 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-21 09:26:16 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-21 09:26:16 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-21 09:26:16 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-21 09:26:16 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-21 09:26:16 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-21 09:26:16 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 961 ms
+2026-04-21 09:26:17 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-21 09:26:17 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-21 09:26:17 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 2.183 seconds (process running for 2.985)
+2026-04-21 09:26:42 [http-nio-80-exec-3] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-21 09:26:42 [http-nio-80-exec-3] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-21 09:26:42 [http-nio-80-exec-3] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-21 09:26:42 [http-nio-80-exec-3] INFO  com.eiousee.controller.ReportController - 查询学历人数统计数据
+2026-04-21 09:26:42 [http-nio-80-exec-3] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-21 09:30:46 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-21 09:30:46 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-21 09:30:46 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-21 09:30:46 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-21 09:30:49 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 24780 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-21 09:30:49 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-21 09:30:50 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-21 09:30:50 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-21 09:30:50 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-21 09:30:50 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-21 09:30:50 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-21 09:30:50 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 859 ms
+2026-04-21 09:30:51 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-21 09:30:51 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-21 09:30:51 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.875 seconds (process running for 2.535)
+2026-04-21 09:30:56 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-21 09:30:56 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-21 09:30:56 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-21 09:31:01 [http-nio-80-exec-6] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-04-21 09:31:01 [http-nio-80-exec-5] INFO  com.eiousee.controller.DeptController - 查询所有部门数据
+2026-04-21 09:31:01 [http-nio-80-exec-3] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-21 09:31:01 [http-nio-80-exec-6] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-21 09:31:01 [http-nio-80-exec-4] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-04-21 09:31:04 [http-nio-80-exec-9] INFO  com.eiousee.controller.ReportController - 查询员工性别统计数据
+2026-04-21 09:31:04 [http-nio-80-exec-10] INFO  com.eiousee.controller.ReportController - 查询员工职位统计数据
+2026-04-21 09:31:04 [http-nio-80-exec-1] INFO  com.eiousee.controller.ReportController - 查询学历人数统计数据
+2026-04-21 09:31:04 [http-nio-80-exec-2] INFO  com.eiousee.controller.ReportController - 查询部门职位统计数据
+2026-04-21 09:31:04 [http-nio-80-exec-4] INFO  com.eiousee.controller.ReportController - 查询班级人数统计数据
+2026-04-21 09:31:04 [http-nio-80-exec-6] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-04-21 09:31:10 [http-nio-80-exec-8] INFO  com.eiousee.controller.StudentController - 获取专业列表
+2026-04-21 09:31:10 [http-nio-80-exec-7] INFO  com.eiousee.controller.ClassController - 查询班级列表
+2026-04-21 09:31:10 [http-nio-80-exec-1] INFO  com.eiousee.controller.StudentController - 获取学历列表
+2026-04-21 09:31:10 [http-nio-80-exec-4] INFO  com.eiousee.controller.StudentController - 获取学生列表: StuQueryParam(name=, educationName=, className=, page=1, pageSize=10)
+2026-04-21 09:31:11 [http-nio-80-exec-2] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-04-21 09:31:32 [http-nio-80-exec-9] INFO  com.eiousee.controller.StudentController - 添加学生：Student(id=211111111, name=阎进, sex=男, birth=2026-04-09, className=网络工程1班, majorName=人工智能与大数据技术, educationName=博士, updateTime=null, DisciplineCount=null, DeductionPoints=0.0)
+2026-04-21 09:31:32 [http-nio-80-exec-10] INFO  com.eiousee.controller.StudentController - 获取学生列表: StuQueryParam(name=, educationName=, className=, page=1, pageSize=10)
+2026-04-21 09:31:33 [http-nio-80-exec-3] INFO  com.eiousee.controller.ReportController - 查询员工职位统计数据
+2026-04-21 09:31:33 [http-nio-80-exec-5] INFO  com.eiousee.controller.ReportController - 查询员工性别统计数据
+2026-04-21 09:31:33 [http-nio-80-exec-1] INFO  com.eiousee.controller.ReportController - 查询学历人数统计数据
+2026-04-21 09:31:33 [http-nio-80-exec-8] INFO  com.eiousee.controller.ReportController - 查询部门职位统计数据
+2026-04-21 09:31:33 [http-nio-80-exec-7] INFO  com.eiousee.controller.ReportController - 查询班级人数统计数据
+2026-04-21 09:31:33 [http-nio-80-exec-4] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-04-21 09:31:56 [http-nio-80-exec-9] INFO  com.eiousee.controller.ReportController - 查询学历人数统计数据
+2026-04-21 09:31:58 [http-nio-80-exec-10] INFO  com.eiousee.controller.ReportController - 查询学历人数统计数据
+2026-04-21 09:32:07 [http-nio-80-exec-6] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource .well-known/appspecific/com.chrome.devtools.json.
+2026-04-21 09:35:30 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-21 09:35:30 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-21 09:35:30 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-21 09:35:30 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-21 09:35:32 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 35132 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-21 09:35:32 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-21 09:35:33 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-21 09:35:33 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-21 09:35:33 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-21 09:35:33 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-21 09:35:33 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-21 09:35:33 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 860 ms
+2026-04-21 09:35:34 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-21 09:35:34 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-21 09:35:34 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.923 seconds (process running for 2.59)
+2026-04-21 09:35:40 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-21 09:35:40 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-21 09:35:40 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-21 09:35:43 [http-nio-80-exec-6] INFO  com.eiousee.controller.ReportController - 查询部门职位统计数据
+2026-04-21 09:35:43 [http-nio-80-exec-5] INFO  com.eiousee.controller.ReportController - 查询学历人数统计数据
+2026-04-21 09:35:43 [http-nio-80-exec-7] INFO  com.eiousee.controller.ReportController - 查询班级人数统计数据
+2026-04-21 09:35:43 [http-nio-80-exec-4] INFO  com.eiousee.controller.ReportController - 查询员工职位统计数据
+2026-04-21 09:35:43 [http-nio-80-exec-3] INFO  com.eiousee.controller.ReportController - 查询员工性别统计数据
+2026-04-21 09:35:43 [http-nio-80-exec-10] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-04-21 09:35:43 [http-nio-80-exec-7] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-21 09:38:50 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-21 09:38:50 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-21 09:38:50 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-21 09:38:50 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-21 09:38:52 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 16144 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-21 09:38:52 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-21 09:38:53 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-21 09:38:53 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-21 09:38:53 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-21 09:38:53 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-21 09:38:53 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-21 09:38:53 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 876 ms
+2026-04-21 09:38:54 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-21 09:38:54 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-21 09:38:54 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.922 seconds (process running for 2.57)
+2026-04-21 09:38:57 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-21 09:38:57 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-21 09:38:57 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-21 09:39:02 [http-nio-80-exec-3] INFO  com.eiousee.controller.ReportController - 查询员工性别统计数据
+2026-04-21 09:39:02 [http-nio-80-exec-6] INFO  com.eiousee.controller.ReportController - 查询部门职位统计数据
+2026-04-21 09:39:02 [http-nio-80-exec-5] INFO  com.eiousee.controller.ReportController - 查询学历人数统计数据
+2026-04-21 09:39:02 [http-nio-80-exec-7] INFO  com.eiousee.controller.ReportController - 查询班级人数统计数据
+2026-04-21 09:39:02 [http-nio-80-exec-4] INFO  com.eiousee.controller.ReportController - 查询员工职位统计数据
+2026-04-21 09:39:02 [http-nio-80-exec-8] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-04-21 09:39:02 [http-nio-80-exec-3] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-21 09:42:47 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-21 09:42:47 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-21 09:42:47 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-21 09:42:47 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-21 09:42:49 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 36732 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-21 09:42:49 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-21 09:42:50 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-21 09:42:50 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-21 09:42:50 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-21 09:42:50 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-21 09:42:50 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-21 09:42:50 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 888 ms
+2026-04-21 09:42:51 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-21 09:42:51 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-21 09:42:51 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.962 seconds (process running for 2.605)
+2026-04-21 09:42:55 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-21 09:42:55 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-21 09:42:55 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-21 09:42:57 [http-nio-80-exec-4] INFO  com.eiousee.controller.ReportController - 查询员工职位统计数据
+2026-04-21 09:42:57 [http-nio-80-exec-6] INFO  com.eiousee.controller.ReportController - 查询班级人数统计数据
+2026-04-21 09:42:57 [http-nio-80-exec-5] INFO  com.eiousee.controller.ReportController - 查询学历人数统计数据
+2026-04-21 09:42:57 [http-nio-80-exec-3] INFO  com.eiousee.controller.ReportController - 查询员工性别统计数据
+2026-04-21 09:42:57 [http-nio-80-exec-7] INFO  com.eiousee.controller.ReportController - 查询部门职位统计数据
+2026-04-21 09:42:57 [http-nio-80-exec-8] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-04-21 09:42:57 [http-nio-80-exec-7] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-21 09:44:50 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-21 09:44:50 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-21 09:44:50 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-21 09:44:50 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-21 09:44:52 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 22124 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-21 09:44:52 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-21 09:44:53 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-21 09:44:53 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-21 09:44:53 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-21 09:44:53 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-21 09:44:53 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-21 09:44:53 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 874 ms
+2026-04-21 09:44:54 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-21 09:44:54 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-21 09:44:54 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.937 seconds (process running for 2.617)
+2026-04-21 09:44:58 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-21 09:44:58 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-21 09:44:58 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 2 ms
+2026-04-21 09:45:01 [http-nio-80-exec-6] INFO  com.eiousee.controller.ReportController - 查询部门职位统计数据
+2026-04-21 09:45:01 [http-nio-80-exec-5] INFO  com.eiousee.controller.ReportController - 查询学历人数统计数据
+2026-04-21 09:45:01 [http-nio-80-exec-4] INFO  com.eiousee.controller.ReportController - 查询员工职位统计数据
+2026-04-21 09:45:01 [http-nio-80-exec-7] INFO  com.eiousee.controller.ReportController - 查询班级人数统计数据
+2026-04-21 09:45:01 [http-nio-80-exec-3] INFO  com.eiousee.controller.ReportController - 查询员工性别统计数据
+2026-04-21 09:45:01 [http-nio-80-exec-8] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-04-21 09:45:01 [http-nio-80-exec-4] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-21 09:48:00 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-21 09:48:00 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-21 09:48:00 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-21 09:48:00 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-21 09:48:03 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 3488 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-21 09:48:03 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-21 09:48:03 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-21 09:48:03 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-21 09:48:03 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-21 09:48:03 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-21 09:48:04 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-21 09:48:04 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 891 ms
+2026-04-21 09:48:04 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-21 09:48:04 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-21 09:48:04 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.959 seconds (process running for 2.62)
+2026-04-21 09:48:08 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-21 09:48:08 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-21 09:48:08 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 0 ms
+2026-04-21 09:48:10 [http-nio-80-exec-3] INFO  com.eiousee.controller.ReportController - 查询员工性别统计数据
+2026-04-21 09:48:10 [http-nio-80-exec-4] INFO  com.eiousee.controller.ReportController - 查询部门职位统计数据
+2026-04-21 09:48:10 [http-nio-80-exec-5] INFO  com.eiousee.controller.ReportController - 查询学历人数统计数据
+2026-04-21 09:48:10 [http-nio-80-exec-6] INFO  com.eiousee.controller.ReportController - 查询员工职位统计数据
+2026-04-21 09:48:10 [http-nio-80-exec-7] INFO  com.eiousee.controller.ReportController - 查询班级人数统计数据
+2026-04-21 09:48:10 [http-nio-80-exec-8] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-04-21 09:48:10 [http-nio-80-exec-7] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-21 09:48:55 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-21 09:48:55 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-21 09:48:55 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-21 09:48:55 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-21 09:48:57 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 31516 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-21 09:48:57 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-21 09:48:58 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-21 09:48:58 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-21 09:48:58 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-21 09:48:58 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-21 09:48:58 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-21 09:48:58 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 890 ms
+2026-04-21 09:48:59 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-21 09:48:59 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-21 09:48:59 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.963 seconds (process running for 2.628)
+2026-04-21 09:49:02 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-21 09:49:02 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-21 09:49:02 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 0 ms
+2026-04-21 09:49:05 [http-nio-80-exec-3] INFO  com.eiousee.controller.ReportController - 查询员工性别统计数据
+2026-04-21 09:49:05 [http-nio-80-exec-7] INFO  com.eiousee.controller.ReportController - 查询班级人数统计数据
+2026-04-21 09:49:05 [http-nio-80-exec-4] INFO  com.eiousee.controller.ReportController - 查询学历人数统计数据
+2026-04-21 09:49:05 [http-nio-80-exec-5] INFO  com.eiousee.controller.ReportController - 查询员工职位统计数据
+2026-04-21 09:49:05 [http-nio-80-exec-6] INFO  com.eiousee.controller.ReportController - 查询部门职位统计数据
+2026-04-21 09:49:05 [http-nio-80-exec-8] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-04-21 09:49:05 [http-nio-80-exec-5] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-21 09:49:21 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-21 09:49:21 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-21 09:49:21 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-21 09:49:21 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-21 09:49:24 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 28224 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-21 09:49:24 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-21 09:49:25 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-21 09:49:25 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-21 09:49:25 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-21 09:49:25 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-21 09:49:25 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-21 09:49:25 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 828 ms
+2026-04-21 09:49:25 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-21 09:49:25 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-21 09:49:25 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.881 seconds (process running for 2.542)
+2026-04-21 09:49:31 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-21 09:49:31 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-21 09:49:31 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 2 ms
+2026-04-21 09:49:35 [http-nio-80-exec-5] INFO  com.eiousee.controller.ReportController - 查询班级人数统计数据
+2026-04-21 09:49:35 [http-nio-80-exec-6] INFO  com.eiousee.controller.ReportController - 查询部门职位统计数据
+2026-04-21 09:49:35 [http-nio-80-exec-7] INFO  com.eiousee.controller.ReportController - 查询学历人数统计数据
+2026-04-21 09:49:35 [http-nio-80-exec-4] INFO  com.eiousee.controller.ReportController - 查询员工职位统计数据
+2026-04-21 09:49:35 [http-nio-80-exec-3] INFO  com.eiousee.controller.ReportController - 查询员工性别统计数据
+2026-04-21 09:49:35 [http-nio-80-exec-8] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-04-21 09:49:35 [http-nio-80-exec-6] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-21 09:52:40 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-21 09:52:40 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-21 09:52:40 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-21 09:52:40 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-21 09:52:42 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 36204 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-21 09:52:42 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-21 09:52:43 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-21 09:52:43 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-21 09:52:43 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-21 09:52:43 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-21 09:52:43 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-21 09:52:43 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 888 ms
+2026-04-21 09:52:44 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-21 09:52:44 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-21 09:52:44 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.942 seconds (process running for 2.591)
+2026-04-21 09:52:48 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-21 09:52:48 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-21 09:52:48 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-21 14:41:55 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 19056 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-21 14:41:55 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-21 14:41:56 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-21 14:41:56 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-21 14:41:56 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-21 14:41:56 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-21 14:41:56 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-21 14:41:56 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 972 ms
+2026-04-21 14:41:56 [main] WARN  o.s.b.w.s.c.AnnotationConfigServletWebServerApplicationContext - Exception encountered during context initialization - cancelling refresh attempt: org.springframework.beans.factory.UnsatisfiedDependencyException: Error creating bean with name 'deptController' defined in file [D:\JetBrains_Files\Java_Files\webProject\target\classes\com\eiousee\controller\DeptController.class]: Unsatisfied dependency expressed through constructor parameter 0: Error creating bean with name 'deptServiceImpl' defined in file [D:\JetBrains_Files\Java_Files\webProject\target\classes\com\eiousee\service\impl\DeptServiceImpl.class]: Unsatisfied dependency expressed through constructor parameter 1: Error creating bean with name 'empServiceImpl' defined in file [D:\JetBrains_Files\Java_Files\webProject\target\classes\com\eiousee\service\impl\EmpServiceImpl.class]: Unsatisfied dependency expressed through constructor parameter 2: Error creating bean with name 'deptServiceImpl': Requested bean is currently in creation: Is there an unresolvable circular reference or an asynchronous initialization dependency?
+2026-04-21 14:41:56 [main] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-0} closing ...
+2026-04-21 14:41:56 [main] INFO  org.apache.catalina.core.StandardService - Stopping service [Tomcat]
+2026-04-21 14:41:56 [main] INFO  o.s.b.a.logging.ConditionEvaluationReportLogger - 
+
+Error starting ApplicationContext. To display the condition evaluation report re-run your application with 'debug' enabled.
+2026-04-21 14:41:57 [main] ERROR o.s.b.diagnostics.LoggingFailureAnalysisReporter - 
+
+***************************
+APPLICATION FAILED TO START
+***************************
+
+Description:
+
+The dependencies of some of the beans in the application context form a cycle:
+
+   deptController defined in file [D:\JetBrains_Files\Java_Files\webProject\target\classes\com\eiousee\controller\DeptController.class]
+┌─────┐
+|  deptServiceImpl defined in file [D:\JetBrains_Files\Java_Files\webProject\target\classes\com\eiousee\service\impl\DeptServiceImpl.class]
+↑     ↓
+|  empServiceImpl defined in file [D:\JetBrains_Files\Java_Files\webProject\target\classes\com\eiousee\service\impl\EmpServiceImpl.class]
+└─────┘
+
+
+Action:
+
+Relying upon circular references is discouraged and they are prohibited by default. Update your application to remove the dependency cycle between beans. As a last resort, it may be possible to break the cycle automatically by setting spring.main.allow-circular-references to true.
+
+2026-04-21 14:45:59 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 32576 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-21 14:45:59 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-21 14:45:59 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-21 14:45:59 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-21 14:45:59 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-21 14:45:59 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-21 14:45:59 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-21 14:45:59 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 777 ms
+2026-04-21 14:46:00 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-21 14:46:00 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-21 14:46:00 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.8 seconds (process running for 2.405)
+2026-04-21 14:46:11 [http-nio-80-exec-2] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-21 14:46:11 [http-nio-80-exec-2] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-21 14:46:11 [http-nio-80-exec-2] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-21 14:46:13 [http-nio-80-exec-4] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-04-21 14:46:13 [http-nio-80-exec-3] INFO  com.eiousee.controller.DeptController - 查询所有部门数据
+2026-04-21 14:46:13 [http-nio-80-exec-5] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-21 14:46:13 [http-nio-80-exec-6] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-04-21 14:46:13 [http-nio-80-exec-3] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-21 14:46:18 [http-nio-80-exec-9] INFO  com.eiousee.controller.DeptController - 查询所有部门数据
+2026-04-21 14:46:18 [http-nio-80-exec-8] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-04-21 14:46:23 [http-nio-80-exec-2] INFO  com.eiousee.controller.DeptController - 根据id删除部门：6
+2026-04-21 14:46:23 [http-nio-80-exec-1] INFO  com.eiousee.controller.DeptController - 查询所有部门数据
+2026-04-21 14:47:16 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-21 14:47:16 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-21 14:47:16 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-21 14:47:16 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-21 14:47:19 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 34592 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-21 14:47:19 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-21 14:47:20 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-21 14:47:20 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-21 14:47:20 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-21 14:47:20 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-21 14:47:20 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-21 14:47:20 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 873 ms
+2026-04-21 14:47:21 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-21 14:47:21 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-21 14:47:21 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.853 seconds (process running for 2.468)
+2026-04-21 14:47:28 [http-nio-80-exec-2] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-21 14:47:28 [http-nio-80-exec-2] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-21 14:47:28 [http-nio-80-exec-2] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 0 ms
+2026-04-21 14:47:29 [http-nio-80-exec-2] INFO  com.eiousee.controller.DeptController - 添加部门数据行政部
+2026-04-21 14:47:29 [http-nio-80-exec-2] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-21 14:47:29 [http-nio-80-exec-1] INFO  com.eiousee.controller.DeptController - 查询所有部门数据
+2026-04-21 14:47:31 [http-nio-80-exec-3] INFO  com.eiousee.controller.DeptController - 根据id查询部门数据：14
+2026-04-21 14:47:34 [http-nio-80-exec-4] INFO  com.eiousee.controller.DeptController - 查询所有部门数据
+2026-04-21 14:47:34 [http-nio-80-exec-5] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-04-21 14:47:34 [http-nio-80-exec-6] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-21 14:47:34 [http-nio-80-exec-7] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-04-21 14:47:37 [http-nio-80-exec-8] INFO  com.eiousee.controller.EmpController - 查询员工，参数：1
+2026-04-21 14:47:39 [http-nio-80-exec-9] INFO  com.eiousee.controller.EmpController - 更新员工，参数：Employee(id=1, name=null, birth=null, sex=null, avatarPath=null, deptName=行政部, jobName=讲师, boardDate=2020-01-01, updateTime=null, empExpList=[])
+2026-04-21 14:47:39 [http-nio-80-exec-9] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.updateEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT,-Exception
+2026-04-21 14:47:39 [http-nio-80-exec-9] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] for JDBC transaction
+2026-04-21 14:47:39 [http-nio-80-exec-9] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] to manual commit
+2026-04-21 14:47:39 [http-nio-80-exec-9] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-21 14:47:39 [http-nio-80-exec-9] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440]
+2026-04-21 14:47:39 [http-nio-80-exec-9] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] after transaction
+2026-04-21 14:47:39 [http-nio-80-exec-10] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-21 14:47:40 [http-nio-80-exec-2] INFO  com.eiousee.controller.EmpController - 查询员工，参数：2
+2026-04-21 14:47:42 [http-nio-80-exec-1] INFO  com.eiousee.controller.EmpController - 更新员工，参数：Employee(id=2, name=null, birth=null, sex=null, avatarPath=null, deptName=行政部, jobName=讲师, boardDate=2020-01-01, updateTime=null, empExpList=[])
+2026-04-21 14:47:42 [http-nio-80-exec-1] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.updateEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT,-Exception
+2026-04-21 14:47:42 [http-nio-80-exec-1] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] for JDBC transaction
+2026-04-21 14:47:42 [http-nio-80-exec-1] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] to manual commit
+2026-04-21 14:47:42 [http-nio-80-exec-1] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-21 14:47:42 [http-nio-80-exec-1] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440]
+2026-04-21 14:47:42 [http-nio-80-exec-1] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] after transaction
+2026-04-21 14:47:42 [http-nio-80-exec-3] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-21 14:47:43 [http-nio-80-exec-5] INFO  com.eiousee.controller.EmpController - 查询员工，参数：3
+2026-04-21 14:47:44 [http-nio-80-exec-4] INFO  com.eiousee.controller.EmpController - 更新员工，参数：Employee(id=3, name=null, birth=null, sex=null, avatarPath=null, deptName=行政部, jobName=副教授, boardDate=2020-01-01, updateTime=null, empExpList=[])
+2026-04-21 14:47:44 [http-nio-80-exec-4] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.updateEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT,-Exception
+2026-04-21 14:47:44 [http-nio-80-exec-4] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] for JDBC transaction
+2026-04-21 14:47:44 [http-nio-80-exec-4] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] to manual commit
+2026-04-21 14:47:44 [http-nio-80-exec-4] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-21 14:47:44 [http-nio-80-exec-4] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440]
+2026-04-21 14:47:44 [http-nio-80-exec-4] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] after transaction
+2026-04-21 14:47:44 [http-nio-80-exec-7] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-21 14:47:45 [http-nio-80-exec-6] INFO  com.eiousee.controller.EmpController - 查询员工，参数：4
+2026-04-21 14:47:46 [http-nio-80-exec-8] INFO  com.eiousee.controller.EmpController - 更新员工，参数：Employee(id=4, name=null, birth=null, sex=null, avatarPath=null, deptName=行政部, jobName=教授, boardDate=2020-01-01, updateTime=null, empExpList=[])
+2026-04-21 14:47:46 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.updateEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT,-Exception
+2026-04-21 14:47:46 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] for JDBC transaction
+2026-04-21 14:47:46 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] to manual commit
+2026-04-21 14:47:46 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-21 14:47:46 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440]
+2026-04-21 14:47:46 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] after transaction
+2026-04-21 14:47:46 [http-nio-80-exec-9] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-21 14:47:47 [http-nio-80-exec-10] INFO  com.eiousee.controller.EmpController - 查询员工，参数：5
+2026-04-21 14:47:49 [http-nio-80-exec-2] INFO  com.eiousee.controller.EmpController - 更新员工，参数：Employee(id=5, name=null, birth=null, sex=null, avatarPath=null, deptName=行政部, jobName=助教, boardDate=2021-03-15, updateTime=null, empExpList=[])
+2026-04-21 14:47:49 [http-nio-80-exec-2] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.updateEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT,-Exception
+2026-04-21 14:47:49 [http-nio-80-exec-2] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] for JDBC transaction
+2026-04-21 14:47:49 [http-nio-80-exec-2] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] to manual commit
+2026-04-21 14:47:49 [http-nio-80-exec-2] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-21 14:47:49 [http-nio-80-exec-2] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440]
+2026-04-21 14:47:49 [http-nio-80-exec-2] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] after transaction
+2026-04-21 14:47:49 [http-nio-80-exec-1] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-21 14:47:49 [http-nio-80-exec-3] INFO  com.eiousee.controller.EmpController - 查询员工，参数：9
+2026-04-21 14:47:51 [http-nio-80-exec-5] INFO  com.eiousee.controller.EmpController - 更新员工，参数：Employee(id=9, name=null, birth=null, sex=null, avatarPath=null, deptName=行政部, jobName=助教, boardDate=2020-07-07, updateTime=null, empExpList=[])
+2026-04-21 14:47:51 [http-nio-80-exec-5] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.updateEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT,-Exception
+2026-04-21 14:47:51 [http-nio-80-exec-5] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] for JDBC transaction
+2026-04-21 14:47:51 [http-nio-80-exec-5] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] to manual commit
+2026-04-21 14:47:51 [http-nio-80-exec-5] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-21 14:47:51 [http-nio-80-exec-5] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440]
+2026-04-21 14:47:51 [http-nio-80-exec-5] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] after transaction
+2026-04-21 14:47:51 [http-nio-80-exec-4] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-21 14:47:52 [http-nio-80-exec-7] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-21 14:47:53 [http-nio-80-exec-6] INFO  com.eiousee.controller.EmpController - 查询员工，参数：13
+2026-04-21 14:47:57 [http-nio-80-exec-8] INFO  com.eiousee.controller.EmpController - 更新员工，参数：Employee(id=13, name=null, birth=null, sex=null, avatarPath=https://eiousee-java-web.oss-cn-beijing.aliyuncs.com/91b6a1a8-a88b-43a8-b10a-56fd33c569d1_热海牌-浔麟 250px.png, deptName=教研部, jobName=主任, boardDate=2026-04-14, updateTime=null, empExpList=[EmpExp(id=13, startTime=2018-01-20, endTime=2019-05-03, company=艾欧希科技股份有限公司, job=Java开发工程师), EmpExp(id=13, startTime=2020-01-13, endTime=2022-03-31, company=艾欧希科技股份有限公司, job=开发部主管), EmpExp(id=13, startTime=2022-04-01, endTime=2026-04-02, company=艾欧希科技股份有限公司, job=董事长)])
+2026-04-21 14:47:57 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Creating new transaction with name [com.eiousee.service.impl.EmpServiceImpl.updateEmp]: PROPAGATION_REQUIRED,ISOLATION_DEFAULT,-Exception
+2026-04-21 14:47:57 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Acquired Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] for JDBC transaction
+2026-04-21 14:47:57 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Switching JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] to manual commit
+2026-04-21 14:47:57 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Initiating transaction commit
+2026-04-21 14:47:57 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Committing JDBC transaction on Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440]
+2026-04-21 14:47:57 [http-nio-80-exec-8] DEBUG o.s.jdbc.support.JdbcTransactionManager - Releasing JDBC Connection [com.mysql.cj.jdbc.ConnectionImpl@658a1440] after transaction
+2026-04-21 14:47:57 [http-nio-80-exec-9] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-21 14:47:58 [http-nio-80-exec-10] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-21 14:48:00 [http-nio-80-exec-3] INFO  com.eiousee.controller.ReportController - 查询员工性别统计数据
+2026-04-21 14:48:00 [http-nio-80-exec-4] INFO  com.eiousee.controller.ReportController - 查询学历人数统计数据
+2026-04-21 14:48:00 [http-nio-80-exec-5] INFO  com.eiousee.controller.ReportController - 查询员工职位统计数据
+2026-04-21 14:48:00 [http-nio-80-exec-6] INFO  com.eiousee.controller.ReportController - 查询班级人数统计数据
+2026-04-21 14:48:00 [http-nio-80-exec-7] INFO  com.eiousee.controller.ReportController - 查询部门职位统计数据
+2026-04-21 14:48:01 [http-nio-80-exec-8] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-04-21 14:48:12 [http-nio-80-exec-9] INFO  com.eiousee.controller.DeptController - 查询所有部门数据
+2026-04-21 14:48:12 [http-nio-80-exec-10] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-04-21 14:48:16 [http-nio-80-exec-2] INFO  com.eiousee.controller.DeptController - 根据id删除部门：14
+2026-04-21 14:49:05 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-21 14:49:05 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-21 14:49:05 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-21 14:49:05 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-21 14:49:09 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 35228 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-21 14:49:09 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-21 14:49:10 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 80 (http)
+2026-04-21 14:49:10 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-80"]
+2026-04-21 14:49:10 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-21 14:49:10 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-21 14:49:10 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-21 14:49:10 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 814 ms
+2026-04-21 14:49:10 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-80"]
+2026-04-21 14:49:10 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 80 (http) with context path '/'
+2026-04-21 14:49:10 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 1.831 seconds (process running for 2.543)
+2026-04-21 14:49:15 [http-nio-80-exec-1] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-21 14:49:15 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-21 14:49:15 [http-nio-80-exec-1] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-21 14:49:16 [http-nio-80-exec-2] INFO  com.eiousee.controller.DeptController - 查询所有部门数据
+2026-04-21 14:49:16 [http-nio-80-exec-5] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-04-21 14:49:16 [http-nio-80-exec-2] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-21 14:49:19 [http-nio-80-exec-4] INFO  com.eiousee.controller.DeptController - 根据id删除部门：14
+2026-04-21 15:36:52 [http-nio-80-exec-8] INFO  com.eiousee.controller.EmpController - 查询员工名称列表
+2026-04-21 15:36:52 [http-nio-80-exec-9] INFO  com.eiousee.controller.ClassController - 查询班级状态列表
+2026-04-21 15:36:52 [http-nio-80-exec-5] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-04-21 15:36:52 [http-nio-80-exec-1] INFO  com.eiousee.controller.ClassController - 查询班级列表：ClassQueryParam(className=, begin=null, end=null, page=1, pageSize=10)
+2026-04-21 15:37:12 [http-nio-80-exec-2] INFO  com.eiousee.controller.ClassController - 查询班级列表：ClassQueryParam(className=, begin=null, end=null, page=1, pageSize=5)
+2026-04-21 15:39:27 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-21 15:39:27 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-21 15:39:27 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-21 15:39:27 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
