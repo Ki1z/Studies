@@ -1,6 +1,6 @@
 # Java Web
 
-`更新时间：2026-4-21`
+`更新时间：2026-4-22`
 
 注释解释：
 
@@ -5791,3 +5791,154 @@ public Integer updateClass(ClassPojo classPojo) {
 
 学生管理与员工管理功能类似，因此此处省略学生管理内容，详细代码可查询[项目文件](./projects/webProject)
 
+### 登录认证
+
+根据接口文档开发登录接口先定义两个实体类，`LoginPojo`存储返回的登陆数据，`LoginInfo`存储请求参数
+
+`LoginPojo`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class LoginPojo {
+    private Integer id;
+    private String username;
+    private String password;
+    private String name;
+    private String token;
+}
+```
+
+`LoginInfo`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class LoginInfo {
+    private String username;
+    private String password;
+}
+```
+
+然后构建`Controller`，`Controller`需要根据`loginPojo`的内容来决定返回的内容
+
+```java
+@PostMapping
+public Result login(@RequestBody LoginInfo loginInfo) {
+    log.info("登录，用户信息：{}", loginInfo);
+    LoginPojo loginPojo = loginService.login(loginInfo);
+    return loginPojo == null ? Result.error("用户名或密码错误") : Result.success(loginPojo);
+}
+```
+
+在`Service`中，将用户登录的用户名传入`Mapper`，获取该用户的所有信息，封装为`LoginPojo`实例，然后获取用户实例的密码，与用户输入的密码进行对比，避免直接将密码字段出现在查询语句中，防止日志记录敏感信息
+
+```java
+@Override
+public LoginPojo login(LoginInfo loginInfo) {
+    LoginPojo user = loginMapper.login(loginInfo.getUsername());
+    return user != null && user.getPassword().equals(loginInfo.getPassword()) ? user : null;
+}
+```
+
+最后实现`Mapper`
+
+```xml
+<select id="login" resultType="com.eiousee.pojo.LoginPojo">
+    SELECT
+        u.id AS id,
+        username,
+        password,
+        name
+    FROM
+        users AS u
+    LEFT JOIN
+        emp_info AS e ON u.id = e.id
+    WHERE
+        username = #{username}
+</select>
+```
+
+#### 会话技术
+
+会话技术是一种在网络通信中用于跟踪用户状态的机制，它可以让服务器在处理用户请求时保持特定用户的状态信息，从而实现个性化的服务和用户体验。举个例子，当用户访问某个网站，网站提示需要登录，用户登陆后访问其他网站页面，又弹出提示需要登录，这就是`HTTP`协议的无状态性导致的，每个`HTTP`请求都是独立的，无法得知上次的请求是否携带了某些信息。
+
+会话技术主要有`Cookie`、`Session`和`token`实现
+
+#### Cookie
+
+`Cookie`的工作原理是在用户登录后，服务器向用户浏览器提供一个`Cookie`字段，字段中存储用户信息，浏览器在第二次访问服务器时携带该用户信息，服务器接收信息，并与数据库中存储的信息进行匹配，匹配通过则表示用户已经获得授权
+
+```java
+// 设置Cookie
+@GetMapping("/setCookie")
+public Result setCookie(HttpServletResponse response) {
+    response.addCookie(new Cookie("username", "eiousee"));
+    return Result.success();
+}
+
+// 读取Cookie
+@GetMapping("/getCookie")
+public Result getCookie(HttpServletRequest request) {
+    Cookie[] cookies = request.getCookies();
+    return Result.success(cookies);
+}
+```
+
+> ![](javaweb/68.png)
+
+`Cookie`无法在移动端、小程序中使用，而且`Cookie`直接存储在浏览器中，容易泄露
+
+#### Session
+
+`Session`技术基于`Cookie`，用户在登录后，服务器会在本地存储用户信息，每个用户信息对应一个`SESSIONID`，然后服务器将`SESSIONID`返回给用户，用户每次请求仅携带`SESSIONID`即可，不会泄露用户源数据
+
+```java
+// 设置Session
+@GetMapping("/setSession")
+public Result setSession(HttpServletRequest request) {
+    request.getSession().setAttribute("username", "eiousee");
+    return Result.success();
+}
+
+// 读取Session
+@GetMapping("/getSession")
+public Result getSession(HttpServletRequest request) {
+    return Result.success(request.getSession().getAttribute("username"));
+}
+```
+
+> ![aaa](javaweb/69.png)
+
+`Session`技术基于`Cookie`，因此也拥有`Cookie`的缺点，而且如果在服务器集群中，假设负载均衡服务器设置的轮询均衡模式，每次用户发送请求，后一个服务器中均不会存在前一个服务器的`Session`数据，导致用户每次请求都需要登录
+
+#### JWT
+
+`jwt`全称`Json Web Token`，是一种简洁、自包含格式的令牌，用于在通信双方以`json`数据格式安全地传输信息。`jwt`令牌组成由三部分构成，分别是`Header`、`Payload`和`Signature`
+
+- `Header`：头部，记录令牌类型，签名算法，如`{"alg": "HS256", "type": "JWT"}`
+
+- `Payload`：有效载荷，携带一些自定义信息，如`{"id": 1, "username": "Kiiz"}`
+- `Signature`：签名，防止`Token`被篡改，确保令牌安全性，将`header`和`payload`融入，并加入指定密钥，通过签名算法计算得到
+
+**示例**
+
+```jwt
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiZWlvdXNlZSJ9.U1Od8RDMG4jYrk-nIyoI1bBqRAPJlDqM1Vsf-FFOrTM
+```
+
+每个部分用`.`分隔，`Header`和`Payload`使用`Base64`编码，`Signature`部分则使用签名算法得到

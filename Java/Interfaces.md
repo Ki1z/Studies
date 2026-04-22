@@ -1903,6 +1903,65 @@
 
 ### 6.1 登录
 
+#### 6.1.1 基本信息
+
+请求路径：`/login`
+
+请求方式：`POST`
+
+接口描述：该接口用于员工登录管理系统，登陆完毕后，系统下发JWT令牌
+
+#### 6.1.2 请求参数
+
+参数格式：`application/json`
+
+参数说明：
+
+| 参数名   | 类型   | 是否必须 | 备注   |
+| -------- | ------ | -------- | ------ |
+| username | string | 是       | 用户名 |
+| password | string | 是       | 密码   |
+
+请求数据样例：
+
+```json
+{
+    "username": "zhangsan",
+    "password": "123456"
+}
+```
+
+#### 6.1.3 响应数据
+
+参数格式：`application/json`
+
+参数说明：
+
+| 名称          | 类型   | 是否必须 | 备注                    |
+| ------------- | ------ | -------- | ----------------------- |
+| code          | number | 必须     | 响应码, 1 成功 ; 0 失败 |
+| msg           | string | 非必须   | 提示信息                |
+| data          | object | 必须     | 返回的数据              |
+| data-id       | number | 必须     | 员工ID                  |
+| data-username | string | 必须     | 用户名                  |
+| data-name     | string | 必须     | 员工姓名                |
+| data=token    | string | 必须     | 令牌                    |
+
+响应数据样例：
+
+```JSON
+{
+    "code": 1,
+    "msg": "success",
+    "data": {
+        "id": 2,
+        "username": "zhangsan",
+        "name": "张三",
+        "token": "eyJhbGciOiJIUzI1NiJ9.eyJpZCI6MiwidXNlcm5hbWUiOiJzb25namlhbmciLCJleHAiOjE2OTg3MDE3NjJ9.w06EkRXTep6SrvMns3w5RKe79nxauDe7fdMhBLK-MKY"
+    }
+}
+```
+
 ### 6.2 文件上传
 
 #### 6.2.1 基本信息
