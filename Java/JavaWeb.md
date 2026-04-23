@@ -1,6 +1,6 @@
 # Java Web
 
-`更新时间：2026-4-22`
+`更新时间：2026-4-23`
 
 注释解释：
 
@@ -5942,3 +5942,93 @@ eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiZWlvdXNlZSJ9.U1Od8RDMG4jYrk-nIy
 ```
 
 每个部分用`.`分隔，`Header`和`Payload`使用`Base64`编码，`Signature`部分则使用签名算法得到
+
+##### 快速入门
+
+1. 引入`jjwt`依赖
+
+```xml
+<!--        jjwt-->
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt</artifactId>
+    <version>0.9.1</version>
+</dependency>
+<!--        jaxb-api -->
+<dependency>
+    <groupId>javax.xml.bind</groupId>
+    <artifactId>jaxb-api</artifactId>
+    <version>2.3.1</version>
+    <scope>compile</scope>
+</dependency>
+```
+
+2. 调用工具类`Jwts`来生成或解析`jwt`令牌
+
+```java
+Jwts.builder()
+        .signWith()
+        .addClaims()
+        .setExpiration()
+        .compact();
+```
+
+- `signWith()`：指定签名算法与密钥，签名算法是`SignatureAlgorithm`枚举类中的值，包括`HS256`、`HS384`、`HS512`、`RS256`、`RS384`等等，密钥要求是Byte`数组或`Base64`编码的字符串
+- `addClaims()`：添加自定义数据，对应`jwt`中的`payload`部分，参数数据类型为`Map<String, Object>`
+- `setExpiration()`：设置过期时间，参数数据类型为`Date`
+- `compact()`：生成令牌
+
+**示例**
+
+生成一个用户令牌，包含用户名与密码，过期时间为一小时，签名算法`HS256`，密钥为`eiousee`
+
+```java
+package com.eiousee;
+
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import org.junit.jupiter.api.Test;
+
+import java.util.Base64;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+public class jwtTest {
+
+    @Test
+    public void generateJwt() {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("username", "kiiz");
+        claims.put("password", "123456");
+
+        String jwt = Jwts.builder()
+                .signWith(SignatureAlgorithm.HS256, "ZWlvdXNlZQ==")
+                .addClaims(claims)
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 3600))
+                .compact();
+
+        System.out.println(jwt);
+    }
+}
+```
+
+```token
+eyJhbGciOiJIUzI1NiJ9.eyJwYXNzd29yZCI6IjEyMzQ1NiIsInVzZXJuYW1lIjoia2lpeiIsImV4cCI6MTc3Njk0MDg5Nn0.o_qL810N01J4MWnTagSu9KHYE4Rgd1IUG62dAaKeg_M
+```
+
+接着我们解析令牌
+
+```java
+@Test
+public void parseJwt() {
+    String jwt = "eyJhbGciOiJIUzI1NiJ9.eyJwYXNzd29yZCI6IjEyMzQ1NiIsInVzZXJuYW1lIjoia2lpeiIsImV4cCI6MTc3Njk0MTA0Nn0.4xM6yeaGiUuZPK0e4XIByi2MNPtMT8X3ZgIgR0PTW4E";
+    Claims claims = Jwts.parser()
+            .setSigningKey("ZWlvdXNlZQ==")
+            .parseClaimsJws(jwt)
+            .getBody();
+    System.out.println(claims);
+}
+```
+
+> ![](javaweb/70.png)
