@@ -1,6 +1,6 @@
 # Java Web
 
-`更新时间：2026-4-23`
+`更新时间：2026-4-24`
 
 注释解释：
 
@@ -6032,3 +6032,358 @@ public void parseJwt() {
 ```
 
 > ![](javaweb/70.png)
+
+##### 下发令牌
+
+在项目中编写一个`JWT`工具类，然后实现下发令牌的逻辑
+
+```java
+package com.eiousee.utils;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+public class JwtUtils {
+
+    private static final String KEY = "ZWlvdXNlZQ==";
+    private static final long EXPIRATION = 1000 * 60 * 60 * 24 * 7;
+
+    /**
+     * 生成jwt
+     * @param claims
+     * @return
+     */
+    public static String generateJwt(Map<String, Object> claims) {
+        return Jwts.builder()
+                .signWith(SignatureAlgorithm.HS256, KEY)
+                .addClaims(claims)
+                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
+                .compact();
+    }
+
+    /**
+     * 解析jwt
+     * @param token
+     * @return
+     */
+    public static Claims parseJwt(String token) {
+        return Jwts.parser()
+                .setSigningKey(KEY)
+                .parseClaimsJws(token)
+                .getBody();
+    }
+}
+```
+
+然后在`Service`中调用`JwtUtils`，并下发`token`
+
+```java
+@Override
+public LoginResult login(LoginInfo loginInfo) {
+    LoginPojo loginPojo = loginMapper.login(loginInfo.getUsername());
+    if (loginPojo != null && loginPojo.getPassword().equals(loginInfo.getPassword())) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("username", loginPojo.getUsername());
+        claims.put("id", loginPojo.getId());
+        return new LoginResult(loginPojo.getId(), loginPojo.getUsername(), loginPojo.getName(), JwtUtils.generateJwt(claims));
+    }
+    return null;
+}
+```
+
+> ![](javaweb/71.png)
+
+在前端的测试中也可以看到，浏览器中存储了对应的用户登录信息
+
+> ![](javaweb/72.png)
+
+#### 令牌校验
+
+`Spring`提供了`Filer`过滤器与`Interceptor`拦截器来实现登录校验功能
+
+##### Filter
+
+`Filter`是`JavaWeb`三大组件`Servlet`、`Filter`、`Listener`中一个，过滤器可以把对指定资源的请求拦截下来，从而实现一些特殊的功能，过滤器一般完成一些通用的操作，如登录校验、统一编码、敏感字符处理等等
+
+###### 快速入门
+
+首先定义一个`Filter`类，实现`Filter`接口，并实现其中的方法
+
+```java
+package com.eiousee.filter;
+
+import jakarta.servlet.*;
+import jakarta.servlet.annotation.WebFilter;
+import lombok.extern.slf4j.Slf4j;
+
+import java.io.IOException;
+
+@Slf4j
+@WebFilter(urlPatterns = "/*")
+public class AuthFilter implements Filter {
+    @Override
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+        log.info("拦截到了请求");
+    }
+
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+        Filter.super.init(filterConfig);
+    }
+
+    @Override
+    public void destroy() {
+        Filter.super.destroy();
+    }
+}
+```
+
+然后在启动类`aa`中添加`@ServletComponentScan`注解，启用`Spring`中对于`Servlert`的支持
+
+```java
+package com.eiousee;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.servlet.ServletComponentScan;
+
+@ServletComponentScan
+@SpringBootApplication
+public class WebProjectApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(WebProjectApplication.class, args);
+    }
+
+}
+```
+
+然后发送登录请求，发现没有响应结果
+
+> ![](javaweb/73.png)
+
+在后端的命令行中提示拦截到了请求
+
+> ![](javaweb/74.png)
+
+在`Filter`中，一旦拦截到请求，并不会在拦截完成后放行，而是需要手动放行
+
+```java
+@Override
+public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+    log.info("拦截到了请求");
+    // 放行
+    filterChain.doFilter(servletRequest, servletResponse);
+}
+```
+
+###### 实现
+
+现在在项目中实现校验逻辑，从请求中读取`Token`，当请求路径为`/login`时，不检查`Token`，确保用户能够正常登录，然后在其他请求中检查并验证`Token`
+
+```java
+package com.eiousee.filter;
+
+import com.eiousee.utils.JwtUtils;
+import jakarta.servlet.*;
+import jakarta.servlet.annotation.WebFilter;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+
+import java.io.IOException;
+
+@Slf4j
+@WebFilter(urlPatterns = "/*")
+public class AuthFilter implements Filter {
+
+    @Override
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+        HttpServletRequest request = (HttpServletRequest) servletRequest;
+        HttpServletResponse response = (HttpServletResponse) servletResponse;
+        // 获取URI
+        String uri = request.getRequestURI();
+        log.info("请求URI：{}", uri);
+        // 判断是否是登录请求
+        if (uri.contains("login")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        // 获取Token
+        String token = request.getHeader("Token");
+        // 验证Token
+        if (token == null || token.isEmpty()) {
+            log.info("未找到Token");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
+        try {
+            JwtUtils.parseJwt(token);
+        } catch (Exception e) {
+            log.info("Token验证失败");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
+        // 验证通过，放行
+        filterChain.doFilter(request, response);
+    }
+}
+```
+
+这里需要注意，前端项目必须与后端`SpringBoot`分离，使用独立的前端服务器来部署前端项目，否则浏览器会阻止`LocalStorage`在`localhost`域中共享，导致登录跳转后又出现`401`
+
+##### Interceptor
+
+拦截器是一种动态拦截方法调用的机制，类似于过滤器，是由`Spring`提供的，主要用来动态拦截控制器方法的执行
+
+###### 快速入门
+
+1. 定义拦截器，实现`HandlerInterceptor`接口，并添加`@Component`注解，注册为`Bean`
+
+```java
+package com.eiousee.filter;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
+
+@Slf4j
+@Component
+public class AuthInterceptor implements HandlerInterceptor {
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        log.info("请求开始：{}", request.getRequestURI());
+        return true;
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+        log.info("请求结束：{}", request.getRequestURI());
+    }
+}
+```
+
+2. 定义配置类，实现`WebMvcConfigurer`类，添加`@Configuration`注解，然后注入指定拦截器，然后重写`addInterceptors`方法，注册拦截器
+
+```java
+package com.eiousee.config;
+
+import com.eiousee.filter.AuthInterceptor;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+
+    private final AuthInterceptor authInterceptor;
+
+    public WebConfig(AuthInterceptor authInterceptor) {
+        this.authInterceptor = authInterceptor;
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(authInterceptor)
+                .addPathPatterns("/**");
+    }
+}
+```
+
+> ![](javaweb/75.png)
+
+###### 实现
+
+在`Interceptor`中，定义`Token`的接收与验证逻辑
+
+```java
+package com.eiousee.interceptor;
+
+import com.eiousee.utils.JwtUtils;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
+
+@Slf4j
+@Component
+public class AuthInterceptor implements HandlerInterceptor {
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        log.info("请求开始：{}", request.getRequestURI());
+
+        String token = request.getHeader("token");
+        if (token == null || token.isEmpty()) {
+            log.info("未找到Token");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return false;
+        }
+        try {
+            // 验证Token
+            JwtUtils.parseJwt(token);
+        } catch (Exception e) {
+            log.info("Token验证失败");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return false;
+        }
+        return true;
+    }
+}
+```
+
+然后在`WebConfig`中，将`/login`排除在拦截器拦截路径之外
+
+```java
+package com.eiousee.config;
+
+import com.eiousee.interceptor.AuthInterceptor;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+
+    private final AuthInterceptor authInterceptor;
+
+    public WebConfig(AuthInterceptor authInterceptor) {
+        this.authInterceptor = authInterceptor;
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(authInterceptor)
+                .addPathPatterns("/**")
+                .excludePathPatterns("/login/**");
+    }
+}
+```
+
+###### 拦截路径
+
+在拦截器中，拦截路径的书写方式与常规计算机目录表示方式有些不同
+
+| 拦截路径 | 含义       | 举例                                 |
+| -------- | ---------- | ------------------------------------ |
+| `/*`     | 一级路径   | 能匹配`/a`，不能匹配`/a/1`           |
+| `/**`    | 任意路径   | 能匹配`/a`、`/a/1`                   |
+| `/a/*`   | 一级子路径 | 能匹配`/a/1`，不能匹配`/a/1/1`、`/a` |
+| `/a/**`  | 任意子路径 | 能匹配`/a`、`/a/1`、`/a/1/1`         |
+
+##### 执行流程
+
+假设项目中存在过滤器`AFilter`、`BFilter`，以及拦截器`AInterceptor`、`BInterceptor`，拦截的执行流程为
+$$
+Request \rightarrow AFilter \rightarrow BFilter \rightarrow AInterceptor \rightarrow BInterceptor
+$$
+对于过滤器和拦截器只存在一种的情况下，默认的排序规则是按首字母排序，首字母越靠前，排序越靠前；对于两种都存在的情况下，先执行过滤器，再执行拦截器

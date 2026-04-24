@@ -6,7 +6,7 @@
 
 #### 1.1.1 基本信息
 
-请求路径：`/depts`
+请求路径：`/api/api/depts`
 
 请求方式：`GET`
 
@@ -59,7 +59,7 @@
 
 #### 1.2.1 基本信息
 
-请求路径：`/depts`
+请求路径：`/api/api/depts`
 
 请求方式：`DELETE`
 
@@ -103,6 +103,8 @@
  ### 1.3 新增部门
 
 #### 1.3.1 基本信息
+
+请求路径：`/api/api/depts`
 
 请求方式：`POST`
 
@@ -152,7 +154,7 @@
 
 #### 1.4.1 基本信息
 
-请求路径：`/depts/{id}`
+请求路径：`/api/api/depts/{id}`
 
 请求方式：`GET`
 
@@ -209,7 +211,7 @@
 
 #### 1.5.1 基本信息
 
-请求路径：`/depts`
+请求路径：`/api/api/depts`
 
 请求方式：`PUT`
 
@@ -263,7 +265,7 @@
 
 #### 2.1.1 基本信息
 
-请求路径：`/emps`
+请求路径：`/api/api/emps`
 
 请求方式：`GET`
 
@@ -351,7 +353,7 @@
 
 #### 2.2.1 基本信息
 
-请求路径：`/emps`
+请求路径：`/api/api/emps`
 
 请求方式：`POST`
 
@@ -432,7 +434,7 @@
 
 #### 2.3.1 基本信息
 
-请求路径：`/emps`
+请求路径：`/api/api/emps`
 
 请求方式：`DELETE`
 
@@ -476,7 +478,7 @@
 
 #### 2.4.1 基本信息
 
-请求路径：`/emps/{id}`
+请求路径：`/api/api/emps/{id}`
 
 请求方式：`GET`
 
@@ -556,7 +558,7 @@
 
 #### 2.5.1 基本信息
 
-请求路径：`/emps`
+请求路径：`/api/api/emps`
 
 请求方式：`PUT`
 
@@ -636,7 +638,7 @@
 
 #### 2.6.1 基本信息
 
-请求路径：`/emps/names`
+请求路径：`/api/api/emps/names`
 
 请求方式：`GET`
 
@@ -688,7 +690,7 @@
 
 #### 3.1.1 基本信息
 
-请求路径：`/class`
+请求路径：`/api/api/class`
 
 请求方式：`GET`
 
@@ -772,7 +774,7 @@
 
 #### 3.2.1 基本信息
 
-请求路径：`/class/{id}`
+请求路径：`/api/api/class/{id}`
 
 请求方式：`DELETE`
 
@@ -816,7 +818,7 @@
 
 #### 3.3.1 基本信息
 
-请求路径：`/class`
+请求路径：`/api/api/class`
 
 请求方式：`POST`
 
@@ -878,7 +880,7 @@
 
 #### 3.4.1 基本信息
 
-请求路径：`/class/status`
+请求路径：`/api/api/class/status`
 
 请求方式：`GET`
 
@@ -918,7 +920,7 @@
 
 #### 3.5.1 基本信息
 
-请求路径：`/class/{id}`
+请求路径：`/api/api/class/{id}`
 
 请求方式：`GET`
 
@@ -977,7 +979,7 @@
 
 #### 3.6.1 基本信息
 
-请求路径：`/class`
+请求路径：`/api/api/class`
 
 请求方式：`PUT`
 
@@ -1039,7 +1041,7 @@
 
 #### 3.7.1 基本信息
 
-请求路径：`/class/list`
+请求路径：`/api/api/class/list`
 
 请求方式：`GET`
 
@@ -1123,7 +1125,7 @@
 
 #### 4.1.1 基本信息
 
-请求路径：`/student`
+请求路径：`/api/api/student`
 
 请求方式：`GET`
 
@@ -1211,7 +1213,7 @@
 
 #### 4.2.1 基本信息
 
-请求路径：`/student/major`
+请求路径：`/api/api/student/major`
 
 请求方式：`GET`
 
@@ -1251,7 +1253,7 @@
 
 #### 4.3.1 基本信息
 
-请求路径：`/student/education`
+请求路径：`/api/api/student/education`
 
 请求方式：`GET`
 
@@ -1296,7 +1298,7 @@
 
 #### 4.4.1 基本信息
 
-请求路径：`/student?ids={ids}`
+请求路径：`/api/api/student?ids={ids}`
 
 请求方式：`DELETE`
 
@@ -1340,7 +1342,7 @@
 
 #### 4.5.1 基本信息
 
-请求路径：`/student`
+请求路径：`/api/api/student`
 
 请求方式：`POST`
 
@@ -1402,7 +1404,7 @@
 
 #### 4.6.1 基本信息
 
-请求路径：`/student/{id}`
+请求路径：`/api/api/student/{id}`
 
 请求方式：`GET`
 
@@ -1467,7 +1469,7 @@
 
 #### 4.7.1 基本信息
 
-请求路径：`/student`
+请求路径：`/api/api/student`
 
 请求方式：`PUT`
 
@@ -1529,7 +1531,7 @@
 
 #### 4.8.1 基本信息
 
-请求路径：`/student/{id}/discipline`
+请求路径：`/api/student/{id}/discipline`
 
 请求方式：`GET`
 
@@ -1590,7 +1592,7 @@
 
 #### 4.9.1 基本信息
 
-请求路径：`/student/{id}/discipline`
+请求路径：`/api/student/{id}/discipline`
 
 请求方式：`PUT`
 
@@ -1660,7 +1662,7 @@
 
 #### 5.1.1 基本信息
 
-请求路径：`/report/empSexData`
+请求路径：`/api/report/empSexData`
 
 请求方式：`GET`
 
@@ -1701,7 +1703,7 @@
 
 #### 5.2.1 基本信息
 
-请求路径：`/report/empJobData`
+请求路径：`/api/report/empJobData`
 
 请求方式：`GET`
 
@@ -1742,7 +1744,7 @@
 
 #### 5.3.1 基本信息
 
-请求路径：`/report/empDeptData`
+请求路径：`/api/report/empDeptData`
 
 请求方式：`GET`
 
@@ -1783,7 +1785,7 @@
 
 #### 5.4.1 基本信息
 
-请求路径：`/report/classSizeData`
+请求路径：`/api/report/classSizeData`
 
 请求方式：`GET`
 
@@ -1840,7 +1842,7 @@
 
 #### 5.4.1 基本信息
 
-请求路径：`/report/educationData`
+请求路径：`/api/report/educationData`
 
 请求方式：`GET`
 
@@ -1905,7 +1907,7 @@
 
 #### 6.1.1 基本信息
 
-请求路径：`/login`
+请求路径：`/api/login`
 
 请求方式：`POST`
 
@@ -1945,7 +1947,7 @@
 | data-id       | number | 必须     | 员工ID                  |
 | data-username | string | 必须     | 用户名                  |
 | data-name     | string | 必须     | 员工姓名                |
-| data=token    | string | 必须     | 令牌                    |
+| data-token    | string | 必须     | 令牌                    |
 
 响应数据样例：
 
@@ -1962,11 +1964,15 @@
 }
 ```
 
+#### 6.1.4 补充说明
+
+> 登录成功后，后台应下发`Token`，由前端存储。前端的每个请求中也应该携带`Token`。如果未携带或携带非法`Token`，后台应返回`401`响应码
+
 ### 6.2 文件上传
 
 #### 6.2.1 基本信息
 
-请求路径：`/upload`
+请求路径：`/api/upload`
 
 请求方式：`POST`
 
@@ -2008,7 +2014,7 @@
 
 #### 6.3.1 基本信息
 
-请求路径：`/jobs`
+请求路径：`/api/jobs`
 
 请求方式：`GET`
 
