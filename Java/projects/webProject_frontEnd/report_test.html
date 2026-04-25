@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>数据统计</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <script src="js/common.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <link rel="stylesheet" href="css/report_test.css">
+</head>
+<body>
+<div id="app">
+  <!-- 导航栏 -->
+  <nav class="navbar">
+    <span class="navbar-title">员工管理系统</span>
+    <div class="navbar-links">
+      <a href="dept_test.html">部门管理</a>
+      <a href="emps_test.html">员工管理</a>
+      <a href="class_test.html">班级管理</a>
+      <a href="student_test.html">学生管理</a>
+      <a href="report_test.html" class="active">数据统计</a>
+    </div>
+    <div class="navbar-right">
+      <template v-if="loginUser">
+        <span class="navbar-user">{{ loginUser.name }}</span>
+        <button class="btn-logout" @click="logout">退出</button>
+      </template>
+      <button v-else class="btn btn-login" @click="showLoginModal=true">登录</button>
+    </div>
+  </nav>
+
+  <!-- 登录弹窗 -->
+  <div class="modal-mask" v-if="showLoginModal" style="z-index: 200;">
+    <div class="modal" style="width: 380px; padding: 25px;">
+      <h3 style="text-align: center;">登录</h3>
+      <div style="margin-bottom: 12px;"><label style="font-size: 14px; color: #666;">用户名</label><input v-model="loginForm.username" placeholder="请输入用户名" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-top: 4px;"></div>
+      <div style="margin-bottom: 12px;"><label style="font-size: 14px; color: #666;">密码</label><input type="password" v-model="loginForm.password" placeholder="请输入密码" @keyup.enter="login" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-top: 4px;"></div>
+      <div style="text-align: right; margin-top: 20px;">
+        <button class="btn" style="background: #ddd; color: #333; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer;" @click="showLoginModal=false">取消</button>
+        <button class="btn" style="background: #1890ff; color: #fff; padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer;" @click="login">登录</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-body">
+    <!-- 左侧导航 -->
+    <aside class="side-nav">
+      <a href="#section-sex" class="side-link active" @click.prevent="scrollTo('section-sex', true)">性别统计</a>
+      <a href="#section-job" class="side-link" @click.prevent="scrollTo('section-job')">职位统计</a>
+      <a href="#section-dept" class="side-link" @click.prevent="scrollTo('section-dept')">部门统计</a>
+      <a href="#section-class" class="side-link" @click.prevent="scrollTo('section-class')">班级统计</a>
+      <a href="#section-edu" class="side-link" @click.prevent="scrollTo('section-edu')">学历统计</a>
+    </aside>
+
+    <!-- 右侧图表 -->
+    <div class="chart-area">
+      <div id="section-sex" class="chart-card">
+        <h3>员工性别人数统计</h3>
+        <div id="sexChart" style="width: 100%; height: 500px;"></div>
+      </div>
+
+      <div id="section-job" class="chart-card">
+        <h3>员工职位人数统计</h3>
+        <div id="jobChart" style="width: 100%; height: 500px;"></div>
+      </div>
+
+      <div id="section-dept" class="chart-card">
+        <h3>部门员工人数统计</h3>
+        <div id="deptChart" style="width: 100%; height: 500px;"></div>
+      </div>
+
+      <div id="section-class" class="chart-card">
+        <h3>班级学生人数统计</h3>
+        <div id="classChart" style="width: 100%; height: 500px;"></div>
+      </div>
+
+      <div id="section-edu" class="chart-card">
+        <h3>学生学历统计</h3>
+        <div id="eduChart" style="width: 100%; height: 500px;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const { createApp, ref, onMounted, onUnmounted } = Vue;
+  createApp({
+    setup() {
+      const scrollTo = (id, toTop) => {
+        if (toTop) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+        const el = document.getElementById(id);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      };
+
+      // 登录
+      const showLoginModal = ref(false);
+      const loginForm = ref({ username: '', password: '' });
+      const loginUser = ref(JSON.parse(localStorage.getItem('loginUser') || 'null'));
+      const login = async () => {
+        if (!loginForm.value.username || !loginForm.value.password) { alert('请输入用户名和密码'); return; }
+        try {
+          const res = await axios.post('/api/login', loginForm.value);
+          if (res.data.code === 1) {
+            loginUser.value = res.data.data;
+            localStorage.setItem('loginUser', JSON.stringify(res.data.data));
+            showLoginModal.value = false;
+            loginForm.value = { username: '', password: '' };
+          } else { alert(res.data.msg || '登录失败'); }
+        } catch (err) { alert('登录异常'); }
+      };
+      const logout = () => {
+        loginUser.value = null;
+        localStorage.removeItem('loginUser');
+      };
+
+      const handleScroll = () => {
+        const sections = ['section-sex', 'section-job', 'section-dept', 'section-class', 'section-edu'];
+        const links = document.querySelectorAll('.side-link');
+        let current = 0;
+        sections.forEach((id, i) => {
+          const el = document.getElementById(id);
+          if (el && el.getBoundingClientRect().top <= 200) current = i;
+        });
+        links.forEach((link, i) => link.classList.toggle('active', i === current));
+      };
+
+      onMounted(() => { window.addEventListener('scroll', handleScroll); });
+      onUnmounted(() => { window.removeEventListener('scroll', handleScroll); });
+
+      onMounted(async () => {
+        try {
+          const [sexRes, jobRes, eduRes, deptRes, classRes] = await Promise.all([
+            axios.get('/api/report/empSexData'),
+            axios.get('/api/report/empJobData'),
+            axios.get('/api/report/educationData'),
+            axios.get('/api/report/empDeptData'),
+            axios.get('/api/report/classSizeData')
+          ]);
+          if (sexRes.data.code === 1) {
+            const { titleList, dataList } = sexRes.data.data;
+            renderPie('sexChart', titleList, dataList);
+          }
+          if (jobRes.data.code === 1) {
+            const { titleList, dataList } = jobRes.data.data;
+            renderBar('jobChart', titleList, dataList, '职位', '#1890ff', '#69c0ff');
+          }
+          if (eduRes.data.code === 1) {
+            const { titleList, dataList } = eduRes.data.data;
+            renderBar('eduChart', titleList, dataList, '学历', '#955ce6', '#c490ff');
+          }
+          if (deptRes.data.code === 1) {
+            const { titleList, dataList } = deptRes.data.data;
+            renderBar('deptChart', titleList, dataList, '部门', '#52c41a', '#95de64');
+          }
+          if (classRes.data.code === 1) {
+            const { titleList, dataList } = classRes.data.data;
+            renderBar('classChart', titleList, dataList, '班级', '#e6a23c', '#f5c861');
+          }
+        } catch (err) {
+          console.error('获取统计数据失败', err);
+        }
+      });
+
+      const renderPie = (el, titleList, dataList) => {
+        const chart = echarts.init(document.getElementById(el));
+        const colorMap = { '男': '#1890ff', '女': '#ff6b81' };
+        chart.setOption({
+          tooltip: { trigger: 'item', formatter: '{b}: {c}人 ({d}%)' },
+          legend: { bottom: '5%', left: 'center' },
+          series: [{
+            type: 'pie',
+            radius: ['40%', '70%'],
+            avoidLabelOverlap: false,
+            itemStyle: { borderRadius: 10, borderColor: '#fff', borderWidth: 2 },
+            label: { show: true, fontSize: 14, formatter: '{b}\n{c}人' },
+            emphasis: { label: { show: true, fontSize: 18, fontWeight: 'bold' } },
+            data: titleList.map((name, i) => ({ name, value: dataList[i], itemStyle: { color: colorMap[name] || undefined } }))
+          }]
+        });
+        window.addEventListener('resize', () => chart.resize());
+      };
+
+      const renderBar = (el, titleList, dataList, xName, color1, color2) => {
+        const chart = echarts.init(document.getElementById(el));
+        chart.setOption({
+          tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+          xAxis: { type: 'category', data: titleList, name: xName },
+          yAxis: { type: 'value', name: '人数', minInterval: 1 },
+          series: [{
+            name: '人数',
+            type: 'bar',
+            data: dataList,
+            barWidth: '40%',
+            itemStyle: {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                { offset: 0, color: color1 },
+                { offset: 1, color: color2 }
+              ]),
+              borderRadius: [4, 4, 0, 0]
+            },
+            label: { show: true, position: 'top', fontSize: 14, fontWeight: 'bold' }
+          }]
+        });
+        window.addEventListener('resize', () => chart.resize());
+      };
+
+      return { scrollTo, showLoginModal, loginForm, loginUser, login, logout };
+    }
+  }).mount('#app');
+</script>
+</body>
+</html>

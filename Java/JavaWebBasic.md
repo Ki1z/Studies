@@ -1,0 +1,6389 @@
+# Java Web Basic
+
+`更新时间：2026-4-24`
+
+注释解释：
+
+- `<>`必填项，必须在当前位置填写相应数据
+
+- `{}`必选项，必须在当前位置选择一个给出的选项
+
+- `[]`可选项，可以选择填写或忽略
+
+*注：该笔记内的可选项和参数均不完整，如有需要，请查询相关手册*
+
+---
+
+## Vue
+
+`Vue`是一款用于构建用户界面的渐进式`JavaScript`框架
+
+构建用户界面指将后端得到的`json`数据渲染为用户能够看到的界面。渐进式是指`Vue`的设计可以逐步采用，使用分层的核心思想，可以从一个简单的功能开始，然后根据需要逐步引入更多 `Vue`的能力，而不需要一开始就做全盘的重构
+
+### Vue快速入门
+
+通过一个案例来进行`Vue`的快速入门，案例要求是使用`Vue`将一段来自后端的内容`message: "Hello, Vue"`渲染到前端，并进行加粗
+
+- 准备
+
+  - 从官方网站引入`Vue`模块
+
+  ```html
+  <script type="module">
+  	import {createApp} from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+  </script>
+  ```
+
+  - 创建`Vue`程序的应用实例，控制视图的元素
+
+  ```html
+  <script type="module">
+  	import {createApp} from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+  
+  	createApp({
+          
+      })
+  </script>
+  ```
+
+  - 准备元素`div`，并被`Vue`控制
+
+  ```html
+  <div class="app">
+  	<!-- 被Vue控制区域 -->  
+  </div>
+  <script type="module">
+  	import {createApp} from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+  
+  	createApp({
+          
+      }).mount(".app")
+  </script>
+  ```
+
+- 数据驱动识图
+
+  - 准备数据，重写方法`data()`，返回需要的数据实例，数据类型为`object`，其中包含属性`message`。
+
+  ```html
+  <div class="app">
+  	<!-- 被Vue控制区域 -->  
+  </div>
+  <script type="module">
+  	import {createApp} from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+  
+  	createApp({
+          data() {
+              return {
+                  message: "Hello, Vue"
+              }
+          }
+      }).mount(".app")
+  </script>
+  ```
+
+  - 通过插值表达式`{{实例属性}}`渲染页面，注意插值表达式不能出现在标签内部
+
+  ```html
+  <div class="app">
+  	<h1>{{message}}</h1> 
+  </div>
+  <script type="module">
+  	import {createApp} from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+  
+  	createApp({
+          data() {
+              return {
+                  message: "Hello, Vue"
+              }
+          }
+      }).mount(".app")
+  </script>
+  ```
+
+> <img src="./javaweb/1.png">
+
+### Vue常用指令
+
+`Vue`常用指令是指`HTML`标签上带有`v-`前缀的特殊属性，不同的指令拥有不用的含义，可以实现不同的功能
+
+| 指令                      | 作用                                             |
+| ------------------------- | ------------------------------------------------ |
+| v-for                     | 列表渲染，遍历容器的元素或者对象的属性           |
+| v-bind                    | 为HTML标签绑定属性值，如设置`href`、`css`样式等  |
+| v-if / v-else / v-else-if | 条件性渲染某元素，判定为`true`时渲染，否则不渲染 |
+| v-show                    | 根据条件改变标签`css`的`display`属性值           |
+| v-model                   | 在表单元素上创建双向数据绑定                     |
+| v-on                      | 为`HTML`标签绑定事件                             |
+
+#### v-for
+
+**标准语法**
+
+```vue
+<tr v-for="(item, [index]) in items"[ :key="unique key"]>{{item}}</tr>
+```
+
+- `items`：需要遍历的数组对象
+- `item`：数组对象中的每个元素
+- `index`：当前元素的索引值，从0开始
+- `key`：给元素添加的唯一标识，用于提升遍历性能，可以填入某个元素属性来作为标识符
+
+**示例**
+
+```js
+employeeList: [
+    {
+        "id": 1,
+        "name": "jack",
+        "gender": "male"
+    },
+    {
+        "id": 2,
+        "name": "tom",
+        "gender": "male"
+    },
+    {
+        "id": 3,
+        "name": "lucy",
+        "gender": "female"
+    }
+]
+```
+
+如上，在员工管理系统中，事先准备好了一些员工数据，现在需要渲染到前端
+
+有多条员工数据，每个员工独占一行，因此在`tr`标签中添加`v-for`属性遍历员工数组，每个`tr`的`td`处使用插值表达式显示相应的员工数据
+
+```vue
+<html>
+    <div class="app">
+        <table>
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Name</th>
+                    <th>Gender</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="employee in employeeList" :key="employee.id">
+                    <td>{{employee.id}}</td>
+                    <td>{{employee.name}}</td>
+                    <td>{{employee.gender}}</td>
+                </tr>
+            </tbody>
+        </table> 
+    </div>
+    <script type="module">
+        import {createApp} from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+    
+        createApp({
+            data() {
+                return {
+                    employeeList: [
+                        {
+                            "id": 1,
+                            "name": "jack",
+                            "gender": "male"
+                        },
+                        {
+                            "id": 2,
+                            "name": "tom",
+                            "gender": "male"
+                        },
+                        {
+                            "id": 3,
+                            "name": "lucy",
+                            "gender": "female"
+                        }
+                    ]
+                }
+            }
+        }).mount(".app")
+    </script>
+</html>
+```
+
+> <img src="./javaweb/2.png">
+
+#### v-bind
+
+**标准语法**
+
+```vue
+<img [v-bind]:src="item.image" width="30px">
+```
+
+其中`v-bind`可以简化省略
+
+**示例**
+
+```vue
+employeeList: [
+    {
+        "id": 1,
+        "name": "jack",
+        "gender": "male",
+		"avatar": "https://img.pconline.com.cn/images/upload/upc/tx/itbbs/1804/23/c23/84211055_1524470634645_mthumb.jpg"
+    },
+    {
+        "id": 2,
+        "name": "tom",
+        "gender": "male",
+		"avatar": ""
+    },
+    {
+        "id": 3,
+        "name": "lucy",
+        "gender": "female",
+		"avatar": ""
+    }
+]
+```
+
+现在我们需要为每位员工添加一个头像，头像链接已经添加到了`employeeList`数组中
+
+添加`img`标签，为`img`标签的`src`属性设置为`v-bind`属性，通过获取`employee.avatar`来获取员工头像链接
+
+```vue
+<html>
+    <div class="app">
+        <table>
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Name</th>
+                    <th>Gender</th>
+                    <th>Avatar</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="employee in employeeList" :key="employee.id">
+                    <td>{{employee.id}}</td>
+                    <td>{{employee.name}}</td>
+                    <td>{{employee.gender}}</td>
+                    <td><img :src="employee.avatar" :alt="employee.name" width="50px" height="50px"></td>
+                </tr>
+            </tbody>
+        </table> 
+    </div>
+    <script type="module">
+        import {createApp} from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+    
+        createApp({
+            data() {
+                return {
+                    employeeList: [
+                        {
+                            "id": 1,
+                            "name": "jack",
+                            "gender": "male",
+                            "avatar": "https://ts2.tc.mm.bing.net/th/id/OIP-C.0BBEJKqmDN6MoIm11sRSigHaLH?pid=ImgDet&w=60&h=60&c=7&rs=1&o=7&rm=3"
+                        },
+                        {
+                            "id": 2,
+                            "name": "tom",
+                            "gender": "male",
+                            "avatar": "https://ts3.tc.mm.bing.net/th/id/OIP-C.wYmbI_r2a8cDTJUBJ9HRcgHaLH?pid=ImgDet&w=60&h=60&c=7&rs=1&o=7&rm=3"
+                        },
+                        {
+                            "id": 3,
+                            "name": "lucy",
+                            "gender": "female",
+                            "avatar": ""
+                        }
+                    ]
+                }
+            }
+        }).mount(".app")
+    </script>
+</html>
+```
+
+> <img src="./javaweb/3.png">
+
+#### v-if
+
+**标准语法**
+
+```vue
+<span v-if="conditon1"></span>
+<span v-else-if="conditon2"></span>
+<span v-else></span>
+```
+
+**示例**
+
+```vue
+employeeList: [
+    {
+        "id": 1,
+        "name": "jack",
+        "gender": "male",
+        "avatar": "https://img.pconline.com.cn/images/upload/upc/tx/itbbs/1804/23/c23/84211055_1524470634645_mthumb.jpg",
+        "position": 1
+    },
+    {
+        "id": 2,
+        "name": "tom",
+        "gender": "male",
+        "avatar": "https://ts3.tc.mm.bing.net/th/id/OIP-C.wYmbI_r2a8cDTJUBJ9HRcgHaLH?pid=ImgDet&w=60&h=60&c=7&rs=1&o=7&rm=3",
+        "position": 2
+    },
+    {
+        "id": 3,
+        "name": "lucy",
+        "gender": "female",
+        "avatar": "",
+        "position": 3
+    }
+]
+```
+
+现在每个员工拥有自己的职位，但是在数据库中使用职位号来标识职位，前端需要显示对应的职位名
+
+添加多行`span`，为每个`span`设置一个职位名，通过`v-if`属性来判断当前员工的职位，然后决定是否显示
+
+```vue
+<html>
+    <div class="app">
+        <table>
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Name</th>
+                    <th>Gender</th>
+                    <th>Avatar</th>
+                    <th>Position</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="employee in employeeList" :key="employee.id">
+                    <td>{{employee.id}}</td>
+                    <td>{{employee.name}}</td>
+                    <td>{{employee.gender}}</td>
+                    <td><img :src="employee.avatar" :alt="employee.name" width="50px" height="50px"></td>
+                    <td>
+                        <span v-if="employee.position==1">boss</span>
+                        <span v-else-if="employee.position==2">manager</span>
+                        <span v-else>other</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table> 
+    </div>
+    <script type="module">
+        import {createApp} from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+    
+        createApp({
+            data() {
+                return {
+                    employeeList: [
+                        {
+                            "id": 1,
+                            "name": "jack",
+                            "gender": "male",
+                            "avatar": "https://img.pconline.com.cn/images/upload/upc/tx/itbbs/1804/23/c23/84211055_1524470634645_mthumb.jpg",
+                            "position": 1
+                        },
+                        {
+                            "id": 2,
+                            "name": "tom",
+                            "gender": "male",
+                            "avatar": "https://ts3.tc.mm.bing.net/th/id/OIP-C.wYmbI_r2a8cDTJUBJ9HRcgHaLH?pid=ImgDet&w=60&h=60&c=7&rs=1&o=7&rm=3",
+                            "position": 2
+                        },
+                        {
+                            "id": 3,
+                            "name": "lucy",
+                            "gender": "female",
+                            "avatar": "",
+                            "position": 3
+                        }
+                    ]
+                }
+            }
+        }).mount(".app")
+    </script>
+</html>
+```
+
+> <img src="./javaweb/4.png">
+
+#### v-show
+
+**标准语法**
+
+```vue
+<span v-show="condition"></span>
+```
+
+`v-show`与`v-if`的区别是元素显示逻辑的区别，`v-show`通过更改元素标签的`display`样式来决定是否显示，而`v-if`则是通过是否渲染标签来决定是否显示，在需要频繁更改显示状态的内容中`v-show`更适合
+
+**示例**
+
+使用`v-show`来达到上文员工职位显示的效果
+
+```vue
+<html>
+    <div class="app">
+        <table>
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Name</th>
+                    <th>Gender</th>
+                    <th>Avatar</th>
+                    <th>Position</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="employee in employeeList" :key="employee.id">
+                    <td>{{employee.id}}</td>
+                    <td>{{employee.name}}</td>
+                    <td>{{employee.gender}}</td>
+                    <td><img :src="employee.avatar" :alt="employee.name" width="50px" height="50px"></td>
+                    <td>
+                        <span v-show="employee.position==1">boss</span>
+                        <span v-show="employee.position==2">manager</span>
+                        <span v-show="employee.position==3">other</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table> 
+    </div>
+    <script type="module">
+        import {createApp} from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+    
+        createApp({
+            data() {
+                return {
+                    employeeList: [
+                        {
+                            "id": 1,
+                            "name": "jack",
+                            "gender": "male",
+                            "avatar": "https://img.pconline.com.cn/images/upload/upc/tx/itbbs/1804/23/c23/84211055_1524470634645_mthumb.jpg",
+                            "position": 1
+                        },
+                        {
+                            "id": 2,
+                            "name": "tom",
+                            "gender": "male",
+                            "avatar": "https://ts3.tc.mm.bing.net/th/id/OIP-C.wYmbI_r2a8cDTJUBJ9HRcgHaLH?pid=ImgDet&w=60&h=60&c=7&rs=1&o=7&rm=3",
+                            "position": 2
+                        },
+                        {
+                            "id": 3,
+                            "name": "lucy",
+                            "gender": "female",
+                            "avatar": "",
+                            "position": 3
+                        }
+                    ]
+                }
+            }
+        }).mount(".app")
+    </script>
+</html>
+```
+
+<img src="./javaweb/4.png">
+
+#### v-model
+
+ **标准语法**
+
+```vue
+<input type="text" id="name" v-model="object.attribute">
+```
+
+将用户输入与`object`对象的`attribute`属性绑定
+
+**示例**
+
+```vue
+searchForm: {
+	name: "",
+	gender: "",
+	position: ""
+}
+```
+
+现在需要能够通过员工信息来搜索相应的元素，搜索表单格式如上
+
+新建`form`表单，在表单中创建输入框`input`和选择框`select`，分别设置对应的`v-model`，与`searchForm`对象绑定
+
+```vue
+<html>
+    <div class="app">
+        {{searchForm}}
+        <form>
+            <label for="name">Name: </label>
+            <input type="text" id="name" v-model="searchForm.name">
+            &nbsp;&nbsp;
+            <label for="gender">Gender: </label>
+            <select name="gender" id="gender" v-model="searchForm.gender">
+                <option value="">All</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+            </select>
+            &nbsp;&nbsp;
+            <label for="position">Position: </label>
+            <select name="position" id="position" v-model="searchForm.position">
+                <option value="">All</option>
+                <option value="1">Boss</option>
+                <option value="2">Manager</option>
+                <option value="3">Other</option>
+            </select>
+            &nbsp;&nbsp;
+            <button type="button">Search</button>
+        </form>
+        <table>
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Name</th>
+                    <th>Gender</th>
+                    <th>Avatar</th>
+                    <th>Position</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="employee in employeeList" :key="employee.id">
+                    <td>{{employee.id}}</td>
+                    <td>{{employee.name}}</td>
+                    <td>{{employee.gender}}</td>
+                    <td><img :src="employee.avatar" :alt="employee.name" width="50px" height="50px"></td>
+                    <td>
+                        <span v-if="employee.position==1">boss</span>
+                        <span v-else-if="employee.position==2">manager</span>
+                        <span v-else-if="employee.position==3">other</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table> 
+    </div>
+    <script type="module">
+        import {createApp} from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+    
+        createApp({
+            data() {
+                return {
+                    employeeList: [
+                        {
+                            "id": 1,
+                            "name": "jack",
+                            "gender": "male",
+                            "avatar": "https://img.pconline.com.cn/images/upload/upc/tx/itbbs/1804/23/c23/84211055_1524470634645_mthumb.jpg",
+                            "position": 1
+                        },
+                        {
+                            "id": 2,
+                            "name": "tom",
+                            "gender": "male",
+                            "avatar": "https://ts3.tc.mm.bing.net/th/id/OIP-C.wYmbI_r2a8cDTJUBJ9HRcgHaLH?pid=ImgDet&w=60&h=60&c=7&rs=1&o=7&rm=3",
+                            "position": 2
+                        },
+                        {
+                            "id": 3,
+                            "name": "lucy",
+                            "gender": "female",
+                            "avatar": "",
+                            "position": 3
+                        }
+                    ],
+                    searchForm: {
+                        name: "",
+                        gender: "",
+                        position: ""
+                    }
+                }
+            }
+        }).mount(".app")
+    </script>
+</html>
+```
+
+> <img src="./javaweb/5.png">
+
+#### v-on
+
+**标准语法**
+
+```vue
+<button type="button" v-on:click="click">click</button>
+
+const app = createApp({
+	// 方法对象
+	methods: {
+		// 具体方法
+		click() {
+			// 方法体
+		}
+	}
+})
+```
+
+可以简写为
+
+```vue
+<button type="button" @click="click">click</button>
+```
+
+**示例**
+
+现在新建一个重置按钮，为两个按钮绑定事件
+
+使用`v-on`为两个按钮分别绑定`search`和`reset`事件，并在`methods`属性中定义这两个方法
+
+```vue
+<html>
+    <div class="app">
+        <form>
+            <label for="name">Name: </label>
+            <input type="text" id="name" v-model="searchForm.name">
+            &nbsp;&nbsp;
+            <label for="gender">Gender: </label>
+            <select name="gender" id="gender" v-model="searchForm.gender">
+                <option value="">All</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+            </select>
+            &nbsp;&nbsp;
+            <label for="position">Position: </label>
+            <select name="position" id="position" v-model="searchForm.position">
+                <option value="">All</option>
+                <option value="1">Boss</option>
+                <option value="2">Manager</option>
+                <option value="3">Other</option>
+            </select>
+            &nbsp;&nbsp;
+            <button type="button" @click="search">Search</button>
+            &nbsp;&nbsp;
+            <button type="reset">Reset</button>
+        </form>
+        <table>
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Name</th>
+                    <th>Gender</th>
+                    <th>Avatar</th>
+                    <th>Position</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="employee in employeeList" :key="employee.id">
+                    <td>{{employee.id}}</td>
+                    <td>{{employee.name}}</td>
+                    <td>{{employee.gender}}</td>
+                    <td><img :src="employee.avatar" :alt="employee.name" width="50px" height="50px"></td>
+                    <td>
+                        <span v-if="employee.position==1">boss</span>
+                        <span v-else-if="employee.position==2">manager</span>
+                        <span v-else-if="employee.position==3">other</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table> 
+    </div>
+    <script type="module">
+        import {createApp} from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+    
+        createApp({
+            data() {
+                return {
+                    employeeList: [
+                        {
+                            "id": 1,
+                            "name": "jack",
+                            "gender": "male",
+                            "avatar": "https://img.pconline.com.cn/images/upload/upc/tx/itbbs/1804/23/c23/84211055_1524470634645_mthumb.jpg",
+                            "position": 1
+                        },
+                        {
+                            "id": 2,
+                            "name": "tom",
+                            "gender": "male",
+                            "avatar": "https://ts3.tc.mm.bing.net/th/id/OIP-C.wYmbI_r2a8cDTJUBJ9HRcgHaLH?pid=ImgDet&w=60&h=60&c=7&rs=1&o=7&rm=3",
+                            "position": 2
+                        },
+                        {
+                            "id": 3,
+                            "name": "lucy",
+                            "gender": "female",
+                            "avatar": "",
+                            "position": 3
+                        }
+                    ],
+                    searchForm: {
+                        name: "",
+                        gender: "",
+                        position: ""
+                    }
+                }
+            },
+            methods: {
+                reset() {
+                    this.searchForm = {
+                        name: "",
+                        gender: "",
+                        position: ""
+                    }
+                },
+                search() {
+                    console.log(this.searchForm)
+                }
+            }
+        }).mount(".app")
+    </script>
+</html>
+```
+
+> <img src="./javaweb/6.png">
+
+### Ajax
+
+`Ajax`全称`Asynchronous JavaScript And XML`，主要作用于数据交换和异步交互，通过`Ajax`可以给服务器发送请求，并获取服务器响应的数据，同时也可以在不刷新整个页面的情况下，与服务器交换数据并更新部分网页
+
+#### Axios
+
+`Axios`是一个基于`Promise`的用于浏览器和`Node.js`的`HTTP`客户端，主要用于`JavaScript`中发送`HTTP`请求，`Axios`对原生的`Ajax`进行了封装，简化书写，可以进行快速开发
+
+#### Axios快速入门
+
+- 从官方网站导入文件
+
+```vue
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+```
+
+- 使用`Axios`发送请求并获取响应结果
+
+```vue
+<script src="https://unpkg.com/axios/dist/axios.min.js">
+    axios({
+        method: "{GET | POST}",
+        url: "<URL>",
+        [data: "<POST DATA>"]
+    }).then((response) => {
+        console.log(response)
+    }).catch((error) => {
+        console.log(error)
+    })
+</script>
+```
+
+- `method`：请求方法，常见的如`POST`、`GET`
+- `url`：请求路径
+- `data`：当请求方法为`POST`时，可以通过`data`来指定携带的参数
+- `then()`：成功回调函数，当请求成功后，自动回调`then()`
+- `catch()`：异常捕获函数，当请求失败后，通过`catch()`进行捕获，可以省略
+
+**示例**
+
+为两个按钮各自绑定一个请求事件，一个通过`GET`，另一个通过`POST`
+
+使用`v-on`为按钮绑定点击事件，然后通过`Axios`发送请求
+
+```vue
+<html>
+    <head>
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <div id="app">
+            <button class="get-request" @click="getRequest">点击进行GET请求</button>
+            <button class="post-request" @click="postRequest">点击进行POST请求</button>
+        </div>
+    </body>
+
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script type="module">
+        import {createApp} from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+
+        createApp({
+            methods: {
+                getRequest() {
+                    axios({
+                        method: "get",
+                        url: "http://localhost/?submit=1",
+                    }).then(function(response) {
+                        console.log(response)
+                    }).catch(function(error) {
+                        alert(error)
+                    })
+                },
+                postRequest() {
+                    axios({
+                        method: "post",
+                        url: "http://localhost/",
+                        data: "submit=1"
+                    }).then(function(response) {
+                        console.log(response)
+                    }).catch(function(error) {
+                        alert(error)
+                    })
+                }
+            }
+        }).mount("#app")
+    </script>
+</html>
+```
+
+> <img src="./javaweb/7.png">
+
+**response.data**
+
+`Axios`请求得到的`response`实际是一个响应对象，如果仅需要数据部分，可以使用`response.data`属性
+
+```vue
+<html>
+    <head>
+        <meta charset="utf-8">
+    </head>
+    <body>
+        <div id="app">
+            <h1>返回的数据体：{{responseData}}</h1>
+            <button class="get-request" @click="getRequest">点击进行GET请求</button>
+            <button class="post-request" @click="postRequest">点击进行POST请求</button>
+        </div>
+    </body>
+
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script type="module">
+        import {createApp} from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+
+        createApp({
+            data() {
+                return {
+                   responseData: ""
+                }
+            },
+            methods: {
+                getRequest() {
+                    axios({
+                        method: "get",
+                        url: "http://localhost/?submit=1",
+                    }).then((response) => {
+                        this.responseData = response.data
+                    }).catch((error) => {
+                        alert(error)
+                    })
+                },
+                postRequest() {
+                    axios({
+                        method: "post",
+                        url: "http://localhost/",
+                        data: "submit=1"
+                    }).then((response) => {
+                        console.log(response)
+                    }).catch((error) => {
+                        alert(error)
+                    })
+                }
+            }
+        }).mount("#app")
+    </script>
+</html>
+```
+
+> <img src="./javaweb/8.png">
+
+*注：这里的`.then()`回调函数必须使用箭头形式`.then((param) => {})`，而不是`.then(function(param) {})`，因为`.then()`的调用并不是作为对象方法调用，而是单独调用的。因此`.then()`不能继承父对象，默认的`function`形式无法找到父对象，所以导致报错`undefined`，而箭头形式默认没有`this`，在箭头函数中的所有`this`只能通过外层作用域来继承，此处即`app`对象*
+
+**.get()和.post()**
+
+在`Axios`中，提供了`.get()`和`.post()`两类更加简洁的请求方法
+
+```vue
+axios.get("url", {params:}).then().catch()
+axios.post("url", data).then().catch()
+```
+
+因此对刚才的程序进行简写，并删除不必要的`catch`
+
+```vue
+createApp({
+    data() {
+        return {
+           responseData: ""
+        }
+    },
+    methods: {
+        getRequest() {
+            axios.get("http://localhost/?submit=1").then((response) => {
+                this.responseData = response.data
+            })
+        },
+        postRequest() {
+            axios.post("http://localhost/", "submit=1").then((response) => {
+                this.responseData = response.data
+            })
+        }
+    }
+}).mount("#app")
+```
+
+#### Axios综合案例
+
+使用`Axios`将先前的员工管理系统进行完善，不考虑后端，已知的后端响应格式如下
+
+```json
+{
+    "code": "0",
+    "status": "",
+    "data": [
+        {
+            "id": 1,
+            "name": "name",
+            "gender": "gender",
+            "avatar": "avatar"
+        },
+        ...
+    ]
+}
+```
+
+首先准备好后端的数据以及筛选功能，这里我使用`php`
+
+```php
+<?php
+$employeeList = [
+    [
+        "id" => 1,
+        "name" => "jack",
+        "gender" => "male",
+        "avatar" => "https://img.pconline.com.cn/images/upload/upc/tx/itbbs/1804/23/c23/84211055_1524470634645_mthumb.jpg",
+        "position" => 1
+    ],
+    [
+        "id" => 2,
+        "name" => "tom",
+        "gender" => "male",
+        "avatar" => "https://ts3.tc.mm.bing.net/th/id/OIP-C.wYmbI_r2a8cDTJUBJ9HRcgHaLH?pid=ImgDet&w=60&h=60&c=7&rs=1&o=7&rm=3",
+        "position" => 2
+    ],
+    [
+        "id" => 3,
+        "name" => "lucy",
+        "gender" => "female",
+        "avatar" => "",
+        "position" => 3
+    ]
+];
+
+$response = [
+    "code" => 0,
+    "message" => "",
+    "data" => []
+];
+
+$jsonData = file_get_contents('php://input');
+$data = json_decode($jsonData, true);
+
+$name = $data['name'] ? $data['name'] : '';
+$gender = $data['gender'] ? $data['gender'] : '';
+$position = $data['position'] ? $data['position'] : '';
+
+function getEmployeeList($name, $gender, $position) {
+    global $employeeList;
+    $list = [];
+    foreach ($employeeList as $employee) {
+        if ($name && $employee['name'] != $name) {
+            continue;
+        }
+        if ($gender && $employee['gender'] != $gender) {
+            continue;
+        }
+        if ($position && $employee['position'] != $position) {
+            continue;
+        }
+        $list[] = $employee;
+    }
+    return $list;
+}
+
+// 如果搜索条件为空，则返回所有员工
+if (!$name && !$gender && !$position) {
+    $response['data'] = $employeeList;
+    $response['message'] = 'success';
+    $response['code'] = 1;
+} else {
+    $response['data'] = getEmployeeList($name, $gender, $position);
+    if (empty($response['data'])) {
+        $response['message'] = 'no data';
+        $response['code'] = 0;
+    } else {
+        $response['message'] = 'success';
+        $response['code'] = 1;
+    }
+}
+echo json_encode($response);
+```
+
+回到`Vue`上来，先前已经写好了前端展示逻辑，我们将前端数据都进行删除
+
+```vue
+<html>
+    <div class="app">
+        <form>
+            <label for="name">Name: </label>
+            <input type="text" id="name" v-model="searchForm.name">
+            &nbsp;&nbsp;
+            <label for="gender">Gender: </label>
+            <select name="gender" id="gender" v-model="searchForm.gender">
+                <option value="">All</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+            </select>
+            &nbsp;&nbsp;
+            <label for="position">Position: </label>
+            <select name="position" id="position" v-model="searchForm.position">
+                <option value="">All</option>
+                <option value="1">Boss</option>
+                <option value="2">Manager</option>
+                <option value="3">Other</option>
+            </select>
+            &nbsp;&nbsp;
+            <button type="button" @click="search">Search</button>
+            &nbsp;&nbsp;
+            <button type="reset">Reset</button>
+        </form>
+        <table>
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Name</th>
+                    <th>Gender</th>
+                    <th>Avatar</th>
+                    <th>Position</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-for="employee in employeeList" :key="employee.id">
+                    <td>{{employee.id}}</td>
+                    <td>{{employee.name}}</td>
+                    <td>{{employee.gender}}</td>
+                    <td><img :src="employee.avatar" :alt="employee.name" width="50px" height="50px"></td>
+                    <td>
+                        <span v-if="employee.position==1">boss</span>
+                        <span v-else-if="employee.position==2">manager</span>
+                        <span v-else-if="employee.position==3">other</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table> 
+    </div>
+    <script type="module">
+        import {createApp} from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+    
+        createApp({
+            data() {
+                return {
+                    employeeList: [],
+                    searchForm: {
+                        name: "",
+                        gender: "",
+                        position: ""
+                    }
+                }
+            },
+            methods: {
+                reset() {
+                    this.searchForm = {
+                        name: "",
+                        gender: "",
+                        position: ""
+                    }
+                },
+                search() {
+                    console.log(this.searchForm)
+                }
+            }
+        }).mount(".app")
+    </script>
+</html>
+```
+
+先添加一些用户友好型提示信息，新建一个对象`statusCode`，用于判断后端传来的数据中是否包含员工信息，如果不包含，则显示`暂无数据`。在`<tbody>`中新建一个`<tr>`和`<td>`，在`<tr>`中添加`v-if`属性来进行判断，判断条件为`statusCode`，我们设定0表示无数据，1表示有数据
+
+```vue
+<tbody>
+    <tr v-if="statusCode == 0">
+        <td>暂无数据</td>
+    </tr>
+</tbody>
+
+data() {
+    return {
+        employeeList: [],
+        searchForm: {
+            name: "",
+            gender: "",
+            position: ""
+        },
+		statusCode: 0,
+    }
+},
+```
+
+然后开始完善`search()`方法，这里使用`Axios`向后端发送请求，将收到的后端响应覆盖原始值
+
+```vue
+search() {
+    axios.post("http://localhost/index.php", this.searchForm).then((res) => {
+        this.statusCode = res.data.code
+        this.employeeList = res.data.data
+    })
+}
+```
+
+以下是所有代码
+
+```vue
+<html>
+    <head>
+        <meta charset="UTF-8">
+    </head>
+
+    <div class="app">
+        <form>
+            <label for="name">Name: </label>
+            <input type="text" id="name" v-model="searchForm.name">
+            &nbsp;&nbsp;
+            <label for="gender">Gender: </label>
+            <select name="gender" id="gender" v-model="searchForm.gender">
+                <option value="">All</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+            </select>
+            &nbsp;&nbsp;
+            <label for="position">Position: </label>
+            <select name="position" id="position" v-model="searchForm.position">
+                <option value="">All</option>
+                <option value="1">Boss</option>
+                <option value="2">Manager</option>
+                <option value="3">Other</option>
+            </select>
+            &nbsp;&nbsp;
+            <button type="button" @click="search">Search</button>
+            &nbsp;&nbsp;
+            <button type="reset">Reset</button>
+        </form>
+        <table>
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Name</th>
+                    <th>Gender</th>
+                    <th>Avatar</th>
+                    <th>Position</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-if="statusCode == 0">
+                    <td>暂无数据</td>
+                </tr>
+                <tr v-for="employee in employeeList" :key="employee.id">
+                    <td>{{employee.id}}</td>
+                    <td>{{employee.name}}</td>
+                    <td>{{employee.gender}}</td>
+                    <td><img :src="employee.avatar" :alt="employee.name" width="50px" height="50px"></td>
+                    <td>
+                        <span v-if="employee.position==1">boss</span>
+                        <span v-else-if="employee.position==2">manager</span>
+                        <span v-else-if="employee.position==3">other</span>
+                    </td>
+                </tr>
+            </tbody>
+        </table> 
+    </div>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script type="module">
+        import {createApp} from "https://unpkg.com/vue@3/dist/vue.esm-browser.js"
+    
+        createApp({
+            data() {
+                return {
+                    employeeList: [],
+                    searchForm: {
+                        name: "",
+                        gender: "",
+                        position: ""
+                    },
+                    statusCode: 0,
+                }
+            },
+            methods: {
+                reset() {
+                    this.searchForm = {
+                        name: "",
+                        gender: "",
+                        position: ""
+                    }
+                },
+                search() {
+                    axios.post("http://localhost/index.php", this.searchForm).then((res) => {
+                        this.statusCode = res.data.code
+                        this.employeeList = res.data.data
+                    })
+                }
+            }
+        }).mount(".app")
+    </script>
+</html>
+```
+
+> <img src="./javaweb/9.png">
+
+#### async & await
+
+在`Ajax`中可以使用`async`关键字来声明一个异步方法，并使用`await`来等待异步任务执行。`await`关键字必须在`async`声明的方法中使用
+
+**示例**
+
+程序运行逻辑一般是从上到下，但异步方法可以让程序先执行下方的代码，再执行上方的代码。比如下面这个程序，通过`Axios`获取一条数据，并在下方用另一条数据覆盖
+
+`PHP`
+
+```php
+<?php
+echo '这是第一条数据';
+```
+
+`HTML`
+
+```vue
+<meta charset="UTF-8">
+<div id="app">
+    <button @click="click">Click me</button>
+    <div>{{ message }}</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+<script type="module">
+    import { createApp } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js'
+
+    createApp({
+        data() {
+            return {
+                message: ''
+            }
+        },
+        methods: {
+            click() {
+                axios.get("http://localhost/add.php").then((res) => {
+                    this.message = res.data
+                })
+                this.message = "这是第二条数据"
+            }
+        } 
+    }).mount('#app')
+</script>
+```
+
+实际的结果却显示`这是第一条数据`
+
+> <img src="./javaweb/10.png">
+
+因此我们加入`await`，让异步交互变为同步
+
+```vue
+methods: {
+    async click() {
+        await axios.get("http://localhost/add.php").then((res) => {
+            this.message = res.data
+        })
+        this.message = "这是第二条数据"
+    }
+} 
+```
+
+> <img src="./javaweb/11.png">
+
+`await`关键字可以一定程度上取代`.then()`回调函数，因为`axios.get()`方法本身也会返回响应对象
+
+```vue
+methods: {
+    async click() {
+        let res = await axios.get("http://localhost/add.php")
+        this.message = res.data
+    }
+} 
+```
+
+<img src="./javaweb/10.png">
+
+*注：`let res = axios.get("http://localhost/add.php")`是无效的，由于异步执行的原因，会先执行`this.message = res.data`，再执行`let res = await axios.get("http://localhost/add.php")`，所以此时`this.message`的值为null*
+
+### Vue生命周期
+
+生命周期是指一个对象从创建到销毁的整个过程，`Vue`生命周期共有八个阶段，每触发一个生命周期事件，会自动执行一个生命周期方法
+$$
+beforeCreate \rightarrow created \rightarrow beforeMount \rightarrow mounted \rightarrow beforeUpdate \rightarrow updated \rightarrow beforeUnmount \rightarrow unmounted
+$$
+**标准语法**
+
+```vue
+createApp({
+	data() {
+		
+	},
+	mounted() {
+		// 钩子方法
+	},
+	......
+}).mount()
+```
+
+**示例**
+
+在上文的员工搜索页面中，添加初次访问页面时自动搜索的功能
+
+这里可以使用`mounted()`方法，调用一次`search()`来实现
+
+```vue
+createApp({
+    data() {
+        return {
+            employeeList: [],
+            searchForm: {
+                name: "",
+                gender: "",
+                position: ""
+            },
+            statusCode: 0,
+        }
+    },
+    methods: {
+        reset() {
+            this.searchForm = {
+                name: "",
+                gender: "",
+                position: ""
+            }
+        },
+        search() {
+            axios.post("http://localhost/index.php", this.searchForm).then((res) => {
+                this.statusCode = res.data.code
+                this.employeeList = res.data.data
+            })
+        }
+    },
+    mounted() {
+        this.search()
+    }
+}).mount(".app")
+```
+
+## Maven
+
+`Maven`是一款用于管理和构建`Java`项目的工具，是`apache`旗下的一个开源项目。`Maven`可以方便快捷地管理项目的依赖资源，提供标准化的跨平台的自动化项目构建方式，提供标准、统一的项目结构
+
+### Maven坐标
+
+`Maven`中的坐标是资源的唯一标识，通过该坐标可以唯一定位资源位置
+
+**标准语法**
+
+```xml
+<groupId></groupId>
+<artifactId></artifactId>
+<version></version>
+```
+
+- `groupId`：定义当前`Maven`项目隶属的组织名称，通常是域名反写，如`com.eiousee`
+- `arifactId`：定义当前`Maven`项目名称
+- `version`：定义当前`Maven`项目版本号
+
+### Maven依赖管理
+
+#### 依赖安装
+
+在`pom.xml`中指定需要安装的依赖的坐标，然后刷新`pom.xml`
+
+```xml
+<dependencies>
+<!--         导入commons-io -->
+    <dependency>
+        <groupId>commons-io</groupId>
+        <artifactId>commons-io</artifactId>
+        <version>2.11.0</version>
+    </dependency>
+<!--        导入spring-context-->
+    <dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-context</artifactId>
+        <version>6.1.4</version>
+    </dependency>
+</dependencies>
+```
+
+> <img src="./javaweb/12.png">
+
+#### 排除依赖
+
+排除依赖指主动断开依赖的资源，被排除的依赖无需指定版本号。排除依赖使用`<exclusions>`标签，该标签必须位于某个依赖的`<dependency>`标签中
+
+**标准语法**
+
+```xml
+<dependency>
+    <exclusions>
+        <exclusion>
+            <groupId>needless jar</groupId>
+            <artifactId>needless jar</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+```
+
+**示例**
+
+在刚才配置的`spring-context`依赖中，我们不需要``，因此将其排除
+
+```xml
+<dependency>
+    <groupId>org.springframework</groupId>
+    <artifactId>spring-context</artifactId>
+    <version>6.1.4</version>
+
+    <exclusions>
+        <exclusion>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-observation</artifactId>
+        </exclusion>
+    </exclusions>
+</dependency>
+```
+
+> <img src="./javaweb/13.png">
+
+### Maven生命周期
+
+`Maven`生命周期就是对所有的`Maven`项目构建过程进行了抽象和统一。`Maven`共有三套独立的生命周期，`clean`、`default`和`site`。`clean`执行清理工作，如上一次编译产生的文件，打包产生的文件等；`default`负责核心工作内容，如编译、测试、打包、安装、部署等等；`site`负责生成报告，发布站点等工作
+
+#### 常见生命周期阶段
+
+- `clean`：移除上一次构建生成的文件
+- `compile`：编译项目源代码
+- `test`：使用合适的单元测试框架运行测试
+- `package`：将编译后的文件打包，生成`jar`、`war`等文件
+- `install`：安装项目到本地`Maven`仓库
+
+### 单元测试
+
+测试是一种用来促进鉴定软件的正确性、完整新、安全性和质量的过程。软件开发阶段划分，测试可以分为`单元测试`、`集成测试`、`系统测试`、`验收测试`四类
+
+单元测试是指对软件的基本组成单元进行测试，是最小的测试单位，目的是验证软件基本组成单位的正确性，测试人员一般为开发人员
+
+集成测试是指将已分别通过测试的单元，按设计要求组合成系统或子系统，再进行的测试，目的是检查单元之间的协作是否正确，测试人员一般为开发人员
+
+系统测试是对集成好的软件系统进行彻底的测试，目的是验证软件系统的正确性，性能是否满足指定的要求，测试人员一般为专业测试工程师
+
+验收测试又称交付测试， 是针对用户需求，业务流程进行的正式的测试，目的是验证软件系统是否满足验收标准，测试人员一般为客户和需求方
+
+#### 测试方法
+
+根据暴露信息的不同，一般有三类测试方法，`白盒测试`、`黑盒测试`、`灰盒测试`
+
+白盒测试中，测试人员清楚软件内部结构、代码逻辑，一般用于验证代码、逻辑的正确性
+
+黑盒测试中，测试人员不清楚软件内部结构、代码逻辑，一般用于验证软件的功能、兼容性等方面
+
+灰盒测试结合了白盒测试和黑盒测试的特点，即关注软件的内部结构，又考虑软件外部表现
+
+| 测试方法 | 采用此方法的测试类型 |
+| -------- | -------------------- |
+| 白盒测试 | 单元测试             |
+| 黑盒测试 | 系统测试、验收测试   |
+| 灰盒测试 | 集成测试             |
+
+#### 单元测试快速入门
+
+`Java`单元测试就是针对最小的功能单元，即方法，编写测试代码对其正确性进行测试。目前`JUnit`是最流行的`Java`测试框架之一，提供了一些功能，方便程序进行单元测试
+
+**main方法测试的缺陷**
+
+1. 测试代码与源代码未分开，难维护
+2. 一个方法测试失败，影响后续方法的测试
+3. 无法自动化测试，得到测试报告
+
+**案例**
+
+使用`Junit`，对已经定义好的`UserService`类中的业务方法进行单元测试
+
+```java
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+
+public class UserService {
+//     给定用户身份证号，计算用户年龄
+//     @param idCard
+//     @return Integer
+    public Integer getAge(String idCard) {
+        if (idCard == null || idCard.length() != 18) {
+            throw new IllegalArgumentException("请输入正确的身份证号");
+        }
+        String birth = idCard.substring(6, 14);
+        LocalDate parse = LocalDate.parse(birth, DateTimeFormatter.ofPattern("yyyyMMdd"));
+        return LocalDate.now().getYear() - parse.getYear();
+    }
+
+//    给定用户身份证号，计算用户性别
+//    @param idCard
+//    @return String
+    public String getGender(String idCard) {
+        if (idCard == null || idCard.length() != 18) {
+            throw new IllegalArgumentException("请输入正确的身份证号");
+        }
+        String gender = idCard.substring(16, 17);
+        return gender.endsWith("0") ? "女" : "男";
+    }
+}
+```
+
+1. 在`pom.xml`引入`Junit`依赖
+
+```xml
+<!--        导入Junit-->
+<dependency>
+    <groupId>org.junit.jupiter</groupId>
+    <artifactId>junit-jupiter</artifactId>
+    <version>5.9.2</version>
+</dependency>
+```
+
+2. 在`test/java`目录下创建测试类，并编写对应的测试方法，并在方法上声明`@Test`注解
+
+测试类命名一般为`被测试类名 + Test`，测试方法为`test + 被测试方法()`，测试方法权限修饰符必须为`public`，返回值类型必须为`void`
+
+```java
+import org.junit.jupiter.api.Test;
+
+public class UserServiceTest {
+
+    @Test
+    public void testGetAge() {
+        Integer age = new UserService().getAge("");
+        System.out.println(age);
+    }
+
+    @Test
+    public void testGetGender() {
+        String gender = new UserService().getGender("100000200201230000");
+        System.out.println(gender);
+    }
+}
+```
+
+3. 然后运行测试，测试失败的方法不会影响后续方法测试
+
+> <img src="./javaweb/14.png">
+
+#### 断言
+
+单元测试通过仅代表语法正确，并不代表逻辑正确，如上文的`UserService`类中的`getGender()`方法，假设我们传入的身份证号为`100000200201230020`，理论上应该是女性，但实际输出为男
+
+> <img src="./javaweb/15.png">
+
+因此`Junit`提供了一些辅助方法，用来帮我们确定被测试的方法是否按照预期的效果正常工作，这种方式被称为`断言`
+
+| 断言方法                                                     | 描述                            |
+| ------------------------------------------------------------ | ------------------------------- |
+| `Assertions.assertEquals(Object exp, Object act, [String msg])` | 检查`exp`、`act`是否相等        |
+| `Assertions.assertNotEquals(Object unexp, Object act, [String msg])` | 检查`unexp`、`act`是否不等      |
+| `Assertions.assertNull(Object act, [String msg])`            | 检查`act`是否为空               |
+| `Assertions.assertNotNull(Object act, [String msg])`         | 检查`act`是否不为空             |
+| `Assertions.assertTrue(boolean condition, [String msg])`     | 检查`condition`是否为`True`     |
+| `Assertions.assertFalse(boolean condition, [String msg])`    | 检查`condition`是否为`False`    |
+| `Assertions.assertThrow(Class expType, Executable exec, [String msg])` | 检查`exec`是否抛出`expType`异常 |
+
+**示例**
+
+现在我们对`getGender()`方法添加断言
+
+```java
+@Test
+public void testGetGender() {
+    String idCard = "100000200201230020";
+    String gender = new UserService().getGender(idCard);
+    Assertions.assertEquals("女", gender);
+    System.out.println("输入身份证号" + idCard + "，性别为：" + gender);
+}
+```
+
+> <img src="./javaweb/16.png">
+
+同样地，可以测试`getAge()`中抛出的异常是否符合要求
+
+```java
+@Test
+public void testGetAge() {
+    Assertions.assertThrows(IllegalArgumentException.class, () -> {
+        new UserService().getAge("");
+    });
+}
+```
+
+> <img src="./javaweb/17.png">
+
+#### 常见注解
+
+| 注解                 | 说明                                                         | 备注                                                      |
+| -------------------- | ------------------------------------------------------------ | --------------------------------------------------------- |
+| `@Test`              | 注解一个测试方法，只有用`@Test`修饰的方法才能在单元测试中执行 |                                                           |
+| `@ParameterizedTest` | 参数化测试注解                                               | 可以让单元测试运行多次，每次运行仅参数不同，与`@Test`互斥 |
+| `@ValueSource`       | 参数化测试的参数来源                                         |                                                           |
+| `@DisplayName`       | 指定测试类、测试方法显示的名字                               |                                                           |
+| `@BeforeEach`        | 用来修饰一个实例方法，该方法会在每一个测试方法执行之前执行一次 |                                                           |
+| `@AfterEach`         | 用来修饰一个实例方法，该方法会在每一个测试方法执行之后执行一次 |                                                           |
+| `@BeforeAll`         | 用来修饰一个静态方法，该方法会在所有测试方法之前执行一次     |                                                           |
+| `@AfterAll`          | 用来修饰一个静态方法，该方法会在所有测试方法之后执行一次     |                                                           |
+
+**示例**
+
+```java
+package com.eiousee;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+public class UserServiceTest {
+    @BeforeAll
+    static void beforeAll() {
+        System.out.println("测试类开始");
+    }
+
+    @AfterAll
+    static void afterAll() {
+        System.out.println("测试类结束");
+    }
+
+    @BeforeEach
+    void beforeEach() {
+        System.out.println("测试方法开始");
+    }
+
+    @AfterEach
+    void afterEach() {
+        System.out.println("测试方法结束");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"100000200101010011", "100000200101010012"})
+    void testGetGender(String idCard) {
+        String gender = new UserService().getGender(idCard);
+        System.out.println("用户性别：" + gender);
+    }
+}
+```
+
+> <img src="./javaweb/18.png">
+
+#### 覆盖率
+
+对于单元测试的效果，可以通过覆盖率来描述，覆盖率越高，单元测试的效果越好
+
+**示例**
+
+以上文的测试类举例，其覆盖率如下
+
+| 类          | 方法覆盖率 | 行覆盖率  | 分支覆盖率 |
+| ----------- | ---------- | --------- | ---------- |
+| UserService | 50% (1/2)  | 33% (3/9) | 30% (3/10) |
+
+我们添加更多的测试数据，尽量覆盖所有的测试结果
+
+```java
+package com.eiousee;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+
+@DisplayName("用户服务测试类")
+public class UserServiceTest {
+
+    @ParameterizedTest
+    @ValueSource(strings = {"100000200101010011", "100000200101010012"})
+    void testGetGender(String idCard) {
+        String gender = new UserService().getGender(idCard);
+        System.out.println("用户性别：" + gender);
+    }
+
+    // 测试异常情况
+    @Test
+    void testGetGenderException() {
+        Assertions.assertThrows(IllegalArgumentException.class, () -> {
+            new UserService().getGender("");
+        });
+    }
+
+}
+```
+
+修改后覆盖率显著提升
+
+| 类          | 方法覆盖率 | 行覆盖率  | 分支覆盖率 |
+| ----------- | ---------- | --------- | ---------- |
+| UserService | 50% (1/2)  | 44% (4/9) | 40% (4/10) |
+
+因此在企业开发中，一般地，核心代码应满足100%的完全单元测试覆盖率，非核心代码应满足至少70%的单元测试覆盖率
+
+### Maven依赖范围
+
+在`Maven`中，可以设定某个依然的作用范围。假设没有对`Junit`设定依赖范围，那么`@Test`注解甚至可以出现在`main`主目录中，这是绝对需要避免的。因此，可以使用`<scope>`标签来设置依赖的作用范围
+
+**示例**
+
+先不设置`Junit`的依赖范围
+
+```xml
+<dependency>
+    <groupId>org.junit.jupiter</groupId>
+    <artifactId>junit-jupiter</artifactId>
+    <version>5.9.2</version>
+</dependency>
+```
+
+然后在`Hello`定义测试方法`test()`
+
+```java
+package com.eiousee;
+
+import org.junit.jupiter.api.Test;
+
+public class Hello {
+    public static void main(String[] args) {
+        System.out.println("Hello World!");
+    }
+
+    @Test
+    public void test() {
+        System.out.println("Hello World!");
+    }
+}
+```
+
+执行测试
+
+> <img src="./javaweb/19.png">
+
+接着我们为`Junit`设置依赖范围
+
+```xml
+<dependency>
+    <groupId>org.junit.jupiter</groupId>
+    <artifactId>junit-jupiter</artifactId>
+    <version>5.9.2</version>
+    <scope>test</scope>
+</dependency>
+```
+
+然后再次执行
+
+> <img src="./javaweb/20.png">
+
+#### scope标签
+
+`<scope>`标签可以设置依赖的作用范围，但是`<scope>`本身的值不能随意设置
+
+| 属性值   | 主程序 | 测试程序 | 打包 | 举例        |
+| -------- | ------ | -------- | ---- | ----------- |
+| compile  | Y      | Y        | Y    | Log4j       |
+| test     | N      | Y        | N    | Junit       |
+| provided | Y      | Y        | N    | Servlet-api |
+| runtime  | N      | Y        | Y    | jdbc        |
+
+## Java Spring概述
+
+`Java Spring` 是一个开源的应用程序框架，提供了全面的基础设施支持，用于构建企业级 Java 应用程序。它通过依赖注入和控制反转等核心功能，简化了开发过程，降低了模块间的耦合度。`Spring` 框架包含多个模块，如 `Spring Boot`、`Spring MVC`、`Spring Data`和 `Spring Security`等，使得开发者能够灵活、高效地开发各种规模的 Java 项目。
+
+### Spring Boot
+
+Spring Boot 是 Spring 框架的一个关键子项目，旨在简化 Spring 应用的初始搭建和开发过程。它通过“约定大于配置”的理念，提供了自动配置、起步依赖和内置Web服务器等核心特性，让开发者无需编写大量样板配置，就能快速创建独立、可执行的、生产级的 Spring 应用程序。通常只需编写少量代码，即可启动一个功能完备的Web服务，极大地提升了开发效率。
+
+#### Spring Boot快速入门
+
+基于`Spring Boot`开发一个`Web`应用，浏览器发送请求，并携带一个参数，然后服务器返回该参数值
+
+- 创建`Spring Boot`项目
+
+> <img src="./javaweb/21.png">
+
+- 创建请求处理类`HelloController`并编写相关逻辑
+
+```java
+package com.eiousee;
+
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController	// 声明请求处理类
+public class HelloController {
+
+    @RequestMapping("/")	// 声明请求路径
+    public String hello(String name) {
+        return "Hello " + name + "!";
+    }
+}
+```
+
+- 访问`localhost/?name=123`
+
+> <img src="./javaweb/22.png">
+
+#### HTTP协议
+
+在`SpringBoot`中，`Tomcat`会对`HTTP`协议的请求数据进行解析，并封装为`HttpServletRequest`对象，在调用`Controller`中的方法时，会自动将该对象传递至方法
+
+```java
+@RequestMapping("/request")
+public String request(HttpServletRequest req) {
+    // 获取请求参数
+    String name = req.getParameter("name");
+    System.out.println("name: " + name);
+    // 获取请求路径
+    String url = req.getRequestURL().toString();
+    String uri = req.getRequestURI();
+    System.out.println("url: " + url);
+    System.out.println("uri: " + uri);
+
+    return "Request Finished!";
+}
+```
+
+> <img src="./javaweb/23.png">
+
+同样地，也提供了`HttpServletResponse`对象来封装响应相关的内容
+
+```java
+@RequestMapping("/response")
+public void response(HttpServletResponse res) throws IOException {
+    // 设置响应状态码
+    res.setStatus(401);
+    // 设置响应头
+    res.setHeader("Responser", "Ki1z");
+    // 设置响应体
+    res.getWriter().write("Hello Response");
+}
+```
+
+> <img src="./javaweb/24.png">
+
+`Spring`中也提供了`ResponseEntity<String>`对象来封装响应，可以通过设置对象属性来更改响应
+
+```java
+@RequestMapping("/response")
+public ResponseEntity<String> response() {
+    return ResponseEntity.status(401)
+            .header("Responser", "Ki1z")
+            .body("Hello Response");
+}
+```
+
+#### Spring Boot简单案例
+
+设计一个员工搜索页面，使用`Axios`与`Spring Boot`技术
+
+首先编写前端页面，定义简单的表格，并添加一些样式信息
+
+```html
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <style>
+        h1, form {
+            text-align: center;
+        }
+        table {
+            margin: 0 auto;
+        }
+    /*    为表格添加边框*/
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            text-align: center;
+            padding: 5px;
+            height: 30px;
+            background-color: #f5f5f5;
+            color: #333;
+            font-size: 16px;
+            line-height: 30px;
+            vertical-align: middle;
+            width: 40rem;
+            margin-top: 20px;
+        }
+        .noData {
+            border: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<!--    标题居中显示-->
+    <div id="app">
+        <h1>员工数据列表</h1>
+        <form class="search-bar">
+            <label>员工姓名：</label>
+            <input type="text" name="name" v-model="searchForm.name">
+            <label>员工性别：</label>
+            <select name="sex" v-model="searchForm.sex">
+                <option value="">请选择性别</option>
+                <option value="男">男</option>
+                <option value="女">女</option>
+            </select>
+            <button type="button" @click="query">查询</button>
+        </form>
+<!--        表格居中 -->
+        <table>
+            <thead>
+                <tr>
+                    <th>员工编号</th>
+                    <th>员工姓名</th>
+                    <th>员工性别</th>
+                    <th>员工职位</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-show="users.length === 0">
+                    <td class="noData" colspan="4">暂无数据</td>
+                </tr>
+                <tr v-for="user in users" :key="user.id">
+                    <td>{{user.id}}</td>
+                    <td>{{user.name}}</td>
+                    <td>{{user.sex}}</td>
+                    <td>{{user.job}}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</body>
+```
+
+然后使用`Vue`和`Axios`定义交互功能
+
+```vue
+<!-- 导入axios -->
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+<!-- 导入vue -->
+<script src="https://cdn.jsdelivr.net/npm/vue@2.6.14/dist/vue.js"></script>
+<script>
+    new Vue({
+        el: "#app",
+        data: {
+            searchForm: {
+                name: "",
+                sex: ""
+            },
+            users: []
+        },
+        methods: {
+            query() {
+                axios.get("list", {params: this.searchForm}).then(res => {
+                    this.users = res.data;
+                })
+            }
+        },
+        mounted() {
+            this.query();
+        }
+    })
+</script>
+</html>
+```
+
+接着在后端定义用户实体类
+
+```java
+package com.eiousee;
+
+@lombok.Data
+@lombok.AllArgsConstructor
+@lombok.NoArgsConstructor
+public class User {
+    private int id;
+    private String name;
+    private String sex;
+    private String job;
+}
+```
+
+最后完成后端请求逻辑
+
+```java
+package com.eiousee;
+
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import java.util.ArrayList;
+
+@RestController
+public class UserController {
+    @RequestMapping("/list")
+    public ArrayList<User> list(HttpServletRequest request) {
+        // 获取请求参数
+        String name = request.getParameter("name");
+        String sex = request.getParameter("sex");
+
+        System.out.println("name: " + name);
+        System.out.println("sex: " + sex);
+
+        // 准备一些员工数据
+        ArrayList<User> userList = new ArrayList<>();
+        userList.add(new User(1, "张三", "男", "程序员"));
+        userList.add(new User(2, "李四", "女", "教师"));
+        userList.add(new User(3, "王五", "男", "学生"));
+        userList.add(new User(4, "赵六", "女", "学生"));
+        userList.add(new User(5, "孙七", "男", "教师"));
+
+        userList = getUserList(name, sex, userList);
+
+        System.out.println(userList);
+        return userList;
+    }
+
+    public static ArrayList<User> getUserList(String name, String sex, ArrayList<User> originUserList) {
+        ArrayList<User> returnedUserList = new ArrayList<>();
+        for (User user : originUserList) {
+            if (name != null && !name.equals("")) {
+                if (!user.getName().contains(name)) {
+                    continue;
+                }
+            }
+            if (sex != null && !sex.equals("")) {
+                if (!user.getSex().equals(sex)) {
+                    continue;
+                }
+            }
+            returnedUserList.add(user);
+        }
+        return returnedUserList;
+    }
+}
+```
+
+*注：`带有@RestController`注解的类中，方法的返回值如果是对象或者集合，在传递给前端前会自动转换为`json`格式，无需手动转换*
+
+### 分层解耦
+
+分层解耦是软件架构设计中的核心思想，旨在将系统划分为不同层次，并减少各层之间的依赖关系，以提升系统的可维护性、可扩展性和灵活性。分层是指将系统功能按职责或抽象级别，垂直划分为多个独立的层。每一层都专注于特定的任务，并遵循“单向依赖”原则；解耦是指降低层与层之间的直接、紧密联系。层之间通过定义清晰的接口或协议进行通信，而不是直接调用具体的实现
+
+#### 三层架构
+
+三层架构指`Controller`、`Service`、`DAO(Data Access Object)`，即
+
+`Controller`：控制层，接收前端发送的请求，对请求进行处理，并相应数据
+
+`Service`：业务逻辑层，处理具体的业务逻辑
+
+`DAO`：数据访问层，负责数据访问操作，包括数据的增删改查
+
+一般来说，`Service`与`DAO`需要提供接口供其他层调用
+
+**示例**
+
+我们对上文的用户查询逻辑进行优化
+
+首先定义相应的软件包与类
+
+> <img src="./javaweb/25.png">
+
+然后分别定义三层架构和实体类
+
+- **Entity**
+
+`User.java`
+
+用户实体类，遵循`JavaBean`标准
+
+```java
+package com.eiousee.entity;
+
+@lombok.Data
+@lombok.AllArgsConstructor
+@lombok.NoArgsConstructor
+public class User implements java.io.Serializable{
+    private int id;
+    private String name;
+    private String sex;
+    private String job;
+}
+```
+
+`SearchCriteria.java`
+
+搜索条件对象类，用于存储搜索条件
+
+```java
+package com.eiousee.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class SearchCriteria {
+    private String name;
+    private String sex;
+}
+```
+
+- **DAO**
+
+`UserDao.java`
+
+在`UserDao`中，我们需要提供所有的数据对象，因此定义方法`getAllUsers()`来为`UserService`提供筛选原始数据
+
+```java
+package com.eiousee.dao;
+
+import com.eiousee.entity.User;
+import java.util.ArrayList;
+
+public interface UserDao {
+
+    public ArrayList<User> getAllUsers();
+
+}
+```
+
+`UserDaoImpl.java`
+
+在实现类中定义确定的用户集合，然后返回这个集合
+
+```java
+package com.eiousee.dao.impl;
+
+import com.eiousee.dao.UserDao;
+import com.eiousee.entity.User;
+
+import java.util.ArrayList;
+
+public class UserDaoImpl implements UserDao {
+    @Override
+    public ArrayList<User> getAllUsers() {
+        ArrayList<User> userList = new ArrayList<>();
+
+        userList.add(new User(1, "张三", "男", "程序员"));
+        userList.add(new User(2, "李四", "女", "教师"));
+        userList.add(new User(3, "王五", "男", "学生"));
+        userList.add(new User(4, "赵六", "女", "学生"));
+        userList.add(new User(5, "孙七", "男", "教师"));
+
+        return userList;
+    }
+}
+```
+
+- **Service**
+
+`UserService.java`
+
+在`UserService`中，考虑到搜索时存在两种情况，默认空字符串的全部搜索，以及传入参数`name`和`sex`时的条件搜索，因此定义`getUsers(SearchCriteria criteria)`，使用`SearchCriteria`搜索条件实体来进行条件查询，以及`getAllUsers()`获取全部用户对象
+
+```java
+package com.eiousee.service;
+
+import com.eiousee.entity.SearchCriteria;
+import com.eiousee.entity.User;
+import java.util.ArrayList;
+
+public interface UserService {
+    public ArrayList<User> getUsers(SearchCriteria criteria);
+
+    public ArrayList<User> getAllUsers();
+}
+```
+
+`UserServiceImpl.java`
+
+对于`Service`，应当持有一个`DAO`的实例，用于与`DAO`层进行交互，因此首先定义`private final UserDao userDao = new UserDaoImpl();`；对于条件查询方法`getUsers(SearchCriteria criteria)`，我们对条件查询逻辑进行进一步优化，分别判断`name`与`sex`是否满足要求，最后只用一个`if`来实现最优查询
+
+```java
+package com.eiousee.service.impl;
+
+import com.eiousee.dao.UserDao;
+import com.eiousee.dao.impl.UserDaoImpl;
+import com.eiousee.entity.SearchCriteria;
+import com.eiousee.entity.User;
+import com.eiousee.service.UserService;
+import java.util.ArrayList;
+
+public class UserServiceImpl implements UserService {
+
+    private final UserDao userDao = new UserDaoImpl();
+
+    @Override
+    public ArrayList<User> getUsers(SearchCriteria criteria) {
+        ArrayList<User> allUserList = userDao.getAllUsers();
+        ArrayList<User> returnedUserList = new ArrayList<>();
+
+        for (User user : allUserList) {
+
+            boolean nameMatch = criteria.getName().isEmpty() || criteria.getName().equals(user.getName());
+            boolean sexMatch = criteria.getSex().isEmpty() || criteria.getSex().equals(user.getSex());
+
+            if (nameMatch && sexMatch) {
+                returnedUserList.add(user);
+            }
+        }
+
+        return returnedUserList;
+    }
+
+    @Override
+    public ArrayList<User> getAllUsers() {
+        return userDao.getAllUsers();
+    }
+}
+```
+
+- **Controller**
+
+`UserController.java`
+
+在`UserController`中，同样需要持有一个`Service`实例来保持与`Service`的数据交换，因此使用`private final UserService userService = new UserServiceImpl();`，接着，我们需要对接收的参数进行空值判断来调用不同的`UserService`方法，进一步优化性能
+
+```java
+package com.eiousee.controller;
+
+import com.eiousee.entity.SearchCriteria;
+import com.eiousee.entity.User;
+import com.eiousee.service.UserService;
+import com.eiousee.service.impl.UserServiceImpl;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import java.util.ArrayList;
+
+@RestController
+public class UserController {
+
+    private final UserService userService = new UserServiceImpl();
+
+    @RequestMapping("/list")
+    public ArrayList<User> list(HttpServletRequest request) {
+        String name = request.getParameter("name");
+        String sex = request.getParameter("sex");
+
+        System.out.println("name: " + name);
+        System.out.println("sex: " + sex);
+
+        if (name != null && !name.equals("") || sex != null && !sex.equals("")) {
+            System.out.println(userService.getUsers(new SearchCriteria(name, sex)));
+            return userService.getUsers(new SearchCriteria(name, sex));
+        } else {
+            System.out.println(userService.getAllUsers());
+            return userService.getAllUsers();
+        }
+    }
+}
+```
+
+#### IOC & DI
+
+耦合度是衡量软件中各个层或各个模块的依赖关联程度，依赖关联程度越高，耦合度越高
+
+因此，在`Spring`中，提供了控制反转`IOC(Inversion Of Control)`和依赖注入`DI(Dependency Injection)`来进行解耦操作。
+
+`控制反转`：对象的创建控制权由程序自身转移到外部容器，这种思想被称为控制反转
+
+`依赖注入`：外部容器为应用程序提供运行时所依赖的资源，被称为依赖注入
+
+`Bean对象`：在`IOC`中创建的用于管理的容器对象被称为`Bean`对象
+
+**示例**
+
+在上文的`Spring简单案例`中，因为`Service`需要持有`DAO`，`Controller`需要持有`Service`，所以我们定义了以下的代码
+
+```java
+private final UserDao userDao = new UserDaoImpl();
+private final UserService userService = new UserServiceImpl();
+```
+
+从分层解耦的角度来看，这就属于不同层级之间的耦合，假设我们定义了新的`UserDaoImpl2`或者`UserServiceImpl2`，那么就需要更新相应相应的代码，这极大地降低了开发效率
+
+因此，我们将`DAO`和`Service`交由`IOC`容器管理，在`Spring`中，`@Component`注解用于标识`IOC`，目标为类
+
+`UserServiceImpl.java`
+
+```java
+@Component
+public class UserServiceImpl implements UserService {}
+```
+
+`UserDaoImpl.java`
+
+```java
+@Component
+public class UserDaoImpl implements UserDao {}
+```
+
+接着，我们为`Controller`与`Service`提供`DI`，在`Spring`中，`@Autowired`注解用于标识`DI`，目标为属性
+
+`UserController.java`
+
+```java
+@Autowired
+private UserService userService;
+```
+
+`UserServiceImpl.java`
+
+```java
+@Autowired
+private UserDao userDao;
+```
+
+##### IOC
+
+`IOC`是面向对象编程中的一种设计思想，它颠覆了传统程序中对象创建和依赖管理的方式。在传统编程模式中，对象的创建、依赖的组装都由开发者在代码中主动控制，比如通过`new`关键字创建对象，手动为对象设置依赖。而`IOC`思想则将这种控制权转移给第三方容器，由容器统一管理对象的生命周期和对象之间的依赖关系。`IOC` 的核心价值在于解耦。它将对象从复杂的依赖关系中解放出来，让对象只关注自身的业务逻辑，而无需关心依赖对象的创建和组装。
+
+在`Spring`中，提供了多种`IOC`注解
+
+| 注解          | 说明                 | 位置                       |
+| ------------- | -------------------- | -------------------------- |
+| `@Component`  | 声明`Bean`的基本注解 | 不属于以下三类时，用此注解 |
+| `@Controller` | `@Component`衍生注解 | 标注在控制层               |
+| `@Service`    | `@Component`衍生注解 | 标注在业务层               |
+| `@Repository` | `@Component`衍生注解 | 标注在数据访问层           |
+
+*注：所有注解可以使用如`@Component("name")`来指定`Bean`的名称；对于`@RestController`，其中已经封装了`@Controller`注解，因此不必二次添加；对于控制层，只能使用`Controller`注解*
+
+**@ComponentScan扫描范围**
+
+并不是所有添加`@Component`注解的类都可以作为有效的`Bean`，则需要保证其处于`@ComponentScan`扫描范围中。默认情况下，其范围为启动类`@SpringBootApplication`当前包及其子包，在`@SpringBootApplication`中，已经封装了一个`@ComponentScan`注解
+
+**示例**
+
+假设我们将启动类移动到某个子包中
+
+> <img src="./javaweb/26.png">
+
+启动`Spring Boot`，就会导致报错
+
+> <img src="./javaweb/27.png">
+
+##### DI
+
+依赖注入是 `IOC` 思想的具体实现方式。它指的是：容器在创建对象时，自动将其依赖的其他对象注入到该对象中。例如，当 `Service` 层对象需要 `Dao` 层对象时，无需手动`new Dao()`，而是由容器直接将 `Dao` 对象交给 `Service` 对象。
+
+基于`@Autowired`注解进行依赖注入一般有如下三种方式
+
+- 属性注入，直接为`Bean`属性添加注解
+
+```java
+@RestController
+public class UserController {
+    @Autowired
+    private UserService userService;
+}
+```
+
+- 构造函数注入，为持有`Bean`的类的构造器添加注解
+
+```java
+@RestController
+public class UserController {
+    private final UserService userService;
+    
+    @Autowired
+    public UserController(UserService userService) {
+        this,userService = userService;
+    }
+}
+```
+
+如果当前类中只存在一个构造函数，那么`@Autowired`注解可以省略
+
+- `Setter`注入，为持有`Bean`的类的`setter`添加注解
+
+```java
+@RestController
+public class UserController {
+    private UserService userService;
+    
+    @Autowired
+    public void setUserService(UserService userService) {
+        this,userService = userService;
+    }
+}
+```
+
+**Bean冲突**
+
+假设一个类仅需要一个`Bean`，但是在书写代码时定义了两个`Bean`，就会导致`Bean`冲突，所以`Spring`又提供了三个额外注解来解决这个问题
+
+| 注解         | 语法                           | 说明                                                         |
+| ------------ | ------------------------------ | ------------------------------------------------------------ |
+| `@Primary`   | `@Primary`                     | 注解`Bean`类                                                 |
+| `@Qualifier` | `@Qualifier("BeanName")`       | 注解`Bean`属性，`BeanName`为`Bean`的名字，默认为类名，但是首字母小写。必须结合`@Autowired`使用 |
+| `@Resource`  | `@Resource(name = "BeanName")` | 注解`Bean`属性，拥有`@Resource`注解的属性无需再添加`@Autowired`注解 |
+
+*注：`@Resource`是`JavaEE`标准下的注解，根据名称进行注入；而`@Autowired`是`Spring`标准的注解，根据类型进行注入*
+
+### JDBC
+
+`JDBC`全称`Java DataBase Connectivity`，是使用`Java`语言操作关系型数据库的`API`的统称
+
+`sun`公司官方定义一套操作所有关系型数据库的规范接口，各个数据库厂商自行实现接口，提供数据库驱动`jar`包，作为开发者，使用的就是驱动`jar`包中的实现类
+
+#### 快速入门
+
+基于`JDBC`，编写一个程序，连接后台`mysql`数据库，执行一条更新语句
+
+1. 准备依赖
+
+```xml
+<!--		jdbc mysql8 -->
+<dependency>
+    <groupId>com.mysql</groupId>
+    <artifactId>mysql-connector-j</artifactId>
+    <version>8.0.33</version>
+</dependency>
+```
+
+2. 注册驱动，获取连接
+
+```java
+// 注册驱动 mysql8.1
+Class.forName("com.mysql.cj.jdbc.Driver");
+// 获取连接
+String url = "jdbc:mysql://localhost:3306/jdbc?serverTimezone=UTC";
+String user = "root";
+String password = "root";
+java.sql.Connection connection = java.sql.DriverManager.getConnection(url, user, password);
+```
+
+3. 获取`sql`执行器对象，并执行`sql`语句
+
+```java
+// 获取执行器对象
+java.sql.Statement statement = connection.createStatement();
+// 构建sql语句
+String sql = "UPDATE users SET password = 666666 WHERE id = 3";
+// 执行sql语句
+int count = statement.executeUpdate(sql);
+// 关闭资源
+statement.close();
+connection.close();
+```
+
+> ![](javaweb/28.png)
+
+执行`sql`语句，将`id`为1的用户信息封装到用户实体类中
+
+```java
+package com.eiousee.test;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.sql.Date;
+import java.sql.ResultSet;
+
+public class DBTest {
+    public static void main(String[] args) throws Exception {
+        // 注册驱动 mysql8.1
+        Class.forName("com.mysql.cj.jdbc.Driver");
+        // 获取连接
+        String url = "jdbc:mysql://localhost:3306/jdbc?serverTimezone=UTC";
+        String username = "root";
+        String password = "root";
+        java.sql.Connection connection = java.sql.DriverManager.getConnection(url, username, password);
+        // 获取执行器对象
+        java.sql.Statement statement = connection.createStatement();
+        // 构建sql语句
+        String sql = "SELECT * FROM users WHERE id = 3";
+        // 执行sql语句
+        ResultSet resultSet = statement.executeQuery(sql);
+        // 封装为User
+        User user = new User();
+        while (resultSet.next()) {
+            user.setId(resultSet.getInt("id"));
+            user.setName(resultSet.getString("name"));
+            user.setPassword(resultSet.getString("password"));
+            user.setEmail(resultSet.getString("email"));
+            user.setBirthday(resultSet.getDate("birthday"));
+        }
+        System.out.println(user);
+        // 关闭资源
+        statement.close();
+        connection.close();
+    }
+}
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+class User {
+    private Integer id;
+    private String name;
+    private String password;
+    private String email;
+    private Date birthday;
+}
+```
+
+> ![](javaweb/29.png)
+
+#### 预编译SQL
+
+为了提高查询效率，并防止`SQL`注入攻击，`JDBC`提供了预编译`SQL`，通过使用`PrepareStatement`类来构建预编译`SQL`语句，然后执行数据库查询
+
+**示例**
+
+```java
+// 注册驱动 mysql8.1
+Class.forName("com.mysql.cj.jdbc.Driver");
+// 获取连接
+String url = "jdbc:mysql://localhost:3306/jdbc?serverTimezone=UTC";
+String username = "root";
+String password = "root";
+java.sql.Connection connection = java.sql.DriverManager.getConnection(url, username, password);
+// 构建sql语句
+String sql = "UPDATE users SET password = ? WHERE id = ?";
+// 获取预编译对象
+PreparedStatement statement = connection.prepareStatement(sql);
+statement.setObject(1, 666666);
+statement.setObject(2, 3);
+// 执行sql语句
+ResultSet resultSet = statement.executeQuery(sql);
+```
+
+### MyBatis
+
+`MyBatis`是一款优秀的持久层框架，用于简化`JDBC`的开发。`MyBatis`原是`Apache`的开源项目`iBatis`，2010年由`Apache`迁移到了`Google Code`，并改名为`MysBatis`，2013年又迁移到`Github`
+
+#### 快速入门
+
+使用`mybatis`查询所有用户数据，并封装为用户实体类
+
+1. 引入`mybatis`依赖
+
+```xml
+<!--		MyBatis-->
+<dependency>
+    <groupId>org.mybatis.spring.boot</groupId>
+    <artifactId>mybatis-spring-boot-starter</artifactId>
+</dependency>
+```
+
+2. 在`application.properties`添加数据库信息
+
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/jdbc
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.username=root
+spring.datasource.password=root
+```
+
+3. 定义`mybatis`接口，并注解`Mapper`接口
+
+```java
+package com.eiousee.test;
+
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
+
+import java.util.List;
+
+@Mapper
+public interface UserMapper {
+    @Select("SELECT * FROM users")
+    public List<User> getUsers();
+}
+```
+
+4. 目前的`UserMapper`已经成为了`IOC`中的一个`Bean`，现在只需要用一个容器注入`Bean`即可，我们在`SpringBoot`提供的默认测试类中编写测试方法，并注入`UserMapper`
+
+```java
+package com.eiousee;
+
+import com.eiousee.entity.User;
+import com.eiousee.mapper.UserMapper;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import java.util.List;
+
+@SpringBootTest
+class WebProjectApplicationTests {
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Test
+    public void test() {
+        List<User> users = userMapper.getUsers();
+        users.forEach(System.out::println);
+    }
+}
+```
+
+> ![](javaweb/30.png)
+
+#### 数据库连接池
+
+数据库连接池是负责分配管理数据库连接实例的容器，它允许应用程序重复使用一个现有的数据库连接，而不是每次重新建立一个。数据库连接池可以释放空闲时间超过最大空间时间的连接，避免因为没有释放连接而引起的数据库连接遗漏。`sun`公司提供了数据库连接池的接口`DataSource`，由第三方公司或组织实现此接口。常见的数据库连接池产品有`c3p0`、`dbcp`、`druid`，以及`spring`默认的`hikari`
+
+目前最常用的是`com.alibaba`旗下的`druid`连接池
+
+##### 切换连接池
+
+1. 引入依赖
+
+`pom.xml`
+
+```xml
+<!--        druid连接池-->
+<dependency>
+    <groupId>com.alibaba</groupId>
+    <artifactId>druid-spring-boot-starter</artifactId>
+    <version>1.2.17</version>
+</dependency>
+```
+
+2. 修改配置文件
+
+`application.properties`
+
+```properties
+# 配置druid连接池
+spring.datasource.type=com.alibaba.druid.pool.DruidDataSource
+```
+
+#### CRUD
+
+##### 删除操作
+
+使用`MyBatis`删除数据库中的一条数据。
+
+在`MyBatis`中，提供了参数化查询的方式，使用`#{ParamName}`的方式指定需要插入的参数，然后放置在`sql`语句中
+
+`UserMapper.java`
+
+```java
+@Delete("DELETE FROM users WHERE id = #{id}")
+public void deleteUser(Integer id);
+```
+
+`WebProjectApplicationTests.java`
+
+```java
+@Test
+public void testDeleteUser() {
+    userMapper.deleteUser(1);
+}
+```
+
+> ![](javaweb/31.png)
+
+可以看出，在`MyBatis`的底层，将`#{id}`解析为了`?`，使用`PrepareStatement`预编译`sql`来执行
+
+同时，可以为方法设置一个返回值接收受影响的行数
+
+`UserMapper.java`
+
+```java
+@Delete("DELETE FROM users WHERE id = #{id}")
+public Integer deleteUserWithReturn(Integer id);
+```
+
+`WebProjectApplicationTests.java`
+
+```java
+@Test
+public void testDeleteUserWithReturn() {
+    Integer result = userMapper.deleteUserWithReturn(1);
+    if (result > 0) {
+        System.out.println("删除成功");
+    } else {
+        System.out.println("删除失败");
+    }
+}
+```
+
+> ![](javaweb/32.png)
+
+*在`MyBatis`中，也能使用拼接符`${...}`，直接将输入拼接在`sql`语句中，因此存在`sql`注入风险*
+
+##### 增加操作
+
+向用户表增添一条用户数据。
+
+在`MyBatis`中新增用户时，可以直接将用户实例作为参数插入`sql`语句中，`MyBatis`会根据`sql`语句中的占位符自动解析实例属性
+
+`UserMapper.java`
+
+```java
+@Insert("INSERT INTO users(id, name, password, email, birthday) VALUES(#{id},#{name},#{password},#{email},#{birthday})")
+public void addUser(User user);
+```
+
+`WebProjectApplicationTests.java`
+
+```java
+@Test
+public void testAddUser() {
+    User user = new User(1, "zs", "123456", "zhangsan@163.com", Date.valueOf("1999-01-01"));
+    userMapper.addUser(user);
+}
+```
+
+> ![](javaweb/33.png)
+
+##### 修改操作
+
+根据`ID`更新用户信息
+
+`UserMapper.java`
+
+```java
+@Update("UPDATE users SET name = #{name}, password = #{password}, email = #{email}, birthday = #{birthday} WHERE id = #{id}")
+public void updateUser(User user);
+```
+
+`WebProjectApplicationTests.java`
+
+```java
+@Test
+public void testUpdateUser() {
+    User user = new User(1, "lisi", "123456", "lisi@163.com", Date.valueOf("1999-01-01"));
+    userMapper.updateUser(user);
+}
+```
+
+> ![](javaweb/34.png)
+
+##### 查询操作
+
+使用`name`和`email`来约束查询条件
+
+由于非官方骨架创建的`SpringBoot`项目中字节码文件无法保留参数名称，因此`MyBatis`提供了`@Param`注解来标记需要注入的参数位置
+
+`UserMapper.java`
+
+```java
+@Select("SELECT * FROM users WHERE name = #{name} AND email = #{email}")
+public User getUserByNameAndEmail(@Param("name") String name, @Param("email") String email);
+```
+
+`WebProjectApplicationTests.java`
+
+```java
+@Test
+public void testGetUserByNameAndEmail() {
+    User user = userMapper.getUserByNameAndEmail("lisi", "lisi@163.com");
+    System.out.println(user);
+}
+```
+
+> ![](javaweb/35.png)
+
+#### XML映射配置
+
+`MyBatis`支持使用`xml`文件来定义所有的注解信息，这个`xml`文件即被称为`XML`映射配置文件。`XML`映射配置文件的命名规范是必须与对应的`java`文件同包同名，并存储在`resources`目录中
+
+> ![](javaweb/36.png)
+
+然后在`xml`文件中定义`<mapper>`标签，使用`namespace`属性来指定`java`文件
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.eiousee.mapper.UserMapper">
+    
+</mapper>
+```
+
+然后添加对应的标签，如`select`、`update`、`delete`、`insert`等等来构建`sql`语句，在查询标签中，使用`id`属性指定`Mapper.java`文件中的方法，使用`resultType`方法指定返回值类型，`resultType`的值应是一个`Java`类引用
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.eiousee.mapper.UserMapper">
+    <select id="getUserByNameAndEmail" resultType="com.eiousee.entity.User">
+        SELECT * FROM users WHERE name = #{name} AND email = #{email}
+    </select>
+</mapper>
+```
+
+然后我们删除`UserMapper`中`getUserByNameAndEmail`的注解，并测试是否正常执行
+
+```
+//    @Select("SELECT * FROM users WHERE name = #{name} AND email = #{email}")
+    public User getUserByNameAndEmail(@Param("name") String name, @Param("email") String email);
+```
+
+> ![](javaweb/37.png)
+
+在`application.properties`中，也可以设置`Mapper.xml`文件的存储位置
+
+```properties
+# 设置mapper.xml路径
+mybatis.mapper-locations=classpath:mapper/*.xml
+```
+
+> ![](javaweb/38.png)
+
+### Spring配置文件
+
+在前面的学习中，我们为`Spring`配置文件新增了非常多的配置信息，但是总体来看，所有的配置信息混合在一起，结构非常混乱
+
+```properties
+spring.application.name=webProject
+server.port=80
+
+# 配置数据源
+spring.datasource.url=jdbc:mysql://localhost:3306/jdbc
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver
+spring.datasource.username=root
+spring.datasource.password=root
+# 配置druid连接池
+spring.datasource.type=com.alibaba.druid.pool.DruidDataSource
+
+# mybatis控制台输出
+mybatis.configuration.log-impl=org.apache.ibatis.logging.stdout.StdOutImpl
+# 设置mapper.xml路径
+mybatis.mapper-locations=classpath:mapper/*.xml
+```
+
+而且类似`spring.datasource`的前缀出现次数非常多，如果有非常多相同前缀的配置，那么就要重复很多次。因此，我们可以使用`yml`格式的配置文件
+
+`application.yml`
+
+```yml
+server:
+  # 端口
+  port: 80
+
+spring:
+  application:
+    name: webProject
+  # 数据源
+  datasource:
+    url: jdbc:mysql://localhost:3306/jdbc
+    username: root
+    password: root
+    driver-class-name: com.mysql.jdbc.Driver
+    # druid连接池
+    type: com.alibaba.druid.pool.DruidDataSource
+
+# mybatis相关配置
+mybatis:
+  # mapper.xml文件路径
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    # 控制台输出
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+```
+
+在`yml`文件中，也可以定义对象、`Map`集合、数组等等
+
+```yml
+# 定义对象/Map集合
+User:
+  name: zhangsan
+  age: 18
+ 
+# 定义数组
+Hobby:
+  - java
+  - python
+  - c
+```
+
+## Java Spring基础项目实战
+
+编写一个完善的校园后台管理系统，拥有以下内容
+
+- `模块`：班级学员管理、系统信息管理、数据统计管理、员工信息管理、学员信息管理等
+- `操作`：对数据的增删改查操作、登录操作、文件上传操作
+- `技术`：数据可视化技术、报表统计技术、登录认证技术、日志管理技术
+
+### 开发规范
+
+#### 开发模式
+
+前后端分离开发：最主流的开发模式，前端工程师只负责前端渲染与页面表现，后端工程师只负责数据处理
+
+#### 接口文档
+
+在前后端分离开发模式中，如果前后端工程师没有交互，则互相都无法得知对方的参数名和参数类型等等，因此需要事先提供一份接口文档，用于规范前后端的编程接口，方便数据交互
+
+本项目接口文档详见<a href="./Interfaces.md">接口文档</a>
+
+#### Restful
+
+`Restful`是一种用于设计网络应用程序和服务之间通信的软件架构风格，基于HTTP协议，强调使用HTTP动词，如`GET`、`POST`、`PUT`、`DELETE`来操作资源，并通过URI唯一标识资源
+
+| 传统URI                 | 请求方式 | REST风格URI | 请求方式 | 含义              |
+| ----------------------- | -------- | ----------- | -------- | ----------------- |
+| `/user/getById?id=1`    | `GET`    | `/users/1`  | `GET`    | 查询`id`为1的用户 |
+| `/user/addUser`         | `POST`   | `/users`    | `POST`   | 新增用户          |
+| `/user/updateUser`      | `POST`   | `/users`    | `PUT`    | 更新用户          |
+| `/user/deleteUser?id=1` | `GET`    | `/users/1`  | `DELETE` | 删除`id`为1的用户 |
+
+#### API测试
+
+在实际开发过程中，由于前后端通常是并行开发，当某一方想要测试开发效果时，对方都还未完成开发工作。因此需要借助`API`测试工具，在测试过程中充当对方的身份，提供或返回相应数据
+
+这里我们使用`Postman`软件向后台发送一条测试数据
+
+```java
+package com.eiousee.controller;
+
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class UserController {
+    @RequestMapping("/hello")
+    public String list(@RequestParam("name") String name) {
+        return "Hello " + name;
+    }
+}
+```
+
+> ![](javaweb/39.png)
+
+#### 工程搭建
+
+1. 创建`Spring`工程，引入`MyBatis`、`Lombok`、`Mysql`等依赖
+
+`pom.xml`
+
+```xml
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.mybatis.spring.boot</groupId>
+        <artifactId>mybatis-spring-boot-starter</artifactId>
+        <version>3.0.5</version>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-test</artifactId>
+        <scope>test</scope>
+    </dependency>
+    <dependency>
+        <groupId>org.mybatis.spring.boot</groupId>
+        <artifactId>mybatis-spring-boot-starter-test</artifactId>
+        <version>3.0.5</version>
+        <scope>test</scope>
+    </dependency>
+    <!--    lombok-->
+    <dependency>
+        <groupId>org.projectlombok</groupId>
+        <artifactId>lombok</artifactId>
+        <optional>true</optional>
+    </dependency>
+<!--        mysql8.0-->
+    <dependency>
+        <groupId>mysql</groupId>
+        <artifactId>mysql-connector-java</artifactId>
+        <version>8.0.33</version>
+    </dependency>
+<!--        druid连接池-->
+    <dependency>
+        <groupId>com.alibaba</groupId>
+        <artifactId>druid-spring-boot-starter</artifactId>
+        <version>1.2.17</version>
+    </dependency>
+</dependencies>
+```
+
+2. 创建数据表`dept`，配置`application.yml`的相关信息
+
+`application.yml`
+
+```yml
+server:
+  # 端口
+  port: 80
+
+spring:
+  application:
+    name: webProject
+  # 数据源
+  datasource:
+    url: jdbc:mysql://localhost:3306/jdbc
+    username: root
+    password: root
+    driver-class-name: com.mysql.jdbc.Driver
+    # druid连接池
+    type: com.alibaba.druid.pool.DruidDataSource
+
+# mybatis相关配置
+mybatis:
+  # mapper.xml文件路径
+  mapper-locations: classpath:mapper/*.xml
+  configuration:
+    # 控制台输出
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+
+```
+
+`dept.sql`
+
+```mysql
+CREATE TABLE IF NOT EXISTS `dept`(
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY COMMENT '部门编号',
+    name VARCHAR(32) NOT NULL UNIQUE COMMENT '部门名称',
+    create_time DATETIME DEFAULT NULL COMMENT '创建时间',
+    update_time DATETIME DEFAULT NULL COMMENT '修改时间'
+) COMMENT '部门表';
+
+INSERT INTO `dept`
+VALUES
+(1, '学工部', '2026-04-08 17:00:00', '2026-04-08 17:00:00'),
+(2, '教研部', '2026-04-08 17:00:00', '2026-04-08 17:00:00'),
+(3, '咨询部', '2026-04-08 17:00:00', '2026-04-08 17:00:00'),
+(4, '就业部', '2026-04-08 17:00:00', '2026-04-08 17:00:00'),
+(5, '人事部', '2026-04-08 17:00:00', '2026-04-08 17:00:00'),
+(6, '行政部', '2026-04-08 17:00:00', '2026-04-08 17:00:00');
+```
+
+3. 准备基础代码结构，创建实体类`Dept`以及统一的响应结果封装类`Result`
+
+`Dept.java`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class Dept {
+    private Integer id;
+    private String name;
+    private LocalDateTime createTime;
+    private LocalDateTime updateTime;
+}
+```
+
+`Result.java`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class Result {
+    private Integer code;
+    private String msg;
+    private Object data;
+
+    public static Result success() {
+        return new Result(1, "success", null);
+    }
+
+    public static Result success(Object data) {
+        return new Result(1, "success", data);
+    }
+
+    public static Result error(String msg) {
+        return new Result(0, msg, null);
+    }
+}
+```
+
+`DeptMapper.java`
+
+```java
+package com.eiousee.mapper;
+
+import org.apache.ibatis.annotations.Mapper;
+import org.springframework.stereotype.Repository;
+
+@Mapper
+@Repository
+public interface DeptMapper {
+
+}
+```
+
+`DeptService.java`
+
+```java
+package com.eiousee.service;
+
+public interface DeptService {
+}
+```
+
+`DeptController.java`
+
+```java
+package com.eiousee.controller;
+
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class DeptController {
+}
+```
+
+`DeptServiceImpl.java`
+
+```java
+package com.eiousee.service.impl;
+
+import com.eiousee.service.DeptService;
+import org.springframework.stereotype.Service;
+
+@Service
+public class DeptServiceImpl implements DeptService {
+}
+```
+
+### 部门查询功能
+
+#### 开发要求
+
+1. 由于部门数量较少，不考虑分页展示
+2. 对查询的结果，根据最后修改时间进行倒序排序
+
+#### 实现
+
+1. 首先构建正确的`sql`语句
+
+```mysql
+SELECT id, name, create_time, update_time FROM `dept` ORDER BY update_time DESC;
+```
+
+> ![](javaweb/40.png)
+
+2. 在`Controller`中定义正确的路由，调用`Service`提供的接口，并返回数据
+
+```java
+package com.eiousee.controller;
+
+import com.eiousee.pojo.Dept;
+import com.eiousee.pojo.Result;
+import com.eiousee.service.DeptService;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+@RestController
+public class DeptController {
+
+    private final DeptService deptService;
+
+    public DeptController(DeptService deptService) {
+        this.deptService = deptService;
+    }
+
+    @GetMapping("/depts")
+    public Result list() {
+        System.out.println("查询全部部门数据");
+        List<Dept> depts = deptService.getAllDepts();
+        return Result.success(depts);
+    }
+}
+```
+
+3. 在`Service`中编写`API`调用`Mapper`
+
+```java
+package com.eiousee.service.impl;
+
+import com.eiousee.mapper.DeptMapper;
+import com.eiousee.pojo.Dept;
+import com.eiousee.service.DeptService;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+public class DeptServiceImpl implements DeptService {
+
+    private final DeptMapper deptMapper;
+
+    public DeptServiceImpl(DeptMapper deptMapper) {
+        this.deptMapper = deptMapper;
+    }
+
+    @Override
+    public List<Dept> getAllDepts() {
+        return deptMapper.getAllDepts();
+    }
+}
+```
+
+4. 在`Mapper`中构建正确的`sql`语句，并返回结果
+
+```java
+package com.eiousee.mapper;
+
+import com.eiousee.pojo.Dept;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+
+@Mapper
+@Repository
+public interface DeptMapper {
+    @Select("SELECT id, name, create_time, update_time FROM `dept` ORDER BY update_time DESC")
+    public List<Dept> getAllDepts();
+}
+```
+
+> ![](javaweb/41.png)
+
+#### 结果封装
+
+在上文的截图中可以看到，虽然成功获取了部门数据，但是`createTime`和`updateTime`没有正确封装，这是因为我们在`sql`中定义的字段名是`update_time`，而`Java`中属性名是`updateTime`。为了解决这个问题，`MyBatis`提供了几种解决方案
+
+##### @Results注解
+
+**标准语法**
+
+```java
+@Results({
+            @Result(column = "column_name", property = "attributeName"),
+            @Result(column = "column_name", property = "attributeName")
+    })
+```
+
+**示例**
+
+```java
+@Select("SELECT id, name, create_time, update_time FROM `dept` ORDER BY update_time DESC")
+@Results({
+        @Result(column = "update_time", property = "updateTime"),
+        @Result(column = "create_time", property = "createTime")
+})
+public List<Dept> getAllDepts();
+```
+
+##### 起别名
+
+直接在`sql`语句中为字段起别名，别名与属性名一致
+
+**示例**
+
+```java
+@Select("SELECT id, name, create_time createTime, update_time updateTime FROM `dept` ORDER BY update_time DESC")
+public List<Dept> getAllDepts();
+```
+
+##### 驼峰命名映射
+
+如果开启驼峰命名映射，`MyBatis`会自动将`aa_bb_cc`的命令规范映射为`aaBbCc`
+
+`application.yml`
+
+```yml
+mybatis:
+	configuration:
+		map-underscore-to-camel-case: true
+```
+
+> ![](javaweb/42.png)
+
+### 部门删除功能
+
+#### 开发要求
+
+1. 根据参数`id`删除部门，要求使用`DELETE`请求方式
+
+#### 实现
+
+1. 构建正确的`sql`语句
+
+```mysql
+DELETE FROM `dept` WHERE id = #{id}
+```
+
+2. 实现`Controller`、`Service`、`Mapper`调用链逻辑
+
+`Controller`
+
+```java
+@DeleteMapping("/depts")
+public Result delete(Integer id) {
+    System.out.println("删除部门数据");
+    return deptService.deleteDeptById(id) > 0 ? Result.success() : Result.error("删除失败");
+}
+```
+
+`Service`
+
+```java
+@Override
+public Integer deleteDeptById(Integer id) {
+    return deptMapper.deleteDeptById(id);
+}
+```
+
+`Mapper`
+
+```java
+@Delete("DELETE FROM `dept` WHERE id = #{id}")
+Integer deleteDeptById(Integer id);
+```
+
+> ![](javaweb/43.png)
+
+### 部门添加功能
+
+`Controller`
+
+```java
+@PostMapping("/depts")
+public Result add(@RequestBody Dept dept) {
+    System.out.println("添加部门数据");
+    return deptService.addDept(dept) > 0 ? Result.success() : Result.error("添加失败");
+}
+```
+
+`Service`
+
+```java
+@Override
+public int addDept(Dept dept) {
+    LocalDateTime now = LocalDateTime.now();
+    dept.setCreateTime(now);
+    dept.setUpdateTime(now);
+    return deptMapper.addDept(dept);
+}
+```
+
+`Mapper`
+
+```java
+@Insert("INSERT INTO `dept` (name, create_time, update_time) VALUES (#{name}, #{createTime}, #{updateTime})")
+Integer addDept(Dept dept);
+```
+
+> ![](javaweb/44.png)
+
+### 部门修改功能
+
+#### 路径参数
+
+路径参数是指直接从`URI`中解析的参数，如`/depts/1`中的`1`就是路径参数。在`Spring`中，使用`{paramName}`来标记`URI`中的路径参数，如`/depts/{id}`，然后使用`@PathVariable`注解来标记路径参数解析到的形参位置
+
+#### 修改回显
+
+在点击修改按钮后，前端应再次向服务器的修改回显接口发送请求，根据指定的`id`来查询指定部门信息
+
+`Controller`
+
+```java
+@GetMapping("/depts/{id}")
+public Result getDeptById(@PathVariable Integer id) {
+    System.out.println("根据id查询部门数据");
+    return Result.success(deptService.getDeptById(id));
+}
+```
+
+`Service`
+
+```java
+@Override
+public Dept getDeptById(Integer id) {
+    return deptMapper.getDeptById(id);
+}
+```
+
+`Mapper`
+
+```java
+@Select("SELECT id, name, create_time, update_time FROM `dept` WHERE id = #{id}")
+Dept getDeptById(Integer id);
+```
+
+> ![](javaweb/45.png)
+
+#### 实现
+
+`Controller`
+
+```java
+@PutMapping("/depts")
+public Result update(@RequestBody Dept dept) {
+    System.out.println("更新部门数据");
+    return deptService.updateDept(dept) > 0 ? Result.success() : Result.error("更新失败");
+}
+```
+
+`Service`
+
+```java
+@Override
+public Integer updateDept(Dept dept) {
+    LocalDateTime now = LocalDateTime.now();
+    dept.setUpdateTime(now);
+    return deptMapper.updateDept(dept);
+}
+```
+
+`Mapper`
+
+```java
+@Update("UPDATE `dept` SET name = #{name}, update_time = #{updateTime} WHERE id = #{id}")
+Integer updateDept(Dept dept);
+```
+
+> ![](javaweb/46.png)
+
+*对于`URI`相同的`Mapping`方法，可以直接在类中添加`@RequestMapping("URI")`来指定，通过子注解指定`URI`后缀*
+
+```java
+package com.eiousee.controller;
+
+import com.eiousee.pojo.Dept;
+import com.eiousee.pojo.Result;
+import com.eiousee.service.DeptService;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/depts")
+public class DeptController {
+
+    private final DeptService deptService;
+
+    public DeptController(DeptService deptService) {
+        this.deptService = deptService;
+    }
+
+    @GetMapping
+    public Result list() {
+        System.out.println("查询全部部门数据");
+        List<Dept> depts = deptService.getAllDepts();
+        return Result.success(depts);
+    }
+
+    @DeleteMapping
+    public Result delete(Integer id) {
+        System.out.println("删除部门数据");
+        return deptService.deleteDeptById(id) > 0 ? Result.success() : Result.error("删除失败");
+    }
+
+    @PostMapping
+    public Result add(@RequestBody Dept dept) {
+        System.out.println("添加部门数据");
+        return deptService.addDept(dept) > 0 ? Result.success() : Result.error("添加失败");
+    }
+
+    @GetMapping("/{id}")
+    public Result getDeptById(@PathVariable Integer id) {
+        System.out.println("根据id查询部门数据");
+        return Result.success(deptService.getDeptById(id));
+    }
+
+    @PutMapping
+    public Result update(@RequestBody Dept dept) {
+        System.out.println("更新部门数据");
+        return deptService.updateDept(dept) > 0 ? Result.success() : Result.error("更新失败");
+    }
+}
+```
+
+### LogBack日志技术
+
+在上文的程序中，我们记录程序日志的方式是`sout`控制台消息的方式，这种记录方式存在诸多弊端，如控制台清空后日志也一并清空，无法存储到文件等等。因此，我们需要一个专门的日志记录技术来记录程序的执行的所有操作信息，以便程序的维护与数据安全
+
+#### LogBack快速入门
+
+1. 引入依赖
+
+`pom.xml`
+
+```xml
+<!--        LogBack-->
+<dependency>
+    <groupId>ch.qos.logback</groupId>
+    <artifactId>logback-classic</artifactId>
+</dependency>
+```
+
+*注：`SpringBoot`依赖默认附带`LogBack`，无需再次引入*
+
+2. 编写`LogBack.xml`配置文件
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="debug">
+        <appender-ref ref="STDOUT" />
+    </root>
+</configuration>
+```
+
+3. 定义`LogBack`实例，调用实例方法记录日志
+
+```java
+package com.eiousee;
+
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+public class LogTest {
+
+    private static final Logger log = LoggerFactory.getLogger(LogTest.class);
+
+    @Test
+    public void test1() {
+        log.debug("开始计算");
+
+        Integer sum = 0;
+        Integer[] nums = {1, 2, 3, 4, 5};
+        for (Integer num : nums) {
+            sum += num;
+        }
+
+        log.info("结果为：{}", sum);
+        log.debug("结束计算");
+    }
+}
+```
+
+> ![](javaweb/47.png)
+
+#### 配置文件详解
+
+**日志输出位置**
+
+`LogBack`支持两种日志输出位置，分别是
+
+`控制台`
+
+```xml
+<appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+```
+
+`文件`
+
+```xml
+<appender name="STDOUT" class="ch.qos.logback.core.rolling.RollingFileAppender">
+```
+
+**日志输出格式**
+
+```xml
+<pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n</pattern>
+```
+
+- `%d{}`：输出日期，后方的大括号内是日期的表示格式
+- `%thread`：线程名
+- `%-5level`：`%level`表示输出级别，`%-5`表示补齐到5个字符
+- `%logger{}`：`Logger`实例的名称，`{50}`表示最大50字符
+
+**文件设置**
+
+```xml
+<!--    文件输出-->
+<appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+    <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+<!--            日志输出文件名-->
+        <fileNamePattern>log/wp-%d{yyyy-MM-dd}-%i.log</fileNamePattern>
+<!--            最多保留的日志文件数量-->
+        <maxHistory>30</maxHistory>
+<!--            最大日志文件大小-->
+        <maxFileSize>10MB</maxFileSize>
+    </rollingPolicy>
+    <encoder>
+        <pattern>%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{50} - %msg%n</pattern>
+    </encoder>
+</appender>
+```
+
+**日志输出级别**
+
+日志级别指的是日志信息的类型，日志都会分级别，常见的日志级别如下
+
+| 日志级别 | 说明                                                         | 记录方式      |
+| -------- | ------------------------------------------------------------ | ------------- |
+| `TRACE`  | 追踪，记录程序运行轨迹                                       | `log.trace()` |
+| `DEBUG`  | 调试，记录程序中的信息，实际应用中一般将其视为最低级别       | `log.debug()` |
+| `INFO`   | 记录一般信息，描述程序运行的关键事件，如网络连接、`IO`操作等等 | `log.info()`  |
+| `WARN`   | 警告信息，记录潜在有害的情况                                 | `log.warn()`  |
+| `ERROR`  | 错误信息                                                     | `log.error()` |
+
+在`LogBack`中，通过`<root>`标签来设置日志输出级别，`<root>`大小写不敏感
+
+```xml
+<!--    日志输出级别-->
+<root level="DEBUG">
+    <appender-ref ref="STDOUT" />
+    <appender-ref ref="FILE" />
+</root>
+```
+
+*注：设置为`OFF`可以关闭所有日志*
+
+#### @Slf4j
+
+可以为类设置`@Slf4j`注解来代替`Logger`实例的创建语句
+
+```java
+@Slf4j
+public class Test{}
+```
+
+### 员工查询功能
+
+#### 数据表设计
+
+为了添加员工查询功能，我们需要自行设计几张有关员工信息的数据表，表中包括`姓名`、`性别`、`头像`、`所属部门`、`职位`、`入职日期`、`最后操作时间`，以及员工的工作经历表，表中包括`公司名`、`入职时间`、`离职时间`、`职位`等
+
+根据需求分析，我们至少需要`员工信息表`、`员工工作经历表`、`职位表`
+
+`emp_info.sql`
+
+```mysql
+CREATE TABLE IF NOT EXISTS `emp_info` (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '员工编号',
+    name VARCHAR(255) NOT NULL COMMENT '员工姓名',
+    birth DATE COMMENT '员工出生日期',
+    sex ENUM('male', 'female') COMMENT '员工性别',
+    avatar BLOB COMMENT '员工头像',
+    dept_id INT COMMENT '员工部门编号',
+    job_id INT COMMENT '员工职位编号',
+    board_date DATE COMMENT '入职日期',
+    update_time DATETIME COMMENT '更新时间'
+) COMMENT '员工信息表';
+```
+
+`job.sql`
+
+```mysql
+CREATE TABLE IF NOT EXISTS `job` (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '职位编号',
+    title VARCHAR(255) NOT NULL COMMENT '职位名称'
+) COMMENT '职位表';
+```
+
+`emp_exp.sql`
+
+```mysql
+CREATE TABLE IF NOT EXISTS `emp_exp` (
+    id INT COMMENT '员工编号',
+    start_time DATE COMMENT '开始时间',
+    end_time DATE COMMENT '结束时间',
+    company VARCHAR(255) COMMENT '公司名称',
+    job VARCHAR(255) COMMENT '职位名称',
+    PRIMARY KEY (id, start_time),
+    CONSTRAINT chk_date_order CHECK (end_time > start_time)
+) COMMENT '员工工作经历表';
+```
+
+#### 框架准备
+
+准备需要的实体类`Employee`、`EmpExp`，以及相关的`Controller`、`Service`和`Mapper`
+
+`Employee.java`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class Employee {
+    private Integer id;
+    private String name;
+    private LocalDate birth;
+    private String sex;
+    private String avatarPath;
+    private String deptName;
+    private String jobName;
+    private LocalDate boardDate;
+    private LocalDateTime updateTime;
+}
+```
+
+`EmpExp.java`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class EmpExp {
+    private Integer id;
+    private LocalDate startTime;
+    private LocalDate endTime;
+    private String company;
+    private String job;
+}
+```
+
+`EmpController.java`
+
+```java
+package com.eiousee.controller;
+
+import com.eiousee.service.EmpService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@Slf4j
+@RestController
+@RequestMapping("/emp")
+public class EmpController {
+
+    private final EmpService empService;
+
+    public EmpController(EmpService empService) {
+        this.empService = empService;
+    }
+}
+```
+
+`EmpMapper.java`
+
+```java
+package com.eiousee.mapper;
+
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface EmpMapper {
+}
+```
+
+`EmpService.java`
+
+```java
+package com.eiousee.service;
+
+import org.springframework.stereotype.Service;
+
+public interface EmpService {
+}
+```
+
+`EmpServiceImpl.java`
+
+```java
+package com.eiousee.service.impl;
+
+import com.eiousee.mapper.EmpMapper;
+import com.eiousee.service.EmpService;
+
+@Service
+public class EmpServiceImpl implements EmpService {
+
+    private final EmpMapper empMapper;
+
+    public EmpServiceImpl(EmpMapper empMapper) {
+        this.empMapper = empMapper;
+    }
+}
+```
+
+#### 分页查询
+
+因为员工的数量较多，因此我们需要制定分页查询的逻辑，由前端决定每页展示的行数，然后传递给后端，后端构建相应的`sql`语句，并返回对应结果
+
+```mysql
+SELECT
+    e.id AS id,
+    e.name AS name,
+    birth, sex,
+    avatar_path,
+    d.name AS dept_name,
+    j.title AS job_name,
+    board_date,
+    e.update_time AS update_time
+FROM emp_info AS e
+    LEFT JOIN dept AS d
+        ON e.dept_id = d.id
+    LEFT JOIN job AS j
+        ON e.job_id = j.id
+LIMIT
+    #{offset}, #{step}
+```
+
+并且构建专门用于获取查询数量的`sql`语句
+
+```mysql
+SELECT
+    COUNT(*)
+FROM emp_info AS e
+    LEFT JOIN dept AS d
+        ON e.dept_id = d.id
+    LEFT JOIN job AS j
+        ON e.job_id = j.id
+```
+
+在编写正式逻辑之前，我们还需要一个`pageResult`来存储对应的数据实体
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class PageResult<T> {
+    private Long total;
+    private List<T> rows;
+}
+```
+
+然后我们编写对应的`Controller`、`Service`和`Mapper`
+
+`Controller`
+
+这里需要注意，`page`和`pageSize`需要拥有默认值，因此使用`@RequestParam`注解的`defaultValue`属性来设定默认值
+
+```java
+@GetMapping
+public Result getEmpList(
+        String name,
+        String sex,
+        String begin,
+        String end,
+        @RequestParam(defaultValue = "1") Integer page,
+        @RequestParam(defaultValue = "10") Integer pageSize
+) {
+    log.info("查询员工列表，参数：name={},sex={},begin={},end={},page={},pageSize={}", name, sex, begin, end, page, pageSize);
+    return Result.success(empService.getEmpList(name, sex, begin, end, page, pageSize));
+}
+```
+
+`Service`
+
+在`Service`中，我们不能直接将`page`传递给`Mapper`，因为`LIMIT`的第一个参数是截取的偏移位置，因此需要先计算每页的偏移位置，然后再一同交给`Mapper`
+
+```java
+@Override
+public PageResult<Employee> getEmpList(String name, String sex, String begin, String end, Integer page, Integer pageSize) {
+    Integer offset = (page - 1) * pageSize;
+    List<Employee> empList = empMapper.getEmpList(name, sex, begin, end, offset, pageSize);
+    Long total = empMapper.getEmpListTotal(name, sex, begin, end);
+    return new PageResult<>(total, empList);
+}
+```
+
+`Mapper`
+
+`Mapper`中需要定义查询内容和查询数量两个查询方法，以便封装`pageResult`实例
+
+```java
+@Select("""
+        SELECT
+            e.id AS id,
+            e.name AS name,
+            birth, sex,
+            avatar_path,
+            d.name AS dept_name,
+            j.title AS job_name,
+            board_date,
+            e.update_time AS update_time
+        FROM emp_info AS e
+            LEFT JOIN dept AS d
+                ON e.dept_id = d.id
+            LEFT JOIN job AS j
+                ON e.job_id = j.id
+        ORDER BY
+            e.id
+        LIMIT
+            #{offset}, #{step}
+        """)
+List<Employee> getEmpList(String name, String sex, String begin, String end, Integer offset, Integer step);
+
+@Select("""
+        SELECT
+            COUNT(*)
+        FROM emp_info AS e
+            LEFT JOIN dept AS d
+                ON e.dept_id = d.id
+            LEFT JOIN job AS j
+                ON e.job_id = j.id
+        """)
+Long getEmpListTotal(String name, String sex, String begin, String end);
+```
+
+> ![](javaweb/48.png)
+
+#### PageHelper分页查询
+
+`PageHelper`是第三方提供的用于`MyBatis`框架中实现分页的插件，用于简化分页操作，提高开发效率
+
+1. 引入依赖
+
+`pom.xml`
+
+```xml
+<!--        pageHelper-->
+<dependency>
+    <groupId>com.github.pagehelper</groupId>
+    <artifactId>pagehelper-spring-boot-starter</artifactId>
+    <version>1.4.6</version>
+</dependency>
+```
+
+2. 在`Mapper`中定义查询方法
+
+```java
+@Select("""
+        SELECT
+            e.id AS id,
+            e.name AS name,
+            birth, sex,
+            avatar_path,
+            d.name AS dept_name,
+            j.title AS job_name,
+            board_date,
+            e.update_time AS update_time
+        FROM emp_info AS e
+            LEFT JOIN dept AS d
+                ON e.dept_id = d.id
+            LEFT JOIN job AS j
+                ON e.job_id = j.id
+        ORDER BY
+            e.id
+        """)
+List<Employee> getEmpList(String name, String sex, String begin, String end);
+```
+
+3. 在`Service`中定义分页查询逻辑
+
+```java
+@Override
+public PageResult<Employee> getEmpList(String name, String sex, String begin, String end, Integer page, Integer pageSize) {
+    // 开启分页
+    PageHelper.startPage(page, pageSize);
+    // 获取分页结果实例
+    List<Employee> empList = empMapper.getEmpList(name, sex, begin, end);
+    PageInfo<Employee> empPage = new PageInfo<>(empList);
+    // 封装分页结果
+    return new PageResult<>(empPage.getTotal(), empPage.getList());
+}
+```
+
+*注：使用`PageHelper`的`sql`语句中不能添加`;`，因为`PageHelper`会直接在原有的`sql`后面添加`LIMIT`，如果有分号，则会导致`sql`语法错误。`PageHelper`的作用域仅有一条查询语句，如果在`PageHelper.startPage()`方法后跟了多条查询语句，仅有第一条查询语句会生效*
+
+#### 条件分页查询
+
+上文我们实现了分页查询的逻辑，但是接口文档中可以看出，页面原型需要的是条件分页查询逻辑，因此我们需要添加条件查询的逻辑
+
+首先，我们对查询参数进行优化，定义查询实体类封装查询参数
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.time.LocalDate;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class EmpQueryParam {
+    private String name;
+    private String sex;
+    @DateTimeFormat(pattern = "yyyy-M-d")
+    private LocalDate begin;
+    @DateTimeFormat(pattern = "yyyy-M-d")
+    private LocalDate end;
+    private Integer page = 1;
+    private Integer pageSize = 10;
+}
+```
+
+然后同步更新`Controller`、`Service`、`Mapper`
+
+`Controller`
+
+```java
+@GetMapping
+public Result getEmpList(EmpQueryParam params) {
+    log.info("查询员工列表，参数：{}", params);
+    return Result.success(empService.getEmpList(params));
+}
+```
+
+`Service`
+
+```java
+@Override
+public PageResult<Employee> getEmpList(EmpQueryParam params) {
+    Page<Employee> page = PageHelper.startPage(params.getPage(), params.getPageSize());
+    List<Employee> list = empMapper.getEmpList(params);
+    return new PageResult<>(page.getTotal(), page.getResult());
+}
+```
+
+`Mapper`
+
+```java
+List<Employee> getEmpList(EmpQueryParam params);
+```
+
+而`sql`语句的构建我们也转为使用`Mapper.xml`来构建复杂`sql`语句，以及定义动态`sql`
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.eiousee.mapper.EmpMapper">
+<!--    员工列表条件查询-->
+    <select id="getEmpList" resultType="com.eiousee.pojo.Employee">
+    </select>
+</mapper>
+```
+
+接着，跟据查询条件，使用`<if>`标签来构建动态`sql`，当用户指定了某个条件，再将条件插入到`sql`语句中
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.eiousee.mapper.EmpMapper">
+<!--    员工列表条件查询-->
+    <select id="getEmpList" resultType="com.eiousee.pojo.Employee">
+            SELECT
+                e.id AS id,
+                e.name AS name,
+                birth, sex,
+                avatar_path,
+                d.name AS dept_name,
+                j.title AS job_name,
+                board_date,
+                e.update_time AS update_time
+            FROM emp_info AS e
+                LEFT JOIN dept AS d
+                    ON e.dept_id = d.id
+                LEFT JOIN job AS j
+                    ON e.job_id = j.id
+            WHERE
+                1=1
+                <if test="name != null and name != ''">
+                    AND e.name LIKE CONCAT('%', #{name}, '%')
+                </if>
+                <if test="sex != null and sex != ''">
+                    AND e.sex = #{sex}
+                </if>
+                <if test="begin != null">
+                    AND e.board_date &gt;= #{begin}
+                </if>
+                <if test="end != null">
+                    AND e.board_date &lt;= #{end}
+                </if>
+    </select>
+</mapper>
+```
+
+> ![](javaweb/49.png)
+
+这里的`WHERE`约束其实同样可以进行优化，使用`MyBatis`的`<where>`标签，就不需要第一行的`1=1`，`MyBatis`会自动决定是否需要`AND`，但是绝对不能去除`AND`，每个约束条件必须包含一个`AND`
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.eiousee.mapper.EmpMapper">
+<!--    员工列表条件查询-->
+    <select id="getEmpList" resultType="com.eiousee.pojo.Employee">
+            SELECT
+                e.id AS id,
+                e.name AS name,
+                birth, sex,
+                avatar_path,
+                d.name AS dept_name,
+                j.title AS job_name,
+                board_date,
+                e.update_time AS update_time
+            FROM emp_info AS e
+                LEFT JOIN dept AS d
+                    ON e.dept_id = d.id
+                LEFT JOIN job AS j
+                    ON e.job_id = j.id
+            <where>
+                <if test="name != null and name != ''">
+                    AND e.name LIKE CONCAT('%', #{name}, '%')
+                </if>
+                <if test="sex != null and sex != ''">
+                    AND e.sex = #{sex}
+                </if>
+                <if test="begin != null">
+                    AND e.board_date &gt;= #{begin}
+                </if>
+                <if test="end != null">
+                    AND e.board_date &lt;= #{end}
+                </if>
+            </where>
+    </select>
+</mapper>
+```
+
+### 新增员工功能
+
+现在来添加新增员工功能，用户通过`POST`请求，访问`/emps`接口来发送一个新增员工的请求。新增员工时允许添加员工曾经的工作经历，因此需要在`Employee`实体类中新增字段`List<EmpExp> empExpList`，并新增实体类`EmpExp`存储每条员工经历数据
+
+`Employee`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class Employee {
+    private Integer id;
+    private String name;
+    private LocalDate birth;
+    private String sex;
+    private String avatarPath;
+    private String deptName;
+    private String jobName;
+    private LocalDate boardDate;
+    private LocalDateTime updateTime;
+    // 工作经历
+    private List<EmpExp> empExpList;
+}
+```
+
+`EmpExp`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class EmpExp {
+    private Integer id;
+    private LocalDate startTime;
+    private LocalDate endTime;
+    private String company;
+    private String job;
+}
+```
+
+然后再完善相关结构
+
+`Controller`
+
+```java
+@PostMapping
+public Result addEmp(@RequestBody Employee employee) {
+    log.info("添加员工，参数：{}", employee);
+    return empService.addEmp(employee) > 0 ? Result.success() : Result.error("添加失败");
+}
+```
+
+`Service`
+
+```java
+@Override
+public Integer addEmp(Employee employee) {
+    
+}
+```
+
+`Mapper`
+
+```java
+Integer addEmp();
+```
+
+然后来考虑如何实现添加逻辑，数据从前端提交到后端后，`Spring`自动封装为先前定义好的`Employee`实体，然后通过后端将实体插入数据库中。但是这里需要注意，数据库中的每个员工记录存储的是部门id和职位id，而实体类中存储的是对应的部门名称和职位名称。因此需要先在数据库中查询出对应的部门id和职位id
+
+`Service`
+
+```java
+@Override
+public Integer addEmp(Employee employee) {
+    // 获取当前时间
+    employee.setUpdateTime(LocalDateTime.now());
+    // 获取员工部门id、职位id
+    Integer deptId = deptService.getDeptIdByName(employee.getDeptName());
+    Integer jobId = jobService.getJobIdByName(employee.getJobName());
+}
+```
+
+由于需要获取部门`id`和职位`id`，而部门和职位应属于不同的`Service`，因此在`EmpService`中注入对应的`Bean`
+
+```java
+private final EmpMapper empMapper;
+private final EmpExpMapper empExpMapper;
+private final DeptService deptService;
+private final JobService jobService;
+
+public EmpServiceImpl(EmpMapper empMapper, EmpExpMapper empExpMapper, DeptService deptService, JobService jobService) {
+    this.empMapper = empMapper;
+    this.empExpMapper = empExpMapper;
+    this.deptService = deptService;
+    this.jobService = jobService;
+}
+```
+
+然后实现对应逻辑
+
+`deptServiceImpl.java`
+
+```java
+@Override
+public Integer getDeptIdByName(String deptName) {
+    return deptMapper.getDeptIdByName(deptName);
+}
+```
+
+`DeptMapper.java`
+
+```java
+@Select("SELECT id FROM `dept` WHERE name = #{name}")
+Integer getDeptIdByName(String name);
+```
+
+`JobServiceImpl.java`
+
+```java
+@Override
+public Integer getJobIdByName(String jobName) {
+    return jobMapper.getJobIdByName(jobName);
+}
+```
+
+`JobMapper.java`
+
+```java
+@Select("SELECT id FROM `job` WHERE title = #{name}")
+Integer getJobIdByName(String name);
+```
+
+然后完善员工工作经历的插入逻辑，首先需要确保员工信息符合规定
+
+`Service`
+
+```java
+// 检查员工信息是否符合规定
+if (employee.getName().isEmpty() || employee.getBirth() == null) return 0;
+
+// 检查员工工作经历是否符合规定
+if (employee.getEmpExpList() != null && !employee.getEmpExpList().isEmpty()) {
+    for (EmpExp empExp : employee.getEmpExpList()) {
+        if (empExp.getStartTime().isAfter(empExp.getEndTime())) {
+            return 0;
+        }
+    }
+}
+```
+
+确认信息无误后，再先将员工插入`emp_info`表，并获取员工的`id`，将`id`添加到每段工作经历中，最后插入`emp_exp`表
+
+`Service`
+
+```java
+// 添加员工到emp_info表
+if (empMapper.addEmp(employee, deptId, jobId) > 0) {
+    if (employee.getEmpExpList() == null || employee.getEmpExpList().isEmpty()) {
+        return 1;
+    }
+    // 获取新增员工id，并添加到员工工作经历中
+    Integer id = empMapper.getEmpIdByNameBirthSex(employee.getName(), employee.getBirth(), employee.getSex());
+    for (EmpExp empExp : employee.getEmpExpList()) {
+        empExp.setId(id);
+    }
+    // 添加员工工作经历到emp_exp表
+    return empExpMapper.addEmpExp(employee.getEmpExpList());
+} else return 0;
+```
+
+完善`EmpExpMapper`，创建`xml`映射文件，然后在`xml`中使用`<foreach>`标签构建循环动态`sql`，遍历`List<EmpExp> empExpList`数组中的所有员工信息，然后插入到表中
+
+`EmpExpMapper.java`
+
+```java
+package com.eiousee.mapper;
+
+import com.eiousee.pojo.EmpExp;
+import org.apache.ibatis.annotations.Insert;
+import org.apache.ibatis.annotations.Mapper;
+
+import java.util.List;
+
+@Mapper
+public interface EmpExpMapper {
+    Integer addEmpExp(List<EmpExp> empExpList);
+}
+```
+
+`EmpExpMapper.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.eiousee.mapper.EmpExpMapper">
+<!--    插入员工工作经历-->
+    <insert id="addEmpExp">
+        INSERT INTO emp_exp(id, start_time, end_time, company, job) VALUES
+        <foreach collection="empExpList" item="empExp" separator=",">
+            (#{empExp.id}, #{empExp.startTime}, #{empExp.endTime}, #{empExp.company}, #{empExp.job})
+        </foreach>
+    </insert>
+</mapper>
+```
+
+最后，别忘了补充`empMapper`的两个方法
+
+`EmpMapper.java`
+
+```java
+@Insert("""
+        INSERT INTO emp_info (name, birth, sex, avatar_path, dept_id, job_id, board_date, update_time)
+            VALUES (#{employee.name}, #{employee.birth}, #{employee.sex}, #{employee.avatarPath}, #{deptId}, #{jobId}, #{employee.boardDate}, #{employee.updateTime});
+        """)
+Integer addEmp(Employee employee, Integer deptId, Integer jobId);
+
+@Select("select id from emp_info where name = #{name} and birth = #{birth} and sex = #{sex} limit 1")
+Integer getEmpIdByNameBirthSex(String name, LocalDate birth, String sex);
+```
+
+> ![](javaweb/50.png)
+
+> ![](javaweb/51.png)
+
+> ![](javaweb/52.png)
+
+#### \<foreach\>标签
+
+上文的循环动态`sql`语句我们使用了`<foreach>`标签，现在来简要介绍一下
+
+```xml
+<foreach collection="" item="" separator="" open="" close="">
+	sql
+</foreach>
+```
+
+- `collection`：需要遍历的数组、列表等容器
+- `item`：遍历出的每一个元素
+- `separator`：每个遍历之间的分隔符
+- `open`：遍历开始前拼接的内容
+- `close`：遍历结束后拼接的字符
+
+#### 主键返回
+
+`MyBatis`提供了主键返回的功能，可以在数据插入数据库时，自动返回刚刚插入数据的主键，在我们的项目中，即是在插入员工数据时，自动返回员工 `id`。在需要返回主键的方法上添加`@Options`注解，设置注解值`useGeneratedKeys`为`true`，并设置主键字段`keyColumn = "id"`，以及存储的实例属性`keyProperty = "id"`。但是需要注意，`MyBatis`在解析多个参数时不会保留参数名，如果不设置`@Param("employee")`注解，则`keyProperty`应该设置为`keyProperty= "param1.id"`
+
+```java
+@Options(useGeneratedKeys = true, keyColumn = "id", keyProperty = "employee.id")
+@Insert("""
+        INSERT INTO emp_info (name, birth, sex, avatar_path, dept_id, job_id, board_date, update_time)
+            VALUES (#{employee.name}, #{employee.birth}, #{employee.sex}, #{employee.avatarPath}, #{deptId}, #{jobId}, #{employee.boardDate}, #{employee.updateTime});
+        """)
+Integer addEmp(@Param("employee") Employee employee, Integer deptId, Integer jobId);
+```
+
+然后修改`Service`中的相关代码，不再需要专门的`getEmpIdByNameBirthSex`方法
+
+```java
+// 添加员工到emp_info表
+if (empMapper.addEmp(employee, deptId, jobId) > 0) {
+    if (employee.getEmpExpList() == null || employee.getEmpExpList().isEmpty()) {
+        return 1;
+    }
+
+    // 获取新增员工id，并添加到员工工作经历中
+    Integer id = employee.getId();
+    for (EmpExp empExp : employee.getEmpExpList()) {
+        empExp.setId(id);
+    }
+    // 添加员工工作经历到emp_exp表
+    return empExpMapper.addEmpExp(employee.getEmpExpList());
+} else return 0;
+```
+
+> ![](javaweb/53.png)
+
+从图片中可以看出，后端连续执行了两条`INSERT`语句，中间并没有穿插`SELECT`查询员工`id`
+
+#### 事务管理
+
+在上文的代码中，我们在插入员工信息前执行了一次检查用户工作经历是否符合规定的操作
+
+```java
+// 检查员工工作经历是否符合规定
+if (employee.getEmpExpList() != null && !employee.getEmpExpList().isEmpty()) {
+    for (EmpExp empExp : employee.getEmpExpList()) {
+        if (empExp.getStartTime().isAfter(empExp.getEndTime())) {
+            return 0;
+        }
+    }
+}
+```
+
+这其实是为了避免已经在`emp_info`表中插入数据的情况下，`emp_exp`表无法插入信息，从而导致数据库信息不完整的问题
+
+```java
+// 添加员工到emp_info表
+if (empMapper.addEmp(employee, deptId, jobId) > 0) {
+    if (employee.getEmpExpList() == null || employee.getEmpExpList().isEmpty()) {
+        return 1;
+    }
+
+    // 获取新增员工id，并添加到员工工作经历中
+    Integer id = employee.getId();
+    for (EmpExp empExp : employee.getEmpExpList()) {
+        empExp.setId(id);
+    }
+    // 添加员工工作经历到emp_exp表
+    return empExpMapper.addEmpExp(employee.getEmpExpList());
+} else return 0;
+```
+
+在这段代码中，如果没有先前的检查，`empMapper.addEmp(employee, deptId, jobId)`执行成功，接着执行`empExpMapper.addEmpExp(employee.getEmpExpList())`，如果员工工作经历中存在异常数据，导致数据库`CHECK`约束警告，从而返回0。在前端看来，这是一次插入失败，但是`emp_info`中却又成功插入了数据
+
+##### 概念
+
+事务是一组操作的集合，它时一个不可分割的工作单位。事务会把所有的操作作为一个整体一起向系统提交或撤销操作请求，即这些操作要么同时成功，要么同时失败。而上文的员工插入操作中，员工信息插入与员工工作插入操作就属于同一个事务
+
+##### 事务控制
+
+在`MySQL`中，事务控制分为三个步骤
+
+1. 开启事务`START TRANSACTION;`或者`BEGIN;`
+
+2. 执行操作
+
+3. 提交事务`COMMIT;`或回滚事务`ROLLBACK;`
+
+##### Spring事务管理
+
+事务管理在项目中非常常见，因此`Spring`提供了专门用于事务管理的模块
+
+**@Transactional**
+
+事务注解，执行前会开启事务，执行成功则提交，出现异常则回滚。注解位置可以在`Service`层的方法、类、接口上，但一般只用于方法注解
+
+```java
+@Transactional
+public void method() {
+    methodBody;
+}
+```
+
+同时可以开启相关的日志
+
+`application.yml`
+
+```yml
+logging:
+  level:
+    # 事务管理日志级别
+    org.springframework.jdbc.support.JdbcTransactionManager: debug
+```
+
+有了事务控制，就不需要在代码中检测用户信息格式了
+
+**rollbackFor属性**
+
+`rollbackFor`属性是`@Transactional`注解的一个属性，能够设置触发事务回滚所需的异常级别，默认为`RuntimeException`
+
+```java
+@Transactional(rollbackFor = {Exception.class})
+```
+
+将回滚所需的异常级别设置为最低的`Exception`，任何异常都会导致回滚
+
+**propagation属性**
+
+`propagation`属性用于控制事务传播行为，指当一个事务方法被另一个事务方法调用时，这个事务方法应该如何进行事务控制。`propagation`的取值依赖于`Propagation`枚举类的值
+
+| 属性值          | 含义                                                         |
+| --------------- | ------------------------------------------------------------ |
+| `REQUIRED`      | 默认值，需要事务，如果当前有事务，则加入该事务，如果没有，则创建一个新事务 |
+| `REQUIRED_NEW`  | 需要新事务，无论当前是否有事务，总是创建新事务               |
+| `SUPPORTS`      | 支持事务，如果有事务，则加入事务中，没有则在无事务状态运行   |
+| `NOT_SUPPORTED` | 不支持事务，如果当前存在事务，则挂起该事务                   |
+| `MANDATORY`     | 必须存在事务，否则抛出异常                                   |
+| `NEVER`         | 不允许存在事务，否则抛出异常                                 |
+
+**举例**
+
+假设我们需要每次员工插入后都记录一个员工插入的日志，并将该日志插入数据库中
+
+```java
+@Transactional
+public void insertEmp() {
+    // 插入员工信息
+    empMapper.insertEmp();
+    
+    // 插入员工工作经历
+    empExpService.insertEmpExp();
+    
+    // 记录日志
+    empLogService.insertEmpLog();
+}
+```
+
+在上文的代码中，三个方法属于同一个事务，当`insertEmp()`或者`insertEmpExp()`任意一个方法执行失败，`insertEmpLog()`都不会执行，因此需要专门设置`insertEmpLog()`的`propagation`属性
+
+```java
+@Transactional(propagation = Propagation.REQUIRED_NEW)
+public void insertEmpLog() {
+    methodBody;
+}
+```
+
+让`insertEmpLog()`方法独立为一个事务，每次执行时，先挂起先前的员工信息插入事务，然后执行日志记录事务，执行完毕后再返回员工信息插入事务
+
+##### 事务的四大特性
+
+**原子性**
+
+事务是不可分割的最小单元，要么全部成功，要么全部失败
+
+**一致性**
+
+事务完成时，必须使所有的数据都保持一致状态
+
+**隔离性**
+
+数据库系统提供的隔离机制，保证事务在不受外部并发操作影响的独立环境下运行
+
+**持久性**
+
+事务一旦提交或回滚，它对数据库中的数据的改变就是永久的
+
+#### 头像上传
+
+在`Spring`中，使用`MultipartFile`类型来接受用户上传的文件
+
+```java
+@PostMapping
+public void upload(MultipartFile file) {
+	mehtodBody;
+}
+```
+
+**示例**
+
+`upload.html`
+
+```html
+<!DOCTYPE html>
+<html lang="zh-cn">
+<head>
+    <meta charset="UTF-8">
+    <title>文件上传</title>
+</head>
+<body>
+    <form action="/upload" method="post" enctype="multipart/form-data">
+        姓名：<input type="text" name="name"><br>
+        年龄：<input type="text" name="age"><br>
+        头像：<input type="file" name="file"><br>
+        <input type="submit" value="上传">
+    </form>
+</body>
+</html>
+```
+
+`UploadController.java`
+
+```java
+package com.eiousee.controller;
+
+import com.eiousee.pojo.Result;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+@Slf4j
+@RestController
+@RequestMapping("/upload")
+public class UploadController {
+    @PostMapping
+    public Result upload(String name, Integer age, MultipartFile file) {
+        log.info("上传文件，参数：name={}, age={}, file={}", name, age, file);
+
+        return Result.success();
+    }
+}
+```
+
+在16行断点，然后上传文件
+
+> ![](javaweb/54.png)
+
+可以看到，后端成功接收了图片文件，文件名为`eiousee.png`
+
+##### 本地存储
+
+所有上传的文件在`Tomcat`服务器中都是临时文件，所以必须要编写对应的保存文件的逻辑。`Spring`提供了`transferTo`方法来快捷转存文件，接收一个`File`类型的参数，原始文件名可以用`MultipartFile`实例中的`getOriginalFilename`方法获取
+
+```java
+package com.eiousee.controller;
+
+import com.eiousee.pojo.Result;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.File;
+import java.io.IOException;
+
+@Slf4j
+@RestController
+@RequestMapping("/upload")
+public class UploadController {
+    @PostMapping
+    public Result upload(String name, Integer age, MultipartFile file) throws IOException {
+        log.info("上传文件，参数：name={}, age={}, file={}", name, age, file);
+
+        String fileName = file.getOriginalFilename();
+        file.transferTo(new File("D:\\JetBrains_Files\\Java_Files\\webProject\\src\\main\\resources\\uploads\\" + fileName));
+
+        return Result.success();
+    }
+}
+```
+
+> ![](javaweb/55.png)
+
+**文件名去重**
+
+不同的用户可能会上传相同文件名的文件，如果直接使用源文件名来保存临时文件，很可能会导致文件名重复而被占用的问题，因此需要使用一些随机的字符串拼接在源文件名中来保证文件名不会重复。这里我是用`UUID`
+
+```java
+package com.eiousee.controller;
+
+import com.eiousee.pojo.Result;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.UUID;
+
+@Slf4j
+@RestController
+@RequestMapping("/upload")
+public class UploadController {
+    @PostMapping
+    public Result upload(String name, Integer age, MultipartFile file) throws IOException {
+        log.info("上传文件，参数：name={}, age={}, file={}", name, age, file);
+
+        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        file.transferTo(new File("D:\\JetBrains_Files\\Java_Files\\webProject\\src\\main\\resources\\uploads\\" + fileName));
+
+        return Result.success();
+    }
+}
+```
+
+> ![](javaweb/56.png)
+
+**文件大小限制**
+
+`Spring`默认限制了文件大小为`1MiB`，但是如果需要上传一些视频、音频等文件，文件大小很显然不够用。因此需要在`application.yml`中设定最大文件大小
+
+```yml
+spring:
+    servlet:
+      # 文件上传大小限制
+      multipart:
+      	# 单个文件大小限制
+        max-file-size: 10MB
+		# 请求表单大小限制
+        max-request-size: 100MB
+```
+
+##### OSS
+
+`OSS`全称`Object Storage Service`，中文名对象存储服务。是指使用`HTTP API`提供存储和检索非结构化数据和元数据的服务。这里我们使用阿里云`OSS`服务
+
+1. 开通阿里云`OSS`服务
+
+> ![](javaweb/57.png)
+
+2. 配置`AccessKey`
+
+> ![](javaweb/58.png)
+
+3. 在计算机中设置对应的环境变量
+
+```cmd
+# 设置OSS AccessKey
+set OSS_ACCESS_KEY_ID=xxxxxxxxxxxxxxxxxxxxxxx
+set OSS_ACCESS_KEY_SECRET=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# 生效
+setx OSS_ACCESS_KEY_ID "%OSS_ACCESS_KEY_ID%"
+setx OSS_ACCESS_KEY_SECRET "%OSS_ACCESS_KEY_SECRET%"
+
+# 验证是否生效
+echo %OSS_ACCESS_KEY_ID%
+echo %OSS_ACCESS_KEY_SECRET%
+```
+
+4. 在`pom.xml`中引入依赖
+
+```xml
+<!--        阿里云OSS-->
+<dependency>
+    <groupId>com.aliyun</groupId>
+    <artifactId>alibabacloud-oss-v2</artifactId>
+    <version>0.3.2</version>
+</dependency>
+```
+
+5. 依据官方文档构建阿里云`OSS`工具类
+
+```java
+package com.eiousee.utils;
+
+import com.aliyun.sdk.service.oss2.OSSClient;
+import com.aliyun.sdk.service.oss2.OSSClientBuilder;
+import com.aliyun.sdk.service.oss2.credentials.CredentialsProvider;
+import com.aliyun.sdk.service.oss2.credentials.EnvironmentVariableCredentialsProvider;
+import com.aliyun.sdk.service.oss2.models.*;
+import com.aliyun.sdk.service.oss2.transport.BinaryData;
+
+public class AliyunOSS2Operator {
+    public static String putObject(String fileName, byte[] data) {
+        String region = "cn-beijing";
+        String bucket = "eiousee-java-web";
+
+        CredentialsProvider provider = new EnvironmentVariableCredentialsProvider();
+        OSSClientBuilder clientBuilder = OSSClient.newBuilder()
+                .credentialsProvider(provider)
+                .region(region);
+
+        try (OSSClient client = clientBuilder.build()) {
+            PutObjectResult result = client.putObject(PutObjectRequest.newBuilder()
+                            .bucket(bucket)
+                            .key(fileName)
+                            .body(BinaryData.fromBytes(data))
+                    .build());
+
+            System.out.printf("status code:%d, request id:%s, eTag:%s\n",
+                    result.statusCode(), result.requestId(), result.eTag());
+
+        } catch (Exception e) {
+            System.out.printf("error:\n%s", e);
+            return null;
+        }
+        return "https://" + bucket + ".oss-cn-beijing.aliyuncs.com/" + fileName;
+    }
+}
+```
+
+6. 然后完善`UploadController`
+
+```java
+package com.eiousee.controller;
+
+import com.eiousee.pojo.Result;
+import com.eiousee.service.UploadService;
+import com.eiousee.utils.AliyunOSS2Operator;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.UUID;
+
+@Slf4j
+@RestController
+@RequestMapping("/upload")
+public class UploadController {
+
+    private final UploadService uploadService;
+
+    public UploadController(UploadService uploadService) {
+        this.uploadService = uploadService;
+    }
+
+    @PostMapping
+    public Result upload(MultipartFile file) {
+        log.info("上传文件：{}", file);
+        return uploadService.putObject(file);
+    }
+}
+```
+
+7. 完善`UploadService`
+
+```java
+package com.eiousee.service.impl;
+
+import com.eiousee.pojo.Result;
+import com.eiousee.service.UploadService;
+import com.eiousee.utils.AliyunOSS2Operator;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.UUID;
+
+@Service
+public class UploadServiceImpl implements UploadService {
+    @Override
+    public Result putObject(MultipartFile file) {
+        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        String url;
+        try {
+            url = AliyunOSS2Operator.putObject(fileName, file.getBytes());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        if (url != null) {
+            return Result.success(url);
+        } else {
+            return Result.error("上传失败");
+        }
+    }
+}
+```
+
+> ![](javaweb/59.png)
+
+这里的`putObject`是静态方法，每次调用，都会创建一个`OSSClient`实例，实际上非常浪费资源，因此我们将`putObject`设置为实例方法，然后为`AliyunOSS2Operator`设置`@Component`注解，成为一个`Bean`，注入到`UploadService`中
+
+`AliyunOSS2Operator.java`
+
+```java
+package com.eiousee.utils;
+
+import com.aliyun.sdk.service.oss2.OSSClient;
+import com.aliyun.sdk.service.oss2.OSSClientBuilder;
+import com.aliyun.sdk.service.oss2.credentials.CredentialsProvider;
+import com.aliyun.sdk.service.oss2.credentials.EnvironmentVariableCredentialsProvider;
+import com.aliyun.sdk.service.oss2.models.*;
+import com.aliyun.sdk.service.oss2.transport.BinaryData;
+import org.springframework.stereotype.Component;
+
+@Component
+public class AliyunOSS2Operator {
+    public String putObject(String fileName, byte[] data) {
+        String region = "cn-beijing";
+        String bucket = "eiousee-java-web";
+
+        CredentialsProvider provider = new EnvironmentVariableCredentialsProvider();
+        OSSClientBuilder clientBuilder = OSSClient.newBuilder()
+                .credentialsProvider(provider)
+                .region(region);
+
+        try (OSSClient client = clientBuilder.build()) {
+            PutObjectResult result = client.putObject(PutObjectRequest.newBuilder()
+                            .bucket(bucket)
+                            .key(fileName)
+                            .body(BinaryData.fromBytes(data))
+                    .build());
+
+            System.out.printf("status code:%d, request id:%s, eTag:%s\n",
+                    result.statusCode(), result.requestId(), result.eTag());
+
+        } catch (Exception e) {
+            System.out.printf("error:\n%s", e);
+            return null;
+        }
+        return "https://" + bucket + ".oss-cn-beijing.aliyuncs.com/" + fileName;
+    }
+}
+```
+
+`UploadServiceImpl.java`
+
+```java
+package com.eiousee.service.impl;
+
+import com.eiousee.pojo.Result;
+import com.eiousee.service.UploadService;
+import com.eiousee.utils.AliyunOSS2Operator;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.util.UUID;
+
+@Service
+public class UploadServiceImpl implements UploadService {
+
+    private final AliyunOSS2Operator aliyunOSS2Operator;
+
+    public UploadServiceImpl(AliyunOSS2Operator aliyunOSS2Operator) {
+        this.aliyunOSS2Operator = aliyunOSS2Operator;
+    }
+
+    @Override
+    public Result putObject(MultipartFile file) {
+        String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        String url;
+        try {
+            url = aliyunOSS2Operator.putObject(fileName, file.getBytes());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        if (url != null) {
+            return Result.success(url);
+        } else {
+            return Result.error("上传失败");
+        }
+    }
+}
+```
+
+##### OSS配置管理
+
+在上文的`AliyunOSS2Operator`类中，我们设置阿里云`OSS`的区域与`bucket`时，直接将对应的数据写在方法体中，如果需要经常更改，就会显得非常麻烦，因此我们可以在`application.yml`中设置相应的配置，然后使用`@Value`注解来注入配置文件中的值
+
+`application.yml`
+
+```yml
+# 阿里云OSS配置
+aliyun:
+  oss2:
+    region: cn-beijing
+    bucket: eiousee-java-web
+```
+
+`AliyunOSS2Operator.java`
+
+```java
+package com.eiousee.utils;
+
+import com.aliyun.sdk.service.oss2.OSSClient;
+import com.aliyun.sdk.service.oss2.OSSClientBuilder;
+import com.aliyun.sdk.service.oss2.credentials.CredentialsProvider;
+import com.aliyun.sdk.service.oss2.credentials.EnvironmentVariableCredentialsProvider;
+import com.aliyun.sdk.service.oss2.models.*;
+import com.aliyun.sdk.service.oss2.transport.BinaryData;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+@Component
+public class AliyunOSS2Operator {
+
+    @Value("${aliyun.oss2.region}")
+    private String region;
+    @Value("${aliyun.oss2.bucket}")
+    private String bucket;
+
+    public String putObject(String fileName, byte[] data) {
+        CredentialsProvider provider = new EnvironmentVariableCredentialsProvider();
+        OSSClientBuilder clientBuilder = OSSClient.newBuilder()
+                .credentialsProvider(provider)
+                .region(region);
+
+        try (OSSClient client = clientBuilder.build()) {
+            PutObjectResult result = client.putObject(PutObjectRequest.newBuilder()
+                            .bucket(bucket)
+                            .key(fileName)
+                            .body(BinaryData.fromBytes(data))
+                    .build());
+
+            System.out.printf("status code:%d, request id:%s, eTag:%s\n",
+                    result.statusCode(), result.requestId(), result.eTag());
+
+        } catch (Exception e) {
+            System.out.printf("error:\n%s", e);
+            return null;
+        }
+        return "https://" + bucket + ".oss-cn-beijing.aliyuncs.com/" + fileName;
+    }
+}
+```
+
+其实也可以通过一个配置实体类来存储配置信息，定义一个配置实体类，然后通过`@ConfigurationProperties`注解来指定需要解析的配置字段，然后将配置类加上`@Component`注册为一个`Bean`，最后注入到需要配置的类中
+
+`AliyunOSS2Properties.java`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+@Data
+@Component
+@ConfigurationProperties(prefix = "aliyun.oss2")
+public class AliyunOSS2Properties {
+    private String region;
+    private String bucket;
+}
+```
+
+`AliyunOSS2Operator.java`
+
+```java
+package com.eiousee.utils;
+
+import com.aliyun.sdk.service.oss2.OSSClient;
+import com.aliyun.sdk.service.oss2.OSSClientBuilder;
+import com.aliyun.sdk.service.oss2.credentials.CredentialsProvider;
+import com.aliyun.sdk.service.oss2.credentials.EnvironmentVariableCredentialsProvider;
+import com.aliyun.sdk.service.oss2.models.*;
+import com.aliyun.sdk.service.oss2.transport.BinaryData;
+import com.eiousee.pojo.AliyunOSS2Properties;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+@Component
+public class AliyunOSS2Operator {
+
+    private final AliyunOSS2Properties aliyunOSS2Properties;
+
+    public AliyunOSS2Operator(AliyunOSS2Properties aliyunOSS2Properties) {
+        this.aliyunOSS2Properties = aliyunOSS2Properties;
+    }
+
+    public String putObject(String fileName, byte[] data) {
+
+        String region = aliyunOSS2Properties.getRegion();
+        String bucket = aliyunOSS2Properties.getBucket();
+
+        CredentialsProvider provider = new EnvironmentVariableCredentialsProvider();
+        OSSClientBuilder clientBuilder = OSSClient.newBuilder()
+                .credentialsProvider(provider)
+                .region(region);
+
+        try (OSSClient client = clientBuilder.build()) {
+            PutObjectResult result = client.putObject(PutObjectRequest.newBuilder()
+                            .bucket(bucket)
+                            .key(fileName)
+                            .body(BinaryData.fromBytes(data))
+                    .build());
+
+            System.out.printf("status code:%d, request id:%s, eTag:%s\n",
+                    result.statusCode(), result.requestId(), result.eTag());
+
+        } catch (Exception e) {
+            System.out.printf("error:\n%s", e);
+            return null;
+        }
+        return "https://" + bucket + ".oss-cn-beijing.aliyuncs.com/" + fileName;
+    }
+}
+```
+
+### 批量删除员工功能
+
+根据接口文档，我们来开发批量删除员工的功能。在接口文档中，使用了`?ids=1,2,3`的参数形式，对于这种形式，可以使用一个普通类型的数组来接收，也可以使用`List`集合来接收，但是在使用`List`集合时必须添加`@Param`注解
+
+`Controller`
+
+```java
+@DeleteMapping
+public Result deleteEmpByIds(Integer[] ids) {
+    log.info("删除员工，参数：{}", Arrays.toString(ids));
+    empService.deleteEmpByIds(ids);
+    return Result.success();
+}
+
+@DeleteMapping
+public Result deleteEmpByIds(@Param("ids") List<Integer> ids) {
+    log.info("删除员工，参数：{}", Arrays.toString(ids));
+    empService.deleteEmpByIds(ids);
+    return Result.success();
+}
+```
+
+这里我们就使用普通数组，然后构建`Service`，在`EmpMapper`中删除员工表中的数据，在`EmpExpMapper`中删除对应的员工工作经历表中的数据。并且为了保证事务的一致性，添加`@Transactional`注解，设定回滚级别为`Exception`
+
+`Service`
+
+```java
+@Override
+@Transactional(rollbackForClassName = "Exception")
+public void deleteEmpByIds(Integer[] ids) {
+    empMapper.deleteEmpByIds(ids);
+    empExpMapper.deleteEmpExpByIds(ids);
+}
+```
+
+然后完善相应的`Mapper`，这里传入的是数组参数，因此需要使用`<foreach>`标签构建动态`sql`，使用`IN`关键字，在遍历开始前添加`(`，在遍历完成后添加`)`
+
+`EmpExpMapper.xml`
+
+```xml
+<!--    删除员工工作经历-->
+<delete id="deleteEmpExpByIds">
+    DELETE FROM emp_exp WHERE id IN
+    <foreach item="id" collection="ids" separator="," open="(" close=")">
+        #{id}
+    </foreach>
+</delete>
+```
+
+`EmpMapper.xml`
+
+```xml
+<!--    员工批量删除 -->
+<delete id="deleteEmpByIds">
+    DELETE FROM emp_info WHERE id IN
+    <foreach item="id" collection="ids" separator="," open="(" close=")">
+        #{id}
+    </foreach>
+</delete>
+```
+
+### 修改员工功能
+
+#### 查询回显
+
+根据接口文档内容，使用路径参数`/emps/{id}`来指定需要编辑的员工
+
+`Controller`
+
+```java
+@GetMapping("/{id}")
+public Result getEmpById(@PathVariable Integer id) {
+    log.info("查询员工，参数：{}", id);
+    return Result.success(empService.getEmpById(id));
+}
+```
+
+然后在`Service`中调用`Mapper`实现查询
+
+```java
+@Override
+public Employee getEmpById(Integer id) {
+    Employee employee = empMapper.getEmpById(id);
+    employee.setEmpExpList(empExpMapper.getEmpExpListByEmpId(id));
+    return employee;
+}
+```
+
+最后在两个`Mapper`的映射文件中实现查询的逻辑
+
+`EmpMapper.xml`
+
+```xml
+<!--    根据id查询员工信息-->
+<select id="getEmpById" resultType="com.eiousee.pojo.Employee">
+    SELECT
+        e.name AS name,
+        birth, sex,
+        avatar_path,
+        d.name AS dept_name,
+        j.title AS job_name,
+        board_date
+    FROM emp_info AS e
+        LEFT JOIN dept AS d
+            ON e.dept_id = d.id
+        LEFT JOIN job AS j
+            ON e.job_id = j.id
+    WHERE e.id = #{id}
+</select>
+```
+
+`EmpExpMapper.xml`
+
+```xml
+<!--    根据员工id查询员工工作经历-->
+<select id="getEmpExpListByEmpId" resultType="com.eiousee.pojo.EmpExp">
+    SELECT
+        start_time, end_time, company, job
+    FROM emp_exp
+    WHERE id = #{id}
+</select>
+```
+
+#### ResultMap
+
+上文的结果查询中我们使用了两个`Mapper`进行查询，虽然结构简单，逻辑更清晰，但是在实际业务中会有两次的网络调用，对于一对多，且数据量较小的场景，使用连接查询的性能更好
+
+`EmpMapper.xml`
+
+```xml
+<!--    根据id查询员工信息和员工工作经历-->
+<select id="getEmpAndExpById" resultType="com.eiousee.pojo.Employee">
+    SELECT
+        e.name AS name,
+        birth, sex,
+        avatar_path,
+        d.name AS dept_name,
+        j.title AS job_name,
+        board_date,
+        ee.start_time AS start_time,
+        ee.end_time AS end_time,
+        ee.company AS company,
+        ee.job AS job
+    FROM emp_info AS e
+        LEFT JOIN dept AS d
+            ON e.dept_id = d.id
+        LEFT JOIN job AS j
+            ON e.job_id = j.id
+        LEFT JOIN emp_exp AS ee
+            ON e.id = ee.id
+    WHERE e.id = #{id}
+</select>
+```
+
+但是这里有个问题，我们设置的`resultType`是`Employee`，而`MyBatis`在进行封装的时候，并不会自动将每条查询结果的工作经历部分封装为`List<EmpExp>`，而是尝试直接将所有的字段全部封装到`Employee`的所有属性中，并且在员工拥有多条工作经历记录的情况下会抛出`TooManyResults`异常
+
+> ![](javaweb/60.png)
+
+于是我们需要使用`<ResultMap>`标签自定义一个封装类型
+
+```xml
+<!--    定义ResultMap-->
+<resultMap id="empResultMap" type="com.eiousee.pojo.Employee">
+    <id property="id" column="id"/>
+    <result property="name" column="name"/>
+    <result property="birth" column="birth"/>
+    <result property="sex" column="sex"/>
+    <result property="avatarPath" column="avatar_path"/>
+    <result property="deptName" column="dept_name"/>
+    <result property="jobName" column="job_name"/>
+    <result property="boardDate" column="board_date"/>
+    <collection property="empExpList" ofType="com.eiousee.pojo.EmpExp">
+        <result property="startTime" column="start_time"/>
+        <result property="endTime" column="end_time"/>
+        <result property="company" column="company"/>
+        <result property="job" column="job"/>
+    </collection>
+</resultMap>
+```
+
+然后将`resultType`改为`resultMap`
+
+```xml
+<!--    根据id查询员工信息和员工工作经历-->
+<select id="getEmpAndExpById" resultMap="empResultMap">
+```
+
+> ![](javaweb/61.png)
+
+#### 实现
+
+根据接口文档，`Controller`使用`Employee`实体类接收参数信息
+
+```java
+@PutMapping
+public Result updateEmp(@RequestBody Employee employee) {
+    log.info("更新员工，参数：{}", employee);
+    empService.updateEmp(employee);
+    return Result.success();
+}
+```
+
+在`Service`中，我们先根据员工基本信息，调用`EmpMapper`更新，然后删除所有的员工工作经历信息，再插入新的员工工作经历
+
+```java
+@Override
+@Transactional(rollbackForClassName = "Exception")
+public void updateEmp(Employee employee) {
+    employee.setUpdateTime(LocalDateTime.now());
+    empMapper.updateEmp(employee);
+    empExpMapper.deleteEmpExpByIds(new Integer[]{employee.getId()});
+
+    if (employee.getEmpExpList() != null && !employee.getEmpExpList().isEmpty()) {
+        empExpMapper.addEmpExp(employee.getEmpExpList());
+    }
+}
+```
+
+通过子查询获取部门`id`和员工职位`id`，然后再进行更新
+
+`EmpMapper.java`
+
+```java
+@Update("""
+        UPDATE
+            emp_info
+        SET
+            avatar_path = #{avatarPath},
+            board_date = #{boardDate},
+            update_time = #{updateTime},
+            dept_id = (SELECT id FROM dept WHERE name = #{deptName}),
+            job_id = (SELECT id FROM job WHERE title = #{jobName})
+        WHERE
+            id = #{id};
+        """)
+void updateEmp(Employee employee);
+```
+
+#### 更新优化
+
+在上文中，我们在每次更新时都直接将用户数据全部更新一次，实际上这是不必要的行为，我们可以使用`<set>`和`<if>`标签构建动态`sql`，每次更新只更新前端指定的字段。`<set>`标签会自动删除末尾多余的逗号，但是不会添加逗号，因此除最后一句外，其他语句必须添加逗号
+
+```xml
+<update id="updateEmp">
+	UPDATE
+    	emp_info
+    <set>
+    	<if test="avatarPath != null and avatarPath != ''">avatar_path = #{avatarPath},</if>
+        <if test="boardDate != null and boardDate != ''">board_date = #{boardDate},</if>
+        <if test="update_time != null">update_time = #{updateTime},</if>
+        <if test="deptName != null">dept_id = (SELECT id FROM dept WHERE name = #{deptName}),</if>
+        <if test="jobName != null">job_id = (SELECT id FROM job WHERE title = #{jobName})</if>
+    </set>
+    WHERE
+    	id = #{id};
+</update>
+```
+
+> ![](javaweb/62.png)
+
+### 全局异常处理器
+
+在上文的开发中，难免会出现服务端异常的情况，但是每次服务端出现异常，前端都无法正常接收错误消息，从而导致前端没有任何操作回显。因此`Spring`提供了全局异常处理器来解决错误回显的问题
+
+`Spring`中，使用`@RestControllerAdvice`来注解一个全局异常处理器类，然后使用`@ExceptionHandler`注解异常捕获方法
+
+```java
+package com.eiousee.exception;
+
+import com.eiousee.pojo.Result;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+@Slf4j
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+    @ExceptionHandler
+    public Result handleException(Exception e) {
+        log.error("服务器异常：{}", e.getMessage());
+        return Result.error("服务器异常");
+    }
+}
+```
+
+> ![](javaweb/63.png)
+
+#### 精确类型捕获
+
+上图中确实捕获到了异常，但是对于用户来说，并不知道具体的错误原因，因此可以在全局异常处理器类中添加更精确的异常捕获
+
+```java
+package com.eiousee.exception;
+
+import com.eiousee.pojo.Result;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.jdbc.UncategorizedSQLException;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+
+import java.sql.SQLException;
+
+@Slf4j
+@RestControllerAdvice
+public class GlobalExceptionHandler {
+
+    @ExceptionHandler
+    public Result handleException(Exception e) {
+        log.error("服务器异常：", e);
+        return Result.error("服务器异常");
+    }
+
+    @ExceptionHandler
+    public Result handleUncategorizedSQLException(UncategorizedSQLException e) {
+        log.error("SQL异常：", e);
+        if (e.getMessage().contains("'chk_date_order' is violated")) {
+            return Result.error("入职时间不能大于离职时间");
+        }
+        return Result.error("SQL异常");
+    }
+
+}
+```
+
+> ![](javaweb/64.png)
+
+一般来说，异常捕获越精确，用户的体验就越好。上文中的`UncategorizedSQLException`是`Spring`为非预期的`SQLException`提供的包装类，因此我们仍需要`if`来再次判断准确的错误类型。例如，我们为`name`添加唯一键，然后加上用户名重复的异常捕获
+
+```java
+@ExceptionHandler
+public Result handleDuplicateKeyException(DuplicateKeyException e) {
+    log.error("DuplicateKeyException异常：", e);
+    // 获取异常信息
+    String message = e.getMessage();
+    // 获取索引
+    int target = message.indexOf("Duplicate entry");
+    // 从索引截取字符串
+    String errMsg = message.substring(target);
+    return Result.error(errMsg.split(" ")[2] + "已存在");
+}
+```
+
+> ![](javaweb/65.png)
+
+这样用户就能清晰地得知错误地位置并及时更改
+
+### 职位统计功能
+
+根据接口文档开发员工职位统计功能，首先构造返回的实体类`ReportData`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class ReportData {
+    private List<String> titleList;
+    private List<Integer> dataList;
+}
+```
+
+然后同步构建`Controller`
+
+```java
+@GetMapping("/empJobData")
+public Result getEmpJobData() {
+    log.info("查询员工职位统计数据");
+    return Result.success(reportService.getEmpJobData());
+}
+```
+
+然后构建`sql`语句，再决定`Service`如何实现
+
+```xml
+<select id="getEmpJobData" resultType="com.eiousee.pojo.ReportCount">
+    SELECT
+        j.title AS title,
+        COUNT(e.job_id) AS empCount
+    FROM
+        job j
+            LEFT JOIN emp_info e ON j.id = e.job_id
+    GROUP BY
+        j.id, j.title
+    ORDER BY
+        COUNT(e.job_id)
+</select>
+```
+
+数据库中返回的数据是表格的形式，但前端需要的是两个数组的形式，因此我们还需要构建一个实体类`ReportCount`来封装每条记录，然后提取每条记录中的职位名和员工人数，封装到`ReportData`中
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class ReportCount {
+    private String title;
+    private Integer empCount;
+}
+```
+
+所以在`Service`中，我们实现这个逻辑，最后返回`ReportData`实例
+
+```java
+@Override
+public ReportData getEmpJobData() {
+    List<ReportCount> reportCountList = reportMapper.getEmpJobData();
+    List<String> jobList = reportCountList.stream().map(ReportCount::getTitle).toList();
+    List<Integer> dataList = reportCountList.stream().map(ReportCount::getEmpCount).toList();
+    return new ReportData(jobList, dataList);
+}
+```
+
+由于接口文档中有关部门人数统计和性别人数统计的接口完全相同，因此省略相关步骤
+
+> ![](javaweb/66.png)
+
+### 班级管理
+
+根据[接口文档](./Interfaces.md)中的班级管理接口，开发完整的班级管理功能
+
+#### 查询班级
+
+条件分页查询班级信息，先定义查询参数实体类`ClassQueryParam`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
+
+import java.time.LocalDate;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class ClassQueryParam {
+    private String className;
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    private LocalDate begin;
+    @DateTimeFormat(pattern = "yyyy-MM-dd")
+    private LocalDate end;
+    private Integer page = 1;
+    private Integer pageSize = 10;
+}
+```
+
+然后在`Controller`中接收查询参数，封装为`ClassQueryParam`，调用`classService`的查询方法，并传递查询参数，最后返回`Result`结果
+
+```java
+@GetMapping
+public Result list(ClassQueryParam queryParam) {
+    log.info("查询班级列表：{}", queryParam);
+    return Result.success(classService.list(queryParam));
+}
+```
+
+在`Service`中先调用`PageHelper`的`startPage`方法，传入`ClassQueryParam`查询参数中的分页控制字段，然后调用`classMapper`的查询方法正常查询，最后使用`page`实例来接收查询的结果，并封装为`PageResult`
+
+```java
+@Override
+public PageResult<ClassPojo> list(ClassQueryParam queryParam) {
+    Page<ClassPojo> page = PageHelper.startPage(queryParam.getPage(), queryParam.getPageSize());
+    List<ClassPojo> list = classMapper.list(queryParam);
+    return new PageResult<>(page.getTotal(), page.getResult());
+}
+```
+
+查询语句比较复杂，因此使用`xml`映射文件来编写动态`sql`
+
+```xml
+<!--    条件查询班级列表-->
+<select id="list" resultType="com.eiousee.pojo.ClassPojo">
+    SELECT
+        c.id AS id,
+        class_name,
+        classroom,
+        e.name AS teacherName,
+        start_date,
+        end_date,
+        cs.status_name AS classStatus,
+        c.update_time AS updateTime
+    FROM
+        class c
+            LEFT JOIN emp_info e ON c.teacher_id = e.id
+            LEFT JOIN class_status cs ON c.status = cs.id
+    <where>
+        <if test="className != null and className != ''">
+            class_name LIKE CONCAT('%', #{className}, '%')
+        </if>
+        <if test="begin != null">
+            AND start_date &gt;= #{begin}
+        </if>
+        <if test="end != null">
+            AND end_date &lt;= #{end}
+        </if>
+    </where>
+</select>
+```
+
+> ![](javaweb/67.png)
+
+#### 根据id删除班级
+
+在`Controller`中接收`id`，然后调用`classService`的`deleteClassById`方法，根据返回值判断删除是否成功
+
+```java
+@DeleteMapping("/{id}")
+public Result deleteClassById(@PathVariable Integer id) {
+    log.info("删除班级：{}", id);
+    return classService.deleteClassById(id) > 0 ? Result.success() : Result.error("未找到该班级");
+}
+```
+
+`Service`中也直接调用`Mapper`
+
+```java
+@Override
+public Integer deleteClassById(Integer id) {
+    return classMapper.deleteClassById(id);
+}
+```
+
+`Mapper`执行删除操作，然后返回影响的行数，来判断是否删除成功
+
+```java
+@Delete("delete from class where id = #{id}")
+Integer deleteClassById(Integer id);
+```
+
+#### 添加班级
+
+使用班级实体类`ClassPojo`来接收前端参数，并传递给`classService.addClass()`，然后通过返回值来判断是否插入成功
+
+```java
+@PostMapping
+public Result addClass(@RequestBody ClassPojo classPojo) {
+    log.info("添加班级：{}", classPojo);
+    return classService.addClass(classPojo) > 0 ? Result.success() : Result.error("添加班级失败");
+}
+```
+
+在`Service`中为`classPojo`的`updateTime`字段设置当前时间，然后调用`Mapper`执行`INSERT`语句
+
+```java
+@Override
+public Integer addClass(ClassPojo classPojo) {
+    classPojo.setUpdateTime(LocalDateTime.now());
+    return classMapper.addClass(classPojo);
+}
+```
+
+`sql`语句比较复杂，因此使用`xml`映射文件
+
+```xml
+<!--    添加班级-->
+<insert id="addClass">
+    INSERT INTO
+        class(id, class_name, teacher_id, classroom, start_date, end_date, status, update_time)
+    VALUES (
+           #{id},
+           #{className},
+           (SELECT id FROM emp_info WHERE name = #{teacherName}),
+           #{classroom},
+           #{startDate},
+           #{endDate},
+           (SELECT id FROM class_status WHERE status_name = #{classStatus}),
+           #{updateTime}
+       )
+</insert>
+```
+
+#### 更新班级信息
+
+与新增类似，通过`ClassPojo`实体类接收前端参数，然后调用`Service`继续向上传递，并通过返回值来判断是否更新成功
+
+```java
+@PutMapping
+public Result updateClass(@RequestBody ClassPojo classPojo) {
+    log.info("更新班级：{}", classPojo);
+    return classService.updateClass(classPojo) > 0 ? Result.success() : Result.error("更新班级失败");
+}
+```
+
+`Service`
+
+```java
+@Override
+public Integer updateClass(ClassPojo classPojo) {
+    classPojo.setUpdateTime(LocalDateTime.now());
+    return classMapper.updateClass(classPojo);
+}
+```
+
+`Mapper`
+
+```xml
+<!--    更新班级信息-->
+<update id="updateClass">
+    UPDATE
+        class
+    SET
+        class_name = #{className},
+        teacher_id = (SELECT id FROM emp_info WHERE name = #{teacherName}),
+        classroom = #{classroom},
+        start_date = #{startDate},
+        end_date = #{endDate},
+        status = (SELECT id FROM class_status WHERE status_name = #{classStatus}),
+        update_time = #{updateTime}
+    WHERE
+        id = #{id}
+</update>
+```
+
+学生管理与员工管理功能类似，因此此处省略学生管理内容，详细代码可查询[项目文件](./projects/webProject)
+
+### 登录认证
+
+根据接口文档开发登录接口先定义两个实体类，`LoginPojo`存储返回的登陆数据，`LoginInfo`存储请求参数
+
+`LoginPojo`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class LoginPojo {
+    private Integer id;
+    private String username;
+    private String password;
+    private String name;
+    private String token;
+}
+```
+
+`LoginInfo`
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class LoginInfo {
+    private String username;
+    private String password;
+}
+```
+
+然后构建`Controller`，`Controller`需要根据`loginPojo`的内容来决定返回的内容
+
+```java
+@PostMapping
+public Result login(@RequestBody LoginInfo loginInfo) {
+    log.info("登录，用户信息：{}", loginInfo);
+    LoginPojo loginPojo = loginService.login(loginInfo);
+    return loginPojo == null ? Result.error("用户名或密码错误") : Result.success(loginPojo);
+}
+```
+
+在`Service`中，将用户登录的用户名传入`Mapper`，获取该用户的所有信息，封装为`LoginPojo`实例，然后获取用户实例的密码，与用户输入的密码进行对比，避免直接将密码字段出现在查询语句中，防止日志记录敏感信息
+
+```java
+@Override
+public LoginPojo login(LoginInfo loginInfo) {
+    LoginPojo user = loginMapper.login(loginInfo.getUsername());
+    return user != null && user.getPassword().equals(loginInfo.getPassword()) ? user : null;
+}
+```
+
+最后实现`Mapper`
+
+```xml
+<select id="login" resultType="com.eiousee.pojo.LoginPojo">
+    SELECT
+        u.id AS id,
+        username,
+        password,
+        name
+    FROM
+        users AS u
+    LEFT JOIN
+        emp_info AS e ON u.id = e.id
+    WHERE
+        username = #{username}
+</select>
+```
+
+#### 会话技术
+
+会话技术是一种在网络通信中用于跟踪用户状态的机制，它可以让服务器在处理用户请求时保持特定用户的状态信息，从而实现个性化的服务和用户体验。举个例子，当用户访问某个网站，网站提示需要登录，用户登陆后访问其他网站页面，又弹出提示需要登录，这就是`HTTP`协议的无状态性导致的，每个`HTTP`请求都是独立的，无法得知上次的请求是否携带了某些信息。
+
+会话技术主要有`Cookie`、`Session`和`token`实现
+
+#### Cookie
+
+`Cookie`的工作原理是在用户登录后，服务器向用户浏览器提供一个`Cookie`字段，字段中存储用户信息，浏览器在第二次访问服务器时携带该用户信息，服务器接收信息，并与数据库中存储的信息进行匹配，匹配通过则表示用户已经获得授权
+
+```java
+// 设置Cookie
+@GetMapping("/setCookie")
+public Result setCookie(HttpServletResponse response) {
+    response.addCookie(new Cookie("username", "eiousee"));
+    return Result.success();
+}
+
+// 读取Cookie
+@GetMapping("/getCookie")
+public Result getCookie(HttpServletRequest request) {
+    Cookie[] cookies = request.getCookies();
+    return Result.success(cookies);
+}
+```
+
+> ![](javaweb/68.png)
+
+`Cookie`无法在移动端、小程序中使用，而且`Cookie`直接存储在浏览器中，容易泄露
+
+#### Session
+
+`Session`技术基于`Cookie`，用户在登录后，服务器会在本地存储用户信息，每个用户信息对应一个`SESSIONID`，然后服务器将`SESSIONID`返回给用户，用户每次请求仅携带`SESSIONID`即可，不会泄露用户源数据
+
+```java
+// 设置Session
+@GetMapping("/setSession")
+public Result setSession(HttpServletRequest request) {
+    request.getSession().setAttribute("username", "eiousee");
+    return Result.success();
+}
+
+// 读取Session
+@GetMapping("/getSession")
+public Result getSession(HttpServletRequest request) {
+    return Result.success(request.getSession().getAttribute("username"));
+}
+```
+
+> ![aaa](javaweb/69.png)
+
+`Session`技术基于`Cookie`，因此也拥有`Cookie`的缺点，而且如果在服务器集群中，假设负载均衡服务器设置的轮询均衡模式，每次用户发送请求，后一个服务器中均不会存在前一个服务器的`Session`数据，导致用户每次请求都需要登录
+
+#### JWT
+
+`jwt`全称`Json Web Token`，是一种简洁、自包含格式的令牌，用于在通信双方以`json`数据格式安全地传输信息。`jwt`令牌组成由三部分构成，分别是`Header`、`Payload`和`Signature`
+
+- `Header`：头部，记录令牌类型，签名算法，如`{"alg": "HS256", "type": "JWT"}`
+
+- `Payload`：有效载荷，携带一些自定义信息，如`{"id": 1, "username": "Kiiz"}`
+- `Signature`：签名，防止`Token`被篡改，确保令牌安全性，将`header`和`payload`融入，并加入指定密钥，通过签名算法计算得到
+
+**示例**
+
+```jwt
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJuYW1lIjoiZWlvdXNlZSJ9.U1Od8RDMG4jYrk-nIyoI1bBqRAPJlDqM1Vsf-FFOrTM
+```
+
+每个部分用`.`分隔，`Header`和`Payload`使用`Base64`编码，`Signature`部分则使用签名算法得到
+
+##### 快速入门
+
+1. 引入`jjwt`依赖
+
+```xml
+<!--        jjwt-->
+<dependency>
+    <groupId>io.jsonwebtoken</groupId>
+    <artifactId>jjwt</artifactId>
+    <version>0.9.1</version>
+</dependency>
+<!--        jaxb-api -->
+<dependency>
+    <groupId>javax.xml.bind</groupId>
+    <artifactId>jaxb-api</artifactId>
+    <version>2.3.1</version>
+    <scope>compile</scope>
+</dependency>
+```
+
+2. 调用工具类`Jwts`来生成或解析`jwt`令牌
+
+```java
+Jwts.builder()
+        .signWith()
+        .addClaims()
+        .setExpiration()
+        .compact();
+```
+
+- `signWith()`：指定签名算法与密钥，签名算法是`SignatureAlgorithm`枚举类中的值，包括`HS256`、`HS384`、`HS512`、`RS256`、`RS384`等等，密钥要求是Byte`数组或`Base64`编码的字符串
+- `addClaims()`：添加自定义数据，对应`jwt`中的`payload`部分，参数数据类型为`Map<String, Object>`
+- `setExpiration()`：设置过期时间，参数数据类型为`Date`
+- `compact()`：生成令牌
+
+**示例**
+
+生成一个用户令牌，包含用户名与密码，过期时间为一小时，签名算法`HS256`，密钥为`eiousee`
+
+```java
+package com.eiousee;
+
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import org.junit.jupiter.api.Test;
+
+import java.util.Base64;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+public class jwtTest {
+
+    @Test
+    public void generateJwt() {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("username", "kiiz");
+        claims.put("password", "123456");
+
+        String jwt = Jwts.builder()
+                .signWith(SignatureAlgorithm.HS256, "ZWlvdXNlZQ==")
+                .addClaims(claims)
+                .setExpiration(new Date(System.currentTimeMillis() + 1000 * 3600))
+                .compact();
+
+        System.out.println(jwt);
+    }
+}
+```
+
+```token
+eyJhbGciOiJIUzI1NiJ9.eyJwYXNzd29yZCI6IjEyMzQ1NiIsInVzZXJuYW1lIjoia2lpeiIsImV4cCI6MTc3Njk0MDg5Nn0.o_qL810N01J4MWnTagSu9KHYE4Rgd1IUG62dAaKeg_M
+```
+
+接着我们解析令牌
+
+```java
+@Test
+public void parseJwt() {
+    String jwt = "eyJhbGciOiJIUzI1NiJ9.eyJwYXNzd29yZCI6IjEyMzQ1NiIsInVzZXJuYW1lIjoia2lpeiIsImV4cCI6MTc3Njk0MTA0Nn0.4xM6yeaGiUuZPK0e4XIByi2MNPtMT8X3ZgIgR0PTW4E";
+    Claims claims = Jwts.parser()
+            .setSigningKey("ZWlvdXNlZQ==")
+            .parseClaimsJws(jwt)
+            .getBody();
+    System.out.println(claims);
+}
+```
+
+> ![](javaweb/70.png)
+
+##### 下发令牌
+
+在项目中编写一个`JWT`工具类，然后实现下发令牌的逻辑
+
+```java
+package com.eiousee.utils;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
+public class JwtUtils {
+
+    private static final String KEY = "ZWlvdXNlZQ==";
+    private static final long EXPIRATION = 1000 * 60 * 60 * 24 * 7;
+
+    /**
+     * 生成jwt
+     * @param claims
+     * @return
+     */
+    public static String generateJwt(Map<String, Object> claims) {
+        return Jwts.builder()
+                .signWith(SignatureAlgorithm.HS256, KEY)
+                .addClaims(claims)
+                .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION))
+                .compact();
+    }
+
+    /**
+     * 解析jwt
+     * @param token
+     * @return
+     */
+    public static Claims parseJwt(String token) {
+        return Jwts.parser()
+                .setSigningKey(KEY)
+                .parseClaimsJws(token)
+                .getBody();
+    }
+}
+```
+
+然后在`Service`中调用`JwtUtils`，并下发`token`
+
+```java
+@Override
+public LoginResult login(LoginInfo loginInfo) {
+    LoginPojo loginPojo = loginMapper.login(loginInfo.getUsername());
+    if (loginPojo != null && loginPojo.getPassword().equals(loginInfo.getPassword())) {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("username", loginPojo.getUsername());
+        claims.put("id", loginPojo.getId());
+        return new LoginResult(loginPojo.getId(), loginPojo.getUsername(), loginPojo.getName(), JwtUtils.generateJwt(claims));
+    }
+    return null;
+}
+```
+
+> ![](javaweb/71.png)
+
+在前端的测试中也可以看到，浏览器中存储了对应的用户登录信息
+
+> ![](javaweb/72.png)
+
+#### 令牌校验
+
+`Spring`提供了`Filer`过滤器与`Interceptor`拦截器来实现登录校验功能
+
+##### Filter
+
+`Filter`是`JavaWeb`三大组件`Servlet`、`Filter`、`Listener`中一个，过滤器可以把对指定资源的请求拦截下来，从而实现一些特殊的功能，过滤器一般完成一些通用的操作，如登录校验、统一编码、敏感字符处理等等
+
+###### 快速入门
+
+首先定义一个`Filter`类，实现`Filter`接口，并实现其中的方法
+
+```java
+package com.eiousee.filter;
+
+import jakarta.servlet.*;
+import jakarta.servlet.annotation.WebFilter;
+import lombok.extern.slf4j.Slf4j;
+
+import java.io.IOException;
+
+@Slf4j
+@WebFilter(urlPatterns = "/*")
+public class AuthFilter implements Filter {
+    @Override
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+        log.info("拦截到了请求");
+    }
+
+    @Override
+    public void init(FilterConfig filterConfig) throws ServletException {
+        Filter.super.init(filterConfig);
+    }
+
+    @Override
+    public void destroy() {
+        Filter.super.destroy();
+    }
+}
+```
+
+然后在启动类`aa`中添加`@ServletComponentScan`注解，启用`Spring`中对于`Servlert`的支持
+
+```java
+package com.eiousee;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.servlet.ServletComponentScan;
+
+@ServletComponentScan
+@SpringBootApplication
+public class WebProjectApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(WebProjectApplication.class, args);
+    }
+
+}
+```
+
+然后发送登录请求，发现没有响应结果
+
+> ![](javaweb/73.png)
+
+在后端的命令行中提示拦截到了请求
+
+> ![](javaweb/74.png)
+
+在`Filter`中，一旦拦截到请求，并不会在拦截完成后放行，而是需要手动放行
+
+```java
+@Override
+public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+    log.info("拦截到了请求");
+    // 放行
+    filterChain.doFilter(servletRequest, servletResponse);
+}
+```
+
+###### 实现
+
+现在在项目中实现校验逻辑，从请求中读取`Token`，当请求路径为`/login`时，不检查`Token`，确保用户能够正常登录，然后在其他请求中检查并验证`Token`
+
+```java
+package com.eiousee.filter;
+
+import com.eiousee.utils.JwtUtils;
+import jakarta.servlet.*;
+import jakarta.servlet.annotation.WebFilter;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+
+import java.io.IOException;
+
+@Slf4j
+@WebFilter(urlPatterns = "/*")
+public class AuthFilter implements Filter {
+
+    @Override
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
+        HttpServletRequest request = (HttpServletRequest) servletRequest;
+        HttpServletResponse response = (HttpServletResponse) servletResponse;
+        // 获取URI
+        String uri = request.getRequestURI();
+        log.info("请求URI：{}", uri);
+        // 判断是否是登录请求
+        if (uri.contains("login")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        // 获取Token
+        String token = request.getHeader("Token");
+        // 验证Token
+        if (token == null || token.isEmpty()) {
+            log.info("未找到Token");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
+        try {
+            JwtUtils.parseJwt(token);
+        } catch (Exception e) {
+            log.info("Token验证失败");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
+        // 验证通过，放行
+        filterChain.doFilter(request, response);
+    }
+}
+```
+
+这里需要注意，前端项目必须与后端`SpringBoot`分离，使用独立的前端服务器来部署前端项目，否则浏览器会阻止`LocalStorage`在`localhost`域中共享，导致登录跳转后又出现`401`
+
+##### Interceptor
+
+拦截器是一种动态拦截方法调用的机制，类似于过滤器，是由`Spring`提供的，主要用来动态拦截控制器方法的执行
+
+###### 快速入门
+
+1. 定义拦截器，实现`HandlerInterceptor`接口，并添加`@Component`注解，注册为`Bean`
+
+```java
+package com.eiousee.filter;
+
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
+
+@Slf4j
+@Component
+public class AuthInterceptor implements HandlerInterceptor {
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        log.info("请求开始：{}", request.getRequestURI());
+        return true;
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+        log.info("请求结束：{}", request.getRequestURI());
+    }
+}
+```
+
+2. 定义配置类，实现`WebMvcConfigurer`类，添加`@Configuration`注解，然后注入指定拦截器，然后重写`addInterceptors`方法，注册拦截器
+
+```java
+package com.eiousee.config;
+
+import com.eiousee.filter.AuthInterceptor;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+
+    private final AuthInterceptor authInterceptor;
+
+    public WebConfig(AuthInterceptor authInterceptor) {
+        this.authInterceptor = authInterceptor;
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(authInterceptor)
+                .addPathPatterns("/**");
+    }
+}
+```
+
+> ![](javaweb/75.png)
+
+###### 实现
+
+在`Interceptor`中，定义`Token`的接收与验证逻辑
+
+```java
+package com.eiousee.interceptor;
+
+import com.eiousee.utils.JwtUtils;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.ModelAndView;
+
+@Slf4j
+@Component
+public class AuthInterceptor implements HandlerInterceptor {
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
+        log.info("请求开始：{}", request.getRequestURI());
+
+        String token = request.getHeader("token");
+        if (token == null || token.isEmpty()) {
+            log.info("未找到Token");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return false;
+        }
+        try {
+            // 验证Token
+            JwtUtils.parseJwt(token);
+        } catch (Exception e) {
+            log.info("Token验证失败");
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return false;
+        }
+        return true;
+    }
+}
+```
+
+然后在`WebConfig`中，将`/login`排除在拦截器拦截路径之外
+
+```java
+package com.eiousee.config;
+
+import com.eiousee.interceptor.AuthInterceptor;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class WebConfig implements WebMvcConfigurer {
+
+    private final AuthInterceptor authInterceptor;
+
+    public WebConfig(AuthInterceptor authInterceptor) {
+        this.authInterceptor = authInterceptor;
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(authInterceptor)
+                .addPathPatterns("/**")
+                .excludePathPatterns("/login/**");
+    }
+}
+```
+
+###### 拦截路径
+
+在拦截器中，拦截路径的书写方式与常规计算机目录表示方式有些不同
+
+| 拦截路径 | 含义       | 举例                                 |
+| -------- | ---------- | ------------------------------------ |
+| `/*`     | 一级路径   | 能匹配`/a`，不能匹配`/a/1`           |
+| `/**`    | 任意路径   | 能匹配`/a`、`/a/1`                   |
+| `/a/*`   | 一级子路径 | 能匹配`/a/1`，不能匹配`/a/1/1`、`/a` |
+| `/a/**`  | 任意子路径 | 能匹配`/a`、`/a/1`、`/a/1/1`         |
+
+##### 执行流程
+
+假设项目中存在过滤器`AFilter`、`BFilter`，以及拦截器`AInterceptor`、`BInterceptor`，拦截的执行流程为
+$$
+Request \rightarrow AFilter \rightarrow BFilter \rightarrow AInterceptor \rightarrow BInterceptor
+$$
+对于过滤器和拦截器只存在一种的情况下，默认的排序规则是按首字母排序，首字母越靠前，排序越靠前；对于两种都存在的情况下，先执行过滤器，再执行拦截器

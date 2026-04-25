@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>部门管理接口测试 (无Alert版)</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="js/common.js"></script>
+    <link rel="stylesheet" href="css/dept_test.css">
+</head>
+<body>
+<div id="app">
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <span class="navbar-title">员工管理系统</span>
+        <div class="navbar-links">
+            <a href="dept_test.html" class="active">部门管理</a>
+            <a href="emps_test.html">员工管理</a>
+            <a href="class_test.html">班级管理</a>
+            <a href="student_test.html">学生管理</a>
+            <a href="report_test.html">数据统计</a>
+        </div>
+        <div class="navbar-right">
+            <template v-if="loginUser">
+                <span class="navbar-user">{{ loginUser.name }}</span>
+                <button class="btn-logout" @click="logout">退出</button>
+            </template>
+            <button v-else class="btn btn-login" @click="showLoginModal=true">登录</button>
+        </div>
+    </nav>
+
+    <!-- 登录弹窗 -->
+    <div class="modal-overlay" v-if="showLoginModal">
+        <div class="modal" style="width: 380px;">
+            <h3 style="text-align: center;">登录</h3>
+            <div class="modal-form">
+                <div><label>用户名</label><input type="text" v-model="loginForm.username" placeholder="请输入用户名"></div>
+                <div><label>密码</label><input type="password" v-model="loginForm.password" placeholder="请输入密码" @keyup.enter="login"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" style="background: #ddd; color: #333;" @click="showLoginModal=false">取消</button>
+                <button class="btn btn-primary" @click="login">登录</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- --- 消息提示容器 --- -->
+    <div class="toast-container">
+        <div v-for="toast in toasts" :key="toast.id"
+             :class="['toast', toast.type]">
+            <span>{{ toast.message }}</span>
+            <button class="btn" style="padding: 0 10px; background: rgba(255,255,255,0.2); border: none; color: white;"
+                    @click="removeToast(toast.id)">
+                ✕
+            </button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h1>🎓 部门管理测试 (无Alert版)</h1>
+
+        <!-- 页面内通用错误提示 (可选) -->
+        <div v-if="pageError" class="error" style="color: #f56c6c; text-align: center; margin-bottom: 10px;">
+            ❌ {{ pageError }}
+        </div>
+
+        <!-- 新增部门表单 -->
+        <div class="form-group">
+            <input
+                    type="text"
+                    v-model="newDeptName"
+                    placeholder="请输入部门名称"
+                    @keyup.enter="addDept"
+            />
+            <button class="btn btn-primary" @click="addDept" :disabled="adding">
+                {{ adding ? '提交中...' : '新增部门' }}
+            </button>
+        </div>
+
+        <!-- 数据表格 -->
+        <table v-if="depts.length > 0">
+            <thead>
+            <tr>
+                <th>部门ID</th>
+                <th>部门名称</th>
+                <th>创建时间</th>
+                <th>更新时间</th>
+                <th>操作</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr v-for="dept in depts" :key="dept.id">
+                <td>{{ dept.id }}</td>
+                <td>{{ dept.name }}</td>
+                <td>{{ formatTime(dept.createTime) }}</td>
+                <td>{{ formatTime(dept.updateTime) }}</td>
+                <td>
+                    <button class="btn btn-edit" @click="openEditModal(dept.id)">
+                        修改
+                    </button>
+                    <button class="btn btn-delete" @click="openConfirmModal(dept.id, dept.name)">
+                        删除
+                    </button>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div v-else class="loading">
+            暂无部门数据
+        </div>
+    </div>
+
+    <!-- --- 修改模态框 --- -->
+    <div class="modal-overlay" v-if="showEditModal">
+        <div class="modal">
+            <h3>📝 修改部门信息</h3>
+            <form class="modal-form" @submit.prevent="handleEditSubmit">
+                <div>
+                    <label>部门ID</label>
+                    <input type="text" v-model="editingDept.id" disabled />
+                </div>
+                <div>
+                    <label>部门名称</label>
+                    <input type="text" v-model="editingDept.name" placeholder="请输入新名称" />
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn" @click="closeEditModal">取消</button>
+                    <button type="submit" class="btn btn-save" :disabled="editing">
+                        {{ editing ? '保存中...' : '保存修改' }}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- --- 确认删除模态框 --- -->
+    <div class="modal-overlay" v-if="showConfirmModal">
+        <div class="modal" style="width: 350px; text-align: center;">
+            <h3>⚠️ 确认操作</h3>
+            <div class="confirm-body">
+                <div class="confirm-title">危险操作！</div>
+                <p>确定要删除 ID 为 <strong>{{ confirmTargetId }}</strong> 的部门吗？</p>
+                <p style="font-size: 14px; color: #999;">此操作不可恢复</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn" @click="closeConfirmModal">取消</button>
+                <button class="btn btn-delete" @click="confirmDelete" :disabled="deleting">
+                    {{ deleting ? '删除中...' : '确定删除' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp, ref } = Vue;
+
+    createApp({
+        setup() {
+            const depts = ref([]);
+
+            // 登录
+            const showLoginModal = ref(false);
+            const loginForm = ref({ username: '', password: '' });
+            const loginUser = ref(JSON.parse(localStorage.getItem('loginUser') || 'null'));
+            const login = async () => {
+                if (!loginForm.value.username || !loginForm.value.password) { addToast('请输入用户名和密码', 'error'); return; }
+                try {
+                    const res = await axios.post('/api/login', loginForm.value);
+                    if (res.data.code === 1) {
+                        loginUser.value = res.data.data;
+                        localStorage.setItem('loginUser', JSON.stringify(res.data.data));
+                        addToast('登录成功，欢迎 ' + res.data.data.name, 'success');
+                        showLoginModal.value = false;
+                        loginForm.value = { username: '', password: '' };
+                    } else { addToast(res.data.msg || '登录失败', 'error'); }
+                } catch (err) { addToast('登录异常', 'error'); }
+            };
+            const logout = () => {
+                loginUser.value = null;
+                localStorage.removeItem('loginUser');
+                addToast('已退出登录', 'success');
+            };
+
+            // --- Toast 消息系统 ---
+            const toasts = ref([]);
+            let toastId = 0;
+            const addToast = (message, type = 'info') => {
+                const id = ++toastId;
+                toasts.value.push({ id, message, type });
+
+                // 3秒后自动移除
+                setTimeout(() => {
+                    removeToast(id);
+                }, 3000);
+            };
+            const removeToast = (id) => {
+                toasts.value = toasts.value.filter(t => t.id !== id);
+            };
+
+            // --- 状态管理 ---
+            const newDeptName = ref('');
+            const adding = ref(false);
+            const pageError = ref('');
+
+            // 修改功能
+            const showEditModal = ref(false);
+            const editingDept = ref({ id: '', name: '' });
+            const editing = ref(false);
+
+            // 删除确认功能
+            const showConfirmModal = ref(false);
+            const confirmTargetId = ref(null);
+            const deleting = ref(false);
+
+            // 格式化时间
+            const formatTime = (isoString) => {
+                if (!isoString) return '--';
+                const date = new Date(isoString);
+                return date.toLocaleString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                }).replace(/\//g, '-');
+            };
+
+            // 1. 获取部门列表
+            const fetchDepts = async () => {
+                try {
+                    const response = await axios.get('/api/depts');
+                    if (response.data.code === 1) {
+                        depts.value = response.data.data || [];
+                    } else {
+                        pageError.value = response.data.msg || '获取数据失败';
+                        addToast('获取数据失败: ' + pageError.value, 'error');
+                    }
+                } catch (err) {
+                    const errorMsg = '网络请求失败: ' + (err.response?.data?.msg || err.message);
+                    pageError.value = errorMsg;
+                    addToast(errorMsg, 'error');
+                }
+            };
+
+            // 2. 新增部门
+            const addDept = async () => {
+                const name = newDeptName.value.trim();
+                if (!name) {
+                    addToast('请输入部门名称！', 'warning');
+                    return;
+                }
+
+                if (adding.value) return;
+                adding.value = true;
+
+                try {
+                    const response = await axios.post('/api/depts', { name: name });
+                    if (response.data.code === 1) {
+                        addToast('🎉 新增成功！', 'success');
+                        newDeptName.value = '';
+                        fetchDepts(); // 刷新列表
+                    } else {
+                        addToast('新增失败：' + (response.data.msg || '未知错误'), 'error');
+                    }
+                } catch (err) {
+                    addToast('请求异常：' + (err.response?.data?.msg || err.message), 'error');
+                } finally {
+                    adding.value = false;
+                }
+            };
+
+            // 3. 打开删除确认框
+            const openConfirmModal = (id, name) => {
+                confirmTargetId.value = id;
+                showConfirmModal.value = true;
+            };
+
+            // 4. 确认删除
+            const confirmDelete = async () => {
+                const id = confirmTargetId.value;
+                if (!id) return;
+
+                if (deleting.value) return;
+                deleting.value = true;
+
+                try {
+                    const response = await axios.delete(`/api/depts?id=${id}`);
+                    if (response.data.code === 1) {
+                        addToast('🗑️ 删除成功！', 'success');
+                        closeConfirmModal();
+                        fetchDepts(); // 刷新列表
+                    } else {
+                        addToast('删除失败：' + (response.data.msg || '未知错误'), 'error');
+                    }
+                } catch (err) {
+                    addToast('请求异常：' + (err.response?.data?.msg || err.message), 'error');
+                } finally {
+                    deleting.value = false;
+                }
+            };
+
+            // 5. 查询回显功能 (根据ID查询)
+            const openEditModal = async (id) => {
+                try {
+                    const response = await axios.get(`/api/depts/${id}`);
+                    if (response.data.code === 1) {
+                        editingDept.value = { ...response.data.data };
+                        showEditModal.value = true;
+                    } else {
+                        addToast('查询失败：' + (response.data.msg || '未找到数据'), 'error');
+                    }
+                } catch (err) {
+                    addToast('请求异常：' + (err.response?.data?.msg || err.message), 'error');
+                }
+            };
+
+            // 关闭修改弹窗
+            const closeEditModal = () => {
+                showEditModal.value = false;
+            };
+
+            // 6. 修改部门功能
+            const handleEditSubmit = async () => {
+                const name = editingDept.value.name.trim();
+                if (!name) {
+                    addToast('部门名称不能为空', 'warning');
+                    return;
+                }
+
+                if (editing.value) return;
+                editing.value = true;
+
+                try {
+                    const response = await axios.put('/api/depts', {
+                        id: editingDept.value.id,
+                        name: name
+                    });
+
+                    if (response.data.code === 1) {
+                        addToast('✅ 修改成功！', 'success');
+                        closeEditModal();
+                        fetchDepts(); // 刷新列表
+                    } else {
+                        addToast('修改失败：' + (response.data.msg || '未知错误'), 'error');
+                    }
+                } catch (err) {
+                    addToast('请求异常：' + (err.response?.data?.msg || err.message), 'error');
+                } finally {
+                    editing.value = false;
+                }
+            };
+
+            // 关闭确认框
+            const closeConfirmModal = () => {
+                showConfirmModal.value = false;
+                confirmTargetId.value = null;
+            };
+
+            // 页面加载完成后自动获取数据
+            fetchDepts();
+
+            // --- 返回给模板使用 ---
+            return {
+                depts,
+                showLoginModal, loginForm, loginUser, login, logout,
+                newDeptName,
+                adding,
+                addDept,
+                formatTime,
+                // Toast
+                toasts,
+                removeToast,
+                // 修改功能
+                showEditModal,
+                editingDept,
+                openEditModal,
+                closeEditModal,
+                handleEditSubmit,
+                editing,
+                // 确认删除功能
+                showConfirmModal,
+                confirmTargetId,
+                openConfirmModal,
+                closeConfirmModal,
+                confirmDelete,
+                deleting,
+                // 页面错误
+                pageError
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>

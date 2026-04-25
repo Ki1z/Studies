@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>登录</title>
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+  <link rel="stylesheet" href="css/login.css">
+</head>
+<body>
+<div id="app">
+  <div class="login-card">
+    <h2>员工管理系统</h2>
+    <p class="subtitle">请登录您的账号</p>
+    <div v-if="errorMsg" class="error-msg">{{ errorMsg }}</div>
+    <div class="form-field">
+      <label>用户名</label>
+      <input v-model="form.username" placeholder="请输入用户名" @keyup.enter="login">
+    </div>
+    <div class="form-field">
+      <label>密码</label>
+      <input type="password" v-model="form.password" placeholder="请输入密码" @keyup.enter="login">
+    </div>
+    <button class="btn-login" @click="login" :disabled="loading">{{ loading ? '登录中...' : '登 录' }}</button>
+  </div>
+</div>
+
+<script>
+  const { createApp, ref } = Vue;
+  createApp({
+    setup() {
+      const form = ref({ username: '', password: '' });
+      const loading = ref(false);
+      const errorMsg = ref('');
+
+      const login = async () => {
+        errorMsg.value = '';
+        if (!form.value.username) { errorMsg.value = '请输入用户名'; return; }
+        if (!form.value.password) { errorMsg.value = '请输入密码'; return; }
+
+        loading.value = true;
+        try {
+          // 1. 确保 axios 配置允许携带凭证（防止后端通过 Cookie 传值被拦截）
+          const res = await axios.post('/api/login', form.value, { withCredentials: true });
+
+          console.log('🚀 后端返回的完整数据:', res.data); // 【调试关键】
+
+          // 2. 精确匹配你的 JSON 结构
+          if (res.data.code === 1) {
+            const userData = res.data.data; // 这里对应 { id: 13, username: "kiiz", ... }
+
+            // 3. 确保 token 存在
+            if (userData) {
+              localStorage.setItem('loginUser', JSON.stringify(userData));
+
+              const params = new URLSearchParams(window.location.search);
+              const redirect = params.get('redirect') || 'dept_test.html';
+              window.location.href = redirect;
+            } else {
+              errorMsg.value = '后端返回数据格式错误';
+            }
+          } else {
+            errorMsg.value = res.data.msg || '登录失败';
+          }
+        } catch (err) {
+          errorMsg.value = '登录异常，请稍后重试';
+          console.error('❌ 请求报错:', err);
+        } finally {
+          loading.value = false;
+        }
+      };
+
+      return { form, loading, errorMsg, login };
+    }
+  }).mount('#app');
+</script>
+</body>
+</html>
