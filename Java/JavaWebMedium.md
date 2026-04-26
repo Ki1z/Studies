@@ -215,3 +215,116 @@ execution(* com.eiousee.controller.DeptController.list(..)) || execution(* com.e
 | `getName()`      | String     | 获取对应的字符串名称，如`getTarget().getName()`、`getSignature().getName()` |
 | `getArgs()`      | Object[]   | 获取匹配方法的参数列表                                       |
 
+### 案例-日志记录功能
+
+为学习管理项目增加一个日志记录功能，每条日志数据需要保存在数据库中
+
+首先定义一个数据表来存储日志
+
+```sql
+CREATE TABLE IF NOT EXISTS `operation_log` (
+    id INT AUTO_INCREMENT PRIMARY KEY COMMENT '编号',
+    user_id INT COMMENT '员工编号',
+    operation_time DATETIME COMMENT '操作时间',
+    operation_class VARCHAR(255) COMMENT '操作类名',
+    operation_method VARCHAR(255) COMMENT '操作方法名',
+    operation_params TEXT COMMENT '操作参数',
+    operation_result TEXT COMMENT '操作结果',
+    cost_time BIGINT COMMENT '操作耗时'
+);
+```
+
+然后定义一个操作日志实体类
+
+```java
+package com.eiousee.pojo;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDateTime;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+public class OperationLog {
+    private Integer id;
+    private LocalDateTime operationTime;
+    private String operationClass;
+    private String operationMethod;
+    private String operationParams;
+    private String operationResult;
+    private Long costTime;
+}
+```
+
+再编写一个切面类，切入点为所有`Service`类及其实现类，在通知方法中定义记录日志的逻辑，通知类型为环绕通知
+
+```java
+package com.eiousee.aop;
+
+import com.eiousee.mapper.LogMapper;
+import com.eiousee.pojo.OperationLog;
+import lombok.extern.slf4j.Slf4j;
+import org.aspectj.lang.ProceedingJoinPoint;
+import org.aspectj.lang.annotation.Around;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Pointcut;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
+import java.util.Arrays;
+
+@Aspect
+@Component
+@Slf4j
+public class LogAspect {
+
+    private final LogMapper logMapper;
+
+    public LogAspect(LogMapper logMapper) {
+        this.logMapper = logMapper;
+    }
+
+    @Pointcut("execution(* com.eiousee.service..*(..))")
+    public void log() {}
+
+    @Around("log()")
+    public Object recordLog(ProceedingJoinPoint joinPoint) throws Throwable {
+        long startTime = System.currentTimeMillis();
+        Object result = joinPoint.proceed();
+        long endTime = System.currentTimeMillis();
+
+        OperationLog operationLog = new OperationLog();
+        operationLog.setOperationTime(LocalDateTime.now());
+        operationLog.setOperationClass(joinPoint.getTarget().getClass().getName());
+        operationLog.setOperationMethod(joinPoint.getSignature().getName());
+        operationLog.setOperationParams(Arrays.toString(joinPoint.getArgs()));
+        operationLog.setOperationResult(result.toString());
+        operationLog.setCostTime(endTime - startTime);
+        log.info("操作日志：{}", operationLog);
+        logMapper.addLog(operationLog);
+
+        return result;
+    }
+}
+```
+
+最后实现日志记录的`Mapper`
+
+```xml
+<insert id="addLog">
+    INSERT INTO
+        operation_log(user_id, operation_time, operation_class, operation_method, operation_params, operation_result, cost_time)
+    VALUES (
+               #{id},
+               #{operationTime},
+               #{operationClass},
+               #{operationMethod},
+               #{operationParams},
+               #{operationResult},
+               #{costTime}
+           )
+</insert>
+```
