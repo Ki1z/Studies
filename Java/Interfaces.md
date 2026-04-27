@@ -6,7 +6,7 @@
 
 #### 1.1.1 基本信息
 
-请求路径：`/api/api/depts`
+请求路径：`/api/depts`
 
 请求方式：`GET`
 
@@ -59,7 +59,7 @@
 
 #### 1.2.1 基本信息
 
-请求路径：`/api/api/depts`
+请求路径：`/api/depts`
 
 请求方式：`DELETE`
 
@@ -104,7 +104,7 @@
 
 #### 1.3.1 基本信息
 
-请求路径：`/api/api/depts`
+请求路径：`/api/depts`
 
 请求方式：`POST`
 
@@ -154,7 +154,7 @@
 
 #### 1.4.1 基本信息
 
-请求路径：`/api/api/depts/{id}`
+请求路径：`/api/depts/{id}`
 
 请求方式：`GET`
 
@@ -211,7 +211,7 @@
 
 #### 1.5.1 基本信息
 
-请求路径：`/api/api/depts`
+请求路径：`/api/depts`
 
 请求方式：`PUT`
 
@@ -265,7 +265,7 @@
 
 #### 2.1.1 基本信息
 
-请求路径：`/api/api/emps`
+请求路径：`/api/emps`
 
 请求方式：`GET`
 
@@ -353,7 +353,7 @@
 
 #### 2.2.1 基本信息
 
-请求路径：`/api/api/emps`
+请求路径：`/api/emps`
 
 请求方式：`POST`
 
@@ -434,7 +434,7 @@
 
 #### 2.3.1 基本信息
 
-请求路径：`/api/api/emps`
+请求路径：`/api/emps`
 
 请求方式：`DELETE`
 
@@ -478,7 +478,7 @@
 
 #### 2.4.1 基本信息
 
-请求路径：`/api/api/emps/{id}`
+请求路径：`/api/emps/{id}`
 
 请求方式：`GET`
 
@@ -558,7 +558,7 @@
 
 #### 2.5.1 基本信息
 
-请求路径：`/api/api/emps`
+请求路径：`/api/emps`
 
 请求方式：`PUT`
 
@@ -638,7 +638,7 @@
 
 #### 2.6.1 基本信息
 
-请求路径：`/api/api/emps/names`
+请求路径：`/api/emps/names`
 
 请求方式：`GET`
 
@@ -690,7 +690,7 @@
 
 #### 3.1.1 基本信息
 
-请求路径：`/api/api/class`
+请求路径：`/api/class`
 
 请求方式：`GET`
 
@@ -774,7 +774,7 @@
 
 #### 3.2.1 基本信息
 
-请求路径：`/api/api/class/{id}`
+请求路径：`/api/class/{id}`
 
 请求方式：`DELETE`
 
@@ -818,7 +818,7 @@
 
 #### 3.3.1 基本信息
 
-请求路径：`/api/api/class`
+请求路径：`/api/class`
 
 请求方式：`POST`
 
@@ -880,7 +880,7 @@
 
 #### 3.4.1 基本信息
 
-请求路径：`/api/api/class/status`
+请求路径：`/api/class/status`
 
 请求方式：`GET`
 
@@ -920,7 +920,7 @@
 
 #### 3.5.1 基本信息
 
-请求路径：`/api/api/class/{id}`
+请求路径：`/api/class/{id}`
 
 请求方式：`GET`
 
@@ -979,7 +979,7 @@
 
 #### 3.6.1 基本信息
 
-请求路径：`/api/api/class`
+请求路径：`/api/class`
 
 请求方式：`PUT`
 
@@ -1041,7 +1041,7 @@
 
 #### 3.7.1 基本信息
 
-请求路径：`/api/api/class/list`
+请求路径：`/api/class/list`
 
 请求方式：`GET`
 
@@ -1125,7 +1125,7 @@
 
 #### 4.1.1 基本信息
 
-请求路径：`/api/api/student`
+请求路径：`/api/student`
 
 请求方式：`GET`
 
@@ -1213,7 +1213,7 @@
 
 #### 4.2.1 基本信息
 
-请求路径：`/api/api/student/major`
+请求路径：`/api/student/major`
 
 请求方式：`GET`
 
@@ -1253,7 +1253,7 @@
 
 #### 4.3.1 基本信息
 
-请求路径：`/api/api/student/education`
+请求路径：`/api/student/education`
 
 请求方式：`GET`
 
@@ -1298,7 +1298,7 @@
 
 #### 4.4.1 基本信息
 
-请求路径：`/api/api/student?ids={ids}`
+请求路径：`/api/student?ids={ids}`
 
 请求方式：`DELETE`
 
@@ -1342,7 +1342,7 @@
 
 #### 4.5.1 基本信息
 
-请求路径：`/api/api/student`
+请求路径：`/api/student`
 
 请求方式：`POST`
 
@@ -1404,7 +1404,7 @@
 
 #### 4.6.1 基本信息
 
-请求路径：`/api/api/student/{id}`
+请求路径：`/api/student/{id}`
 
 请求方式：`GET`
 
@@ -1469,7 +1469,7 @@
 
 #### 4.7.1 基本信息
 
-请求路径：`/api/api/student`
+请求路径：`/api/student`
 
 请求方式：`PUT`
 
@@ -2053,3 +2053,82 @@
     ]
 }
 ```
+
+### 6.4 获取日志
+
+#### 6.4.1 基本信息
+
+请求路径：`/api/logs`
+
+请求方式：`GET`
+
+接口描述：获取所有日志记录
+
+#### 6.4.2 请求参数
+
+参数格式：`queryString`
+
+参数说明：
+
+| 参数名   | 是否必须 | 示例 | 备注                           |
+| -------- | -------- | ---- | ------------------------------ |
+| page     | 是       | 1    | 分页查询的页码，默认为1        |
+| pageSize | 是       | 10   | 分页查询的每页记录数，默认为10 |
+
+请求数据样例：
+
+`/logs?page=1&pageSize=10`
+
+#### 6.4.3 响应数据
+
+参数格式：`application/json`
+
+参数说明：
+
+| 名称                 | 类型     | 是否必须 | 备注                         |
+| -------------------- | -------- | -------- | ---------------------------- |
+| code                 | number   | 必须     | 响应码，1表示成功，0表示失败 |
+| msg                  | string   | 非必须   | 提示信息                     |
+| data                 | object   | 必须     | 返回的数据体                 |
+| data-total           | number   | 必须     | 总记录数                     |
+| data-rows            | object[] | 必须     | 数据列表                     |
+| rows-operator        | string   | 非必须   | 操作人                       |
+| rows-operationTime   | string   | 非必须   | 操作时间                     |
+| rows-operationClass  | string   | 非必须   | 操作类                       |
+| rows-operationMethod | string   | 非必须   | 操作方法                     |
+| rows-operationParams | string   | 非必须   | 参数列表                     |
+| rows-operationResult | string   | 非必须   | 返回值列表                   |
+| rows-costTime        | number   | 非必须   | 花费时间，单位ms             |
+
+响应数据样例：
+
+```json
+{
+    "code": 1,
+    "msg": "success",
+    "data": {
+        "total": 2,
+        "rows": [
+            {
+                "operator": null,
+                "operationTime": "2026-04-27T14:12:27",
+                "operationClass": "com.eiousee.service.impl.LoginServiceImpl",
+                "operationMethod": "login",
+                "operationParams": "[LoginInfo(username=kiiz, password=kiiz)]",
+                "operationResult": "LoginResult(id=13, username=kiiz, name=浔麟, token=eyJhbGciOiJIUzI1NiJ9.eyJpZCI6MTMsInVzZXJuYW1lIjoia2lpeiIsImV4cCI6MTc3Nzg3NTE0Nn0.59DjVGeb4c5NAeFoQfEF6UGFsg50zDPdFT0SdF-l40c)",
+                "costTime": 373
+            },
+            {
+                "operator": "kiiz",
+                "operationTime": "2026-04-27T14:12:28",
+                "operationClass": "com.eiousee.service.impl.DeptServiceImpl",
+                "operationMethod": "getAllDepts",
+                "operationParams": "[]",
+                "operationResult": "[Dept(id=14, name=行政部, createTime=2026-04-21T14:47:29, updateTime=2026-04-21T14:47:29), Dept(id=13, name=金融部, createTime=2026-04-17T15:07:45, updateTime=2026-04-17T15:07:45), Dept(id=5, name=人事部, createTime=2026-04-08T17:00, updateTime=2026-04-09T18:20:17), Dept(id=1, name=学工部, createTime=2026-04-08T17:00, updateTime=2026-04-08T17:00), Dept(id=2, name=教研部, createTime=2026-04-08T17:00, updateTime=2026-04-08T17:00), Dept(id=3, name=咨询部, createTime=2026-04-08T17:00, updateTime=2026-04-08T17:00), Dept(id=4, name=就业部, createTime=2026-04-08T17:00, updateTime=2026-04-08T17:00)]",
+                "costTime": 11
+            }
+        ]
+    }
+}
+```
+
