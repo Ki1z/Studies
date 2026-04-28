@@ -597,7 +597,7 @@ public void log() {}
 
 #### 第三方Bean
 
-如果需要管理第三方提供的`Bean`实例，但又不能更改第三方的源代码，就可以使用`@Bean`注解来注册一个`Bean`，在启动类`@SpringBootApplication`中定义相关的方法。如果第三方`Bean`需要注入其他`Bean`，在方法参数列表中添加即可，第三方`Bean`的默认名称为启动类中的方法名，而不是首字母小写的类名
+如果需要管理第三方提供的`Bean`实例，但又不能更改第三方的源代码，就可以使用`@Bean`注解来注册一个`Bean`，在配置类`@Configuration`中定义相关的方法。如果第三方`Bean`需要注入其他`Bean`，在方法参数列表中添加即可，第三方`Bean`的默认名称为启动类中的方法名，而不是首字母小写的类名
 
 现在我们将之前定义的阿里云`OSS`上传类视为第三方类，删除其`@Component`注解，表示不允许更改源码
 
@@ -700,3 +700,347 @@ public class OSS2Config {
 ```
 
 > ![](javaweb/80.png)
+
+## SpringBoot原理
+
+### 起步依赖
+
+在传统的`Spring`框架的项目中，配置和依赖管理非常麻烦，而`SpringBoot`提供了起步依赖，也就是形如`spring-boot-starter-web`、`mybatis-spring-boot-starter`这样拥有`starter`关键字的依赖项，`SpringBoot`的起步依赖实际上基于`maven`的依赖传递，通过起步依赖，`maven`会自动寻找起步依赖所需要的其他依赖，而不用开发人员自行配置
+
+> ![](javaweb/81.png)
+
+### 自动配置
+
+自动配置是指当`Spring`项目启动后，一些配置类、`Bean`实例会自动存入`IOC`容器中，不需要手动声明，从而简化开发，省去繁琐的配置操作
+
+举个例子，我们在引入阿里云`OSS`依赖的时候，自动引入了`JackSon`依赖
+
+> ![](javaweb/82.png)
+
+而在测试类中，我们注入这个依赖的`Bean`，也并没有任何报错，说明这个`Bean`存储在`IOC`容器中
+
+> ![](javaweb/83.png)
+
+我们并没有在项目中为其单独配置第三方`Bean`，源代码中也并没有`@Component`这样的注解，所以这里的自动注入就是由`SpringBoot`的自动配置实现的
+
+#### 实现
+
+我们定义一个额外的包`util.eiousee`，模拟一个第三方依赖，来实现自动配置的功能
+
+> ![](javaweb/84.png)
+
+然后在`Spring`项目中引入这个依赖
+
+```xml
+<!--        demo-->
+        <dependency>
+            <groupId>util.eiousee</groupId>
+            <artifactId>demo</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+```
+
+**方案一**
+
+如果在`Demo`类中直接添加`@Component`注解，无法实现自动配置的功能
+
+> ![](javaweb/85.png)
+
+根本原因是`SpringBoot`项目默认的组件扫描路径是启动类所在包及其子包，而第三方依赖位于其他包中，因此无法找到指定的`Bean`。可以通过为启动类添加`@ComponentScan`注解来指定扫描范围，但是一旦添加该注解，默认的路径就会被覆盖，需要手动添加上启动类所在包
+
+```java
+package com.eiousee;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.servlet.ServletComponentScan;
+import org.springframework.context.annotation.ComponentScan;
+import util.eiousee.Demo;
+
+@ComponentScan({"com.eiousee", "util.eiousee"})
+@ServletComponentScan
+@SpringBootApplication
+public class WebProjectApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(WebProjectApplication.class, args);
+    }
+
+    @Autowired
+    private Demo demo;
+}
+```
+
+**方案二**
+
+`Spring`提供了`@Import`注解来快捷导入依赖，所有被注解`@Import`的类都会被加载到`IOC`容器中。另外，如果`@Import`导入的是一个拥有`@Configuration`注解的配置类，该配置类中所有的声明的`Bean`也都会被加载到`IOC`容器中
+
+先创建几个`Demo`类，然后创建一个`DemoConfig`类，声明第三方`Bean`
+
+```java
+package util.eiousee;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class DemoConfig {
+    @Bean
+    public Demo1 demo() {
+        return new Demo1();
+    }
+
+    @Bean
+    public Demo2 demo2() {
+        return new Demo2();
+    }
+}
+```
+
+接着在启动类中使用`@Import`导入
+
+```java
+package com.eiousee;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.servlet.ServletComponentScan;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Import;
+import util.eiousee.Demo;
+import util.eiousee.Demo1;
+import util.eiousee.Demo2;
+import util.eiousee.DemoConfig;
+
+@ServletComponentScan
+@SpringBootApplication
+@Import({Demo.class, DemoConfig.class})
+public class WebProjectApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(WebProjectApplication.class, args);
+    }
+
+    @Autowired
+    private Demo demo;
+
+    @Autowired
+    private Demo1 demo1;
+
+    @Autowired
+    private Demo2 demo2;
+}
+```
+
+此外，`@Import`还可以导入`ImportSelector`的实现类，编写一个`ImportSelector`的实现类，然后使用`@Import`导入，就可以实现批量导入
+
+```java
+package util.eiousee;
+
+import org.springframework.context.annotation.ImportSelector;
+import org.springframework.core.type.AnnotationMetadata;
+
+public class DemoSelector implements ImportSelector {
+    @Override
+    public String[] selectImports(AnnotationMetadata importingClassMetadata) {
+        return new String[] {"util.eiousee.Demo", "util.eiousee.DemoConfig"};
+    }
+}
+```
+
+*注：从上方的代码中也可以看出，在`ImportSelector`的是实现类中同样可以使用`@Configuration`配置类。不过需要注意，`Intellij IDEA`无法解析`ImportSelector`，因此会导致误报错*
+
+从上文中可以看出，无论哪种方案，开发人员都必须清晰地知道每个依赖对应的包名，但这些包名恰好是第三方依赖地开发人员最清楚。因此，一般的第三方依赖会提供一个`Enable`注解类，来标明自己的依赖中需要导入哪些包。而`SpringBoot`项目开发人员只需要使用`@Enable`注解就可以快捷导入依赖包
+
+```java
+package util.eiousee;
+
+import org.springframework.context.annotation.Import;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Import(DemoSelector.class)
+public @interface EnableDemo {
+}
+```
+
+### 源码追踪
+
+我们深挖`SpringBoot`源码，分析`SpringBoot`是如何实现自动配置的
+
+`SpringBoot`项目都是由启动类`@SpringBootApplication`启动的，因此，我们从`@SpringBootApplication`注解的源码入手
+
+```java
+package com.eiousee;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.web.servlet.ServletComponentScan;
+
+@ServletComponentScan
+@SpringBootApplication
+public class WebProjectApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(WebProjectApplication.class, args);
+    }
+}
+```
+
+在`SpringBootApplication`源码中，上方的四个注解都属于元注解，分别是
+
+- `@Target`：设置注解的应用范围，`ElementType.TYPE`表示只能注解在类或接口上
+- `@Retention`：设置注解的保留周期，`RetentionPolicy.RUNTIME`表示在程序运行时仍保留
+- `@Inherited`：表示该类的所有注解可被继承
+- `@Documented`：表示注解能够出现在`JavaDoc`文档中
+
+```java
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Inherited
+@SpringBootConfiguration
+@EnableAutoConfiguration
+@ComponentScan(excludeFilters = { @Filter(type = FilterType.CUSTOM, classes = TypeExcludeFilter.class),
+       @Filter(type = FilterType.CUSTOM, classes = AutoConfigurationExcludeFilter.class) })
+public @interface SpringBootApplication {}
+```
+
+下方的三个注解中，`@SpringBootConfiguration`注解中包含`@Configuration`注解，因此在启动类中可以声明第三方`Bean`。而`@ComponentScan`是`Bean`扫描注解，表示默认的扫描范围。
+
+最后一个`@EnableAutoConfiguration`则正是自动配置的注解
+
+```
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Inherited
+@AutoConfigurationPackage
+@Import(AutoConfigurationImportSelector.class)
+public @interface EnableAutoConfiguration {}
+```
+
+可以看到，在`@EnableAutoConfiguration`注解中，使用了`@Import`注解，并指定导入的类是`AutoConfigurationImportSelector.class`
+
+```java
+public class AutoConfigurationImportSelector implements DeferredImportSelector, BeanClassLoaderAware,
+       ResourceLoaderAware, BeanFactoryAware, EnvironmentAware, Ordered {}
+```
+
+而`AutoConfigurationImportSelector`又实现了`DeferredImportSelector`
+
+```java
+public interface DeferredImportSelector extends ImportSelector {}
+```
+
+可以看到，`DeferredImportSelector`继承了`ImportSelector`，而`ImportSelector`的作用方式是重写`selectImports`方法，因此只要在`AutoConfigurationImportSelector`类中找到`selectImports`，就能够确定`Spring`底层的自动配置原理
+
+```java
+@Override
+public String[] selectImports(AnnotationMetadata annotationMetadata) {
+    if (!isEnabled(annotationMetadata)) {
+       return NO_IMPORTS;
+    }
+    AutoConfigurationEntry autoConfigurationEntry = getAutoConfigurationEntry(annotationMetadata);
+    return StringUtils.toStringArray(autoConfigurationEntry.getConfigurations());
+}
+```
+
+可以看到，在`selectImports`中调用`getAutoConfigurationEntry`方法获取了`AutoConfigurationEntry`类型的数据，然后再包装成`String`数据向上传递。所以进一步查看`getAutoConfigurationEntry`
+
+```java
+protected AutoConfigurationEntry getAutoConfigurationEntry(AnnotationMetadata annotationMetadata) {
+	if (!isEnabled(annotationMetadata)) {
+		return EMPTY_ENTRY;
+	}
+	AnnotationAttributes attributes = getAttributes(annotationMetadata);
+	List<String> configurations = getCandidateConfigurations(annotationMetadata, attributes);
+	configurations = removeDuplicates(configurations);
+	Set<String> exclusions = getExclusions(annotationMetadata, attributes);
+	checkExcludedClasses(configurations, exclusions);
+	configurations.removeAll(exclusions);
+	configurations = getConfigurationClassFilter().filter(configurations);
+	fireAutoConfigurationImportEvents(configurations, exclusions);
+	return new AutoConfigurationEntry(configurations, exclusions);
+}
+```
+
+在`getAutoConfigurationEntry`中，`configurations`是所有配置类，`exclusions`是被排除的配置类，因此我们观察`configurations`的来源，也就是`getCandidateConfigurations`方法
+
+```java
+protected List<String> getCandidateConfigurations(AnnotationMetadata metadata, AnnotationAttributes attributes) {
+    ImportCandidates importCandidates = ImportCandidates.load(this.autoConfigurationAnnotation,
+          getBeanClassLoader());
+    List<String> configurations = importCandidates.getCandidates();
+    Assert.state(!CollectionUtils.isEmpty(configurations),
+          "No auto configuration classes found in " + "META-INF/spring/"
+                + this.autoConfigurationAnnotation.getName() + ".imports. If you "
+                + "are using a custom packaging, make sure that file is correct.");
+    return configurations;
+}
+```
+
+`configurations`由`importCandidates`对象的`getCandidates`方法而来，而`getCandidates`方法实际返回的是`importCandidates`的一个属性，所以我们重点观察`importCandidates`的来源，即`ImportCandidates`的`load`方法
+
+```java
+public static ImportCandidates load(Class<?> annotation, ClassLoader classLoader) {
+    Assert.notNull(annotation, "'annotation' must not be null");
+    ClassLoader classLoaderToUse = decideClassloader(classLoader);
+    String location = String.format(LOCATION, annotation.getName());
+    Enumeration<URL> urls = findUrlsInClasspath(classLoaderToUse, location);
+    List<String> importCandidates = new ArrayList<>();
+    while (urls.hasMoreElements()) {
+       URL url = urls.nextElement();
+       importCandidates.addAll(readCandidateConfigurations(url));
+    }
+    return new ImportCandidates(importCandidates);
+}
+```
+
+在`load`方法中，第一条`Assert.notNull(annotation, "'annotation' must not be null");`是防止传入的注解类型为空，第二条`ClassLoader classLoaderToUse = decideClassloader(classLoader);`也是防止传入的类加载器为空，因此我们从第三条开始。
+
+`String location = String.format(LOCATION, annotation.getName());`将私有属性`LOCATION`的值与注解全限定名进行了拼接，观察`LOCATION`的定义
+
+```java
+private static final String LOCATION = "META-INF/spring/%s.imports";
+```
+
+可以看到，最后会拼接为形如`META-INF/spring/com.eiousee.AutoConfiguration.imports`这样的资源定位地址
+
+然后使用`findUrlsInClasspath`方法在对应的类路径中查找所有匹配的资源，并返回一个`Enumeration`类型。`Enumeration`是迭代器`Iterator`的前身，相较于`Iterator`只有遍历功能，没有删除元素的功能。
+
+接着新建了返回用的`ArrayList`数组，用于存储结果，随即开始遍历`urls`中匹配到的所有`url`，最后将所有结果返回。
+
+现在来看，`Spring`底层的自动配置原理已经非常清晰了，底层通过查询每个依赖`jar`包中的`AutoConfiguration.imports`文件，从中读取所有的自动配置类，然后逐级向上传递，同时删除不必要的配置类，最后导入所有的`Bean`，进行创建并导入`IOC`容器中
+
+我们来查看`MyBatis`的`AutoConfiguration.imports`文件
+
+> ![](javaweb/86.png)
+
+```imports
+# AutoConfigureMybatis auto-configuration imports
+org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
+org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
+org.springframework.boot.autoconfigure.jdbc.JdbcTemplateAutoConfiguration
+org.springframework.boot.autoconfigure.liquibase.LiquibaseAutoConfiguration
+org.springframework.boot.autoconfigure.transaction.TransactionAutoConfiguration
+org.springframework.boot.autoconfigure.sql.init.SqlInitializationAutoConfiguration
+org.mybatis.spring.boot.autoconfigure.MybatisLanguageDriverAutoConfiguration
+org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration
+```
+
+声明了很多自动配置类，我们打开其中的`MybatisAutoConfiguration`自动配置类进行查看
+
+> ![](javaweb/87.png)
+
+可以看到，里面声明了一个`Bean`名为`sqlSessionFactory`，而在项目运行中，自动配置里也存在对应的自动配置类`Bean` `mybatisAutoConfiguration`，在右侧的结构图中也出现了定义的第三方`Bean`，名为`sqlSessionFactory`
+
+所以，实际演示也证明了我们的逻辑是正确的，这就是`Spring`底层实现自动配置的基本原理
+
