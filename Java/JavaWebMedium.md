@@ -1,6 +1,6 @@
 # Java Web Medium
 
-`更新时间：2026-4-25`
+`更新时间：2026-4-29`
 
 注释解释：
 
@@ -871,7 +871,7 @@ public @interface EnableDemo {
 }
 ```
 
-### 源码追踪
+#### 源码追踪
 
 我们深挖`SpringBoot`源码，分析`SpringBoot`是如何实现自动配置的
 
@@ -1044,3 +1044,458 @@ org.mybatis.spring.boot.autoconfigure.MybatisAutoConfiguration
 
 所以，实际演示也证明了我们的逻辑是正确的，这就是`Spring`底层实现自动配置的基本原理
 
+#### @Conditional注解
+
+`@Conditional`注解会按照相应的条件进行判断，满足条件的类或方法才能被注册为`Bean`，然后交予`IOC`容器中
+
+`@Conditional`注解是一个父注解，派生了很多子注解，以下列举一部分
+
+| 注解                        | 判定条件                      |
+| --------------------------- | ----------------------------- |
+| `@ConditionalOnClass`       | 存在对应的字节码文件          |
+| `@ConditionalOnMissingBean` | 容器中不存在指定的`Bean`      |
+| `@ConditionalOnProperty`    | 配置文件中属性有特定值        |
+| `@ConditionalOnBean`        | 容器中存在指定的`Bean`        |
+| `@ConditionalOnExpression`  | 给定的 `SpEL` 表达式为 `true` |
+
+其中常见的有`@ConditionalOnClass`、`@ConditionalOnMissingBean`、`@ConditionalOnProperty`
+
+**示例**
+
+`@ConditionalOnClass`
+
+```java
+package org.springframework.boot.autoconfigure.condition;
+
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import org.springframework.context.annotation.Conditional;
+
+@Target({ElementType.TYPE, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Conditional({OnClassCondition.class})
+public @interface ConditionalOnClass {
+    Class<?>[] value() default {};
+
+    String[] name() default {};
+}
+```
+
+`@ConditionalOnClass`拥有两个字段可以指定需要的类文件，分别是`Class<?>[] value`和`String[] name`，`value`字段在编译时生效，只要任何指定类不存在，则编译中判断无法通过；`name`字段则在运行时生效，一般使用全限定名
+
+`@ConditionalOnMissingBean`
+
+```java
+package org.springframework.boot.autoconfigure.condition;
+
+import java.lang.annotation.Annotation;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import org.springframework.context.annotation.Conditional;
+
+@Target({ElementType.TYPE, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Conditional({OnBeanCondition.class})
+public @interface ConditionalOnMissingBean {
+    Class<?>[] value() default {};
+
+    String[] type() default {};
+
+    Class<?>[] ignored() default {};
+
+    String[] ignoredType() default {};
+
+    Class<? extends Annotation>[] annotation() default {};
+
+    String[] name() default {};
+
+    SearchStrategy search() default SearchStrategy.ALL;
+
+    Class<?>[] parameterizedContainer() default {};
+}
+```
+
+`value`和`type`可以指定缺少的`Bean`的类型，根据数据类型就可以看出，`value`接收`Class`类型，而`type`接收字符串类型，因此一般使用`value`，防止拼写错误。`ignored`和`ignoredType`与上文类似，可以排除指定类的子类，例如`value = DataSource.class`，可以排除其子类`ignored = HikariDataSource.class`。这里需要注意，只要是指定类的之类，无论是通过继承`extends`还是实现`implements`得到的，如有必要，都需要进行排除。`annotation`用于指定`Bean`上是否存在对应的注解，例如`annotation = org.apache.ibatis.annotations.Mapper`，则表示如果对应`Bean`上没有`@Mapper`注解，则创建这个`Bean`。`name`指定`Bean`名称，与`value`类似，但是不常用，避免拼写错误。`search`指定搜索策略，值为`SearchStrategy`枚举类，其中的`ALL`表示整个上下文，`CURRENT`表示当前上下文，`ANCESTORS`表示只搜索祖先上下文。`parameterizedContainer`指定泛型类型，例如存在一个泛型`Bean`，`GenericService<T>`，而指定`parameterizedContainer = String.class`，则表示匹配`GenericService<String>`，忽略其他类型如`GenericService<Integer>`、`GenericService<Double>`等等
+
+`@ConditionalOnProperty`
+
+```java
+//
+// Source code recreated from a .class file by IntelliJ IDEA
+// (powered by FernFlower decompiler)
+//
+
+package org.springframework.boot.autoconfigure.condition;
+
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Repeatable;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import org.springframework.context.annotation.Conditional;
+
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.TYPE, ElementType.METHOD})
+@Documented
+@Conditional({OnPropertyCondition.class})
+@Repeatable(ConditionalOnProperties.class)
+public @interface ConditionalOnProperty {
+    String[] value() default {};
+
+    String prefix() default "";
+
+    String[] name() default {};
+
+    String havingValue() default "";
+
+    boolean matchIfMissing() default false;
+}
+```
+
+`value`是完整键名，如`vlue = {"app.feature.enabled"}`，`prefix`单独指键前缀，`name`单独指键名，如`prefix = "app.feature", name = "enabled"`，`havingValue`则是需要匹配的键值，`matchIfMissing `是匹配方式，值为布尔值，`true`表示属性缺失时，条件成立，`false`则相反
+
+#### 自定义starter
+
+在实际开发过程中，经常会使用或定义一些公共组件，提供给各个项目团队使用。而在`Spring`项目中，一般都会将这些公共组件封装为`SpringBoot`的`starter`，包含起步依赖以及相关的自动配置等
+
+我们自定义一个阿里云`OSS`操作类的`starter`，以便在其他项目中直接引入`AliyunOSS2Operator`作为`Bean`，不需要再进行相关配置
+
+首先我们定义`starter`模块，创建一个新模块，不需要任何源代码，只作为依赖管理，因此只保留`pom.xml`
+
+> ![](javaweb/88.png)
+
+在`pom.xml`中，删除一切不必要的配置，仅保留最基础的配置，然后引入依赖`aliyun-oss2-spring-boot-autoconfigure`
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+       <groupId>org.springframework.boot</groupId>
+       <artifactId>spring-boot-starter-parent</artifactId>
+       <version>3.5.14</version>
+       <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+    <groupId>com.eiousee.oss</groupId>
+    <artifactId>aliyun-oss2-spring-boot-starter</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>aliyun-oss2-spring-boot-starter</name>
+    <description>aliyun-oss2-spring-boot-starter</description>
+    <url/>
+    <properties>
+       <java.version>21</java.version>
+    </properties>
+    <dependencies>
+       <dependency>
+          <groupId>org.springframework.boot</groupId>
+          <artifactId>spring-boot-starter</artifactId>
+       </dependency>
+       <dependency>
+          <groupId>com.eiousee.oss</groupId>
+          <artifactId>aliyun-oss2-spring-boot-autoconfigure</artifactId>
+          <version>0.0.1-SNAPSHOT</version>
+       </dependency>
+    </dependencies>
+</project>
+```
+
+然后创建自动配置模块`aliyun-oss2-spring-boot-autoconfigure`，将阿里云`OSS`操作类的代码放入其中，并创建`META-INF`目录及其子目录`spring`，创建`org.springframework.boot.autoconfigure.AutoConfiguration.imports`文件
+
+> ![](javaweb/89.png)
+
+在`pom.xml`中引入阿里云的依赖
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.5.14</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+    <groupId>com.eiousee.oss</groupId>
+    <artifactId>aliyun-oss2-spring-boot-autoconfigure</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>aliyun-oss2-spring-boot-autoconfigure</name>
+    <description>aliyun-oss2-spring-boot-autoconfigure</description>
+    <url/>
+    <properties>
+        <java.version>21</java.version>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter</artifactId>
+        </dependency>
+        <!--        阿里云OSS-->
+        <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>alibabacloud-oss-v2</artifactId>
+            <version>0.3.2</version>
+        </dependency>
+    </dependencies>
+</project>
+```
+
+然后在`AliyunOSS2AutoConfiguration`中声明两个必要的`Bean`
+
+```java
+package com.eiousee.oss;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class AliyunOSS2AutoConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean
+    public AliyunOSS2Operator aliyunOSS2Operator(AliyunOSS2Properties aliyunOSS2Properties) {
+        return new AliyunOSS2Operator(aliyunOSS2Properties);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public AliyunOSS2Properties aliyunOSS2Properties() {
+        return new AliyunOSS2Properties();
+    }
+}
+```
+
+确保`org.springframework.boot.autoconfigure.AutoConfiguration.imports`文件中有需要注册的自动配置类名
+
+```imports
+com.eiousee.oss.AliyunOSS2AutoConfiguration
+```
+
+最后在`web`项目中导入
+
+```xml
+<!--        阿里云OSS2-->
+<dependency>
+    <groupId>com.eiousee.oss</groupId>
+    <artifactId>aliyun-oss2-spring-boot-starter</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+</dependency>
+```
+
+## Maven Advance
+
+### 分模块设计与开发
+
+分模块设计是将一个大项目拆分为若干个子模块，方便项目的管理维护、扩展，也方便模块间的相互引用，资源共享
+
+分模块设计一般有三种拆分策略
+
+- `功能拆分`：按照业务逻辑功能进行拆分，例如公共组件模块、商品模块、搜索模块、订单模块等
+- `层级拆分`：按业务逻辑层进行拆分，例如实体类、控制层、业务层、数据访问层等
+- `功能层级拆分`：同时按照功能与层级拆分，例如商品模块实体类、商品模块控制层、订单模块实体类等
+
+### 继承
+
+在分模块设计中，假设项目被分为了几十个模块，而每个模块都需要使用某个依赖，则需要在每个模块的`pom.xml`中都编写一份依赖，而且一旦依赖版本需要更换，将会非常麻烦
+
+因此`Maven`提供了继承，通过子工程可以使用`<parent>`标签来继承一个父工程，所有依赖如果不指定，都会继承父工程的版本。`Maven`不支持多继承，但是可以多重继承，`Son`可以继承`Father`，`Father`可以继承`GrandFather`，从而让`Son`简介继承`GrandFather`
+
+**示例**
+
+创建一个父工程，设置打包方式为`pom`
+
+```xml
+<groupId>com.eiousee</groupId>
+<artifactId>webProject-parent</artifactId>
+<version>0.0.1-SNAPSHOT</version>
+<packaging>pom</packaging>
+```
+
+在子工程中使用`<parent>`标签继承父工程
+
+```xml
+<parent>
+    <groupId>com.eiousee</groupId>
+    <artifactId>webProject</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <relativePath></relativePath>
+</parent>
+```
+
+这样，只需要在父工程的`<dependencies>`中编写公共依赖，所有的子工程就能直接继承
+
+### 版本锁定
+
+如果在多个子工程，但并非全部子工程中都使用了同一个依赖，如果把该依赖加入父工程中，会导致其他不需要的工程产生额外开销，但如果不加入，子工程较多时，版本管理又比较麻烦。因此`Maven`提供了`<dependencyManagement>`标签来管理子工程依赖版本，这被称为版本锁定。只有子工程使用了此依赖，且未指定版本，版本锁定才会生效，如果子工程没有使用依赖，则不会继承
+
+**示例**
+
+父工程中，为`Lombok`设置了版本锁定
+
+```xml
+<dependencyManagement>
+	<dependencies>
+    	<dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.42</version>
+        </dependency>
+    </dependencies>
+</dependencyManagement>
+```
+
+在子工程中，就不要额外指定版本
+
+```xml
+<dependency>
+    <groupId>org.projectlombok</groupId>
+    <artifactId>lombok</artifactId>
+    <optional>true</optional>
+</dependency>
+```
+
+如果父工程中存在大量的依赖标签，在更改依赖版本时，寻找依赖标签就成了一个问题，不过`Maven`也提供了`<properties>`标签，来让开发人员可以自定义属性，在每次更改值的时候，只需要更改自定义属性的值就行了
+
+定义属性
+
+```xml
+<properties>
+	<lombok.version>1.18.42</lombok.version>
+    <mysql.ver>8.0.33</mysql.ver>
+</properties>
+```
+
+使用属性
+
+```xml
+<dependency>
+    <groupId>org.projectlombok</groupId>
+    <artifactId>lombok</artifactId>
+    <version>${lombok.version}</version>
+</dependency>
+<dependency>
+    <groupId>mysql</groupId>
+    <artifactId>mysql-connector-java</artifactId>
+    <version>${mysql.ver}</version>
+</dependency>
+```
+
+### 聚合
+
+在进行项目打包时，如果将项目拆分为了多个模块，默认情况下，是不能完成打包的，因为`Maven`会在仓库中尝试寻找所依赖的模块，但是本地仓库和远程仓库均不存在这样的模块。但是也可以通过将每个模块安装到本地仓库，然后再进行打包，不过这种方式非常繁琐，模块结构越复杂，打包花费的时间就越多。因此我们可以利用`Maven`聚合
+
+在`Maven`中，聚合工程是一个有且仅有一个`pom`文件的空工程，一般来说，我们会将父工程同时作为聚合工程，在聚合工程的`pom.xml`文件中，使用`<modules>`标签来指定需要聚合的子模块，注意需要指定子模块的路径而不是名称
+
+**示例**
+
+```xml
+<modules>
+	<module>../webProject-order</module>
+    <module>../webProject-list</module>
+    <module>../webProject-pay</module>
+</modules>
+```
+
+### 私服
+
+假设公司里程序员甲开发了一套实用的工具包，程序员乙也想使用甲开发的工具包，除开直接传输文件的情况，甲与乙是无法共享资源的，`Maven`的默认仓库中仅有本地仓库与远程中央仓库。但是，`Maven`也提供了私服，每个公司可以搭建自己的`Maven`私服供内部程序员使用
+
+我们使用`Sonatype Nexus`来搭建一个私服，下载`Nexus`，然后执行`nexus.exe /run`
+
+> ![](javaweb/90.png)
+
+默认用户名`admin`，密码在`nexus\sonatype-work\nexus3\admin.password`中
+
+> ![](javaweb/91.png)
+
+然后系统提示更改密码，我们改为`admin`，更改完成后，私服就搭建好了，我们现在对`Intellij IDEA`与`Maven`进行配置
+
+首先在`settings.xml`中配置私服的账号密码
+
+```xml
+<servers>
+	<server>
+        <id>maven-release</id>
+        <username>admin</username>
+        <passowrd>admin</passowrd>
+    </server>
+    <server>
+        <id>maven-snapshots</id>
+        <username>admin</username>
+        <passowrd>admin</passowrd>
+    </server>
+</servers>
+```
+
+接着配置私服地址
+
+```xml
+<mirrors>
+	<mirror>
+      <id>maven-public</id>
+      <mirrorOf>*</mirrorOf>
+      <url>http://localhost:8081/repository/maven-public</url>
+    </mirror>
+</mirrors>
+```
+
+设置允许`snapshots`仓库
+
+```XML
+<profiles> 
+	<profile>
+        <id>allow-snapshots</id>
+        <activation>
+            <activeByDefault>true</activeByDefault>
+        </activation>
+        <repositories>
+            <repository>
+                <id>maven-public</id>
+                <url>http://localhost:8081/repository/maven-public/</url>
+                <releases>
+                    <enabled>true</enabled>
+                </releases>
+                <snapshots>
+                    <enabled>true</enabled>
+                </snapshots>
+            </repository>
+        </repositories>
+    </profile>
+</profiles>   
+```
+
+最后在`pom.xml`中设置私服地址
+
+```XML
+<distributionManagement>
+    <!-- release版本的发布地址 -->
+    <repository>
+        <id>maven-releases</id>
+        <url>http://localhost:8081/repository/maven-releases/</url>
+    </repository>
+    <!-- snapshot版本的发布地址 -->
+    <snapshotRepository>
+        <id>maven-snapshots</id>
+        <url>http://localhost:8081/repository/maven-snapshots/</url>
+    </snapshotRepository>
+</distributionManagement>
+```
+
+我们在`IDEA`中使用`deploy`
+
+> ![](javaweb/92.png)
+
+在`nexus`中也能看到上传的`jar`包
+
+> ![](javaweb/93.png)
