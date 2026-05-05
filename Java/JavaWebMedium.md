@@ -1,6 +1,6 @@
 # Java Web Medium
 
-`更新时间：2026-4-29`
+`更新时间：2026-5-5`
 
 注释解释：
 
@@ -1499,3 +1499,497 @@ com.eiousee.oss.AliyunOSS2AutoConfiguration
 在`nexus`中也能看到上传的`jar`包
 
 > ![](javaweb/93.png)
+
+## Vue工程化
+
+在以往的开发中，我们针对于前端的项目开发是直接在`nginx`的项目目录中进行的，对于企业级开发来说，每个前端开发工程师的文件和目录命名习惯不同，对于图片目录，很可能同时出现如`img`、`image`、`pic`、`picture`等不同的命名方式。因此，我们需要让前端也如同`SpringBoot`一样，拥有一个标准框架，而且这个标准框架也提供对于前端的单元测试、打包等功能，并不是直接部署在`nginx`服务器中
+
+### Node.js
+
+Node.js 是一个开源、跨平台的 `JavaScript` 运行时环境，能够在浏览器环境之外运行`JavaScript`。`Node.js`提供了类似于`maven`的包管理器`npm`，通过`npm`，可以方便地管理项目中需要的依赖，不再需要手动导入如`axios`这样的第三方包。同时，`Node.js`也可以作为`Web`后端服务器，但这里不做演示
+
+### 快速入门
+
+`Vue`官方提供了一个脚手架工具，类似于`SpringBoot`，我们在终端中执行
+
+```cmd
+npm create vue[@3.3.4]
+```
+
+就可以快捷创建一个可以运行的`Vue`项目结构
+
+> ![](javaweb/94.png)
+
+然后进入生成的项目目录，执行
+
+```cmd
+npm install
+```
+
+安装相关依赖
+
+> ![](javaweb/95.png)
+
+然后执行
+
+```CMD
+npm run dev
+```
+
+启动项目，并访问`http://localhost:5173`
+
+> ![](javaweb/96.png)
+
+> ![](javaweb/97.png)
+
+接着，我们利用这个脚手架工具，设计一个员工信息查询的页面。在`src`目录中新建目录`views`，然后创建一个文件`EmpTest.vue`
+
+> ![](javaweb/98.png)
+
+`vue`文件的基本结构如下
+
+```vue
+<script setup>
+
+</script>
+
+<template>
+
+</template>
+
+<style scoped>
+
+</style>
+```
+
+`script`编写文件中所有的`JS`代码，`template`编写模板，也就是`HTML`内容，`style`则是`CSS`样式。如上所示的结构文件在`vue`中被称为一个组件，项目提供的`App.vue`被称为根组件，前端开发人员只需要开发不同的组件，然后根据需要挂载到其他组件即可，被挂载的组件使用其组件名称作为标签名，组件标签可以是成对的，也可以是自闭合的
+
+```vue
+<script setup>
+import Demo from './views/Demo.vue';
+import Demo1 from './views/Demo1.vue';    
+</script>
+
+<template>
+<Demo />
+<Demo1></Demo1>
+</template>
+
+<style scoped>
+
+</style>
+```
+
+接着我们来完善`EmpTest.vue`中的内容，首先定义几个变量用于提交搜索内容。在`vue`组件中，定义变量需要使用`ref()`函数，通过`vue`包引入
+
+```js
+import { ref, onMounted } from "vue";
+import axios from "axios";
+
+const name = ref('');
+const sex = ref('');
+const pageSize = ref(10);
+```
+
+然后定义搜索函数，通过`axios`访问后端`api`，并将结果存储在前端
+
+```js
+const emp_list = ref([]);
+
+const getEmpList = async () => {
+    const result = await axios.get('/api/emps', {
+        params: {
+            name: name.value,
+            sex: sex.value,
+            pageSize: pageSize.value
+        }
+    })
+    emp_list.value = result.data.data.rows;
+}
+```
+
+然后使用钩子函数，在实例创建时调用一次搜索函数
+
+```js
+onMounted(() => {
+    getEmpList();
+});
+```
+
+最后编写简单的模板和样式
+
+```vue
+<template>
+<div id="emp">
+    <h1>员工列表查询</h1>
+    <div class="search">
+        <span>
+            <label>员工姓名：</label>
+            <input type="text" v-model="name">
+        </span>
+        <span>
+            <label>性别：</label>
+            <select v-model="sex">
+                <option value="">全部</option>
+                <option value="男">男</option>
+                <option value="女">女</option>
+            </select>
+        </span>
+        <span>
+            <label>每页数量：</label>
+            <select v-model="pageSize">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </span>
+        <button @click="getEmpList">查询</button>
+    </div>
+    <div class="list">
+        <table border="1" cellspacing="0" cellpadding="5" class="table">
+            <thead>
+                <tr>
+                    <th>编号</th>
+                    <th>姓名</th>
+                    <th>性别</th>
+                    <th>职位</th>
+                    <th>入职时间</th>
+                    <th>出生日期</th>
+                    <th>头像</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr v-if="emp_list.length === 0">
+                    <td colspan="7">暂无数据</td>
+                </tr>
+                <tr v-for="emp in emp_list" :key="emp.id">
+                    <td>{{ emp.id }}</td>
+                    <td>{{ emp.name }}</td>
+                    <td>{{ emp.sex }}</td>
+                    <td>{{ emp.jobName }}</td>
+                    <td>{{ emp.boardDate }}</td>
+                    <td>{{ emp.birth }}</td>
+                    <td><img :src="emp.avatarPath" alt=""></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</template>
+
+<style scoped>
+#emp {
+    text-align: center;
+}
+.search {
+    margin-bottom: 20px;
+}
+.search span {
+    margin-right: 20px;
+}
+.list {
+    width: 80%;
+    margin: 0 auto;
+}
+.table {
+    width: 100%;
+}
+</style>
+```
+
+在`App.vue`中导入`EmpTest`组件，并挂载
+
+```vue
+<script setup>
+import EmpTest from './views/EmpTest.vue';
+</script>
+
+<template>
+<EmpTest />
+</template>
+
+<style scoped>
+
+</style>
+```
+
+启动项目，成功实现员工搜索的功能
+
+> ![](javaweb/99.png)
+
+## ElementPlus
+
+`Element`是饿了么团队研发的，基于`Vue3`的，面向设计师和开发者的组件库，内涵如超链接、按钮、图片、表格、表单、分页条等等组件，可供前端开发人员便捷使用，而不需要考虑具体的样式实现
+
+### 快速入门
+
+首先安装`ElementPlus`依赖，在项目终端中输入
+
+```cmd
+npm install element-plus@2.4.4 --save
+```
+
+然后检查`package.json`中是否包含`element-plus`
+
+```json
+{
+  "name": "vue-project",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "axios": "^1.16.0",
+    "element-plus": "^2.4.4",
+    "vue": "^3.5.32"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.6",
+    "vite": "^8.0.8",
+    "vite-plugin-vue-devtools": "^8.1.1"
+  },
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  }
+}
+```
+
+然后`main.js`中完整导入`ElementPlus`
+
+```js
+import './assets/main.css'
+
+import { createApp } from 'vue'
+import App from './App.vue'
+import ElementPlus from 'element-plus'
+import 'element-plus/dist/index.css'
+
+createApp(App).use(ElementPlus).mount('#app')
+```
+
+现在我们使用`ElementPlus`为员工搜索的页面进行美化。首先改造搜索栏，我们使用如下的输入框组件
+
+> ![](javaweb2/1.png)
+
+选择最基础的输入框，案例如下
+
+```vue
+<template>
+  <el-input v-model="input" style="width: 240px" placeholder="Please input" />
+</template>
+
+<script setup>
+import { ref } from 'vue'
+
+const input = ref('')
+</script>
+```
+
+据此在我们的项目中进行更改
+
+```vue
+<span>
+    <label>员工姓名：</label>
+    <el-input v-model="name" style="width: 240px" placeholder="请输入姓名" />
+</span>
+```
+
+效果如下
+
+> ![](javaweb2/2.png)
+
+然后再更改性别选项框、每页数量和查询按钮
+
+```vue
+<div class="search">
+    <span>
+        <label>员工姓名：</label>
+        <el-input v-model="name" style="width: 240px" placeholder="请输入姓名" />
+    </span>
+    <span>
+        <label>性别：</label>
+        <el-select v-model="sex" placeholder="选择性别" style="width: 80px">
+            <el-option label="全部" value="" />
+            <el-option label="男" value="男" />
+            <el-option label="女" value="女" />
+        </el-select>
+    </span>
+    <span>
+        <label>每页数量：</label>
+        <el-select v-model="pageSize" style="width: 70px">
+            <el-option label="5" value="5" />
+            <el-option label="10" value="10" />
+            <el-option label="20" value="20" />
+            <el-option label="50" value="50" />
+            <el-option label="100" value="100" />
+        </el-select>
+    </span>
+    <el-button type="primary" @click="getEmpList">搜索</el-button>
+</div>
+```
+
+> ![](javaweb2/3.png)
+
+接着更新表格
+
+```vue
+<template>
+<div id="emp">
+    <h1>员工列表查询</h1>
+    <div class="search">
+        <span>
+            <label>员工姓名：</label>
+            <el-input v-model="name" style="width: 240px" placeholder="请输入姓名" />
+        </span>
+        <span>
+            <label>性别：</label>
+            <el-select v-model="sex" placeholder="选择性别" style="width: 80px">
+                <el-option label="全部" value="" />
+                <el-option label="男" value="男" />
+                <el-option label="女" value="女" />
+            </el-select>
+        </span>
+        <span>
+            <label>每页数量：</label>
+            <el-select v-model="pageSize" style="width: 70px">
+                <el-option label="5" value="5" />
+                <el-option label="10" value="10" />
+                <el-option label="20" value="20" />
+                <el-option label="50" value="50" />
+                <el-option label="100" value="100" />
+            </el-select>
+        </span>
+        <el-button type="primary" @click="getEmpList">搜索</el-button>
+    </div>
+    <div class="list">
+        <el-table :data="emp_list" border style="width: 100%">
+        <el-table-column prop="id" label="编号" width="180" align="center" />
+        <el-table-column prop="name" label="姓名" width="180" align="center" />
+        <el-table-column prop="birth" label="出生日期" width="180" align="center" />
+        <el-table-column prop="sex" label="性别" width="180" align="center" />
+        <el-table-column prop="jobName" label="职位" width="180" align="center" />
+        <el-table-column prop="boardDate" label="入职日期" width="180" align="center" />
+        <el-table-column label="头像" align="center">
+            <template #default="scope">
+                <el-avatar :size="60" :src="scope.row.avatarPath">
+                    <img src="https://cube.elemecdn.com/e/fd/0fc7d20532fdaf769a25683617711png.png" />
+                </el-avatar>
+            </template>
+        </el-table-column>
+    </el-table>
+    </div>
+</div>
+</template>
+
+<style scoped>
+#emp {
+    text-align: center;
+}
+.search {
+    margin-bottom: 20px;
+}
+.search span {
+    margin-right: 20px;
+}
+.list {
+    width: 70%;
+    margin: 0 auto;
+}
+</style>
+```
+
+> ![](javaweb2/4.png)
+
+实际上分页功能还没有完全实现，因此我们还需要根据`ElementPlus`的官方文档来制作分页展示按钮
+
+```vue
+<template>
+<div id="emp">
+    <h1>员工列表查询</h1>
+    <div class="search">
+        <span>
+            <label>员工姓名：</label>
+            <el-input v-model="name" style="width: 240px" placeholder="请输入姓名" />
+        </span>
+        <span>
+            <label>性别：</label>
+            <el-select v-model="sex" placeholder="选择性别" style="width: 80px">
+                <el-option label="全部" value="" />
+                <el-option label="男" value="男" />
+                <el-option label="女" value="女" />
+            </el-select>
+        </span>
+        <el-button type="primary" @click="getEmpList">搜索</el-button>
+    </div>
+    <div class="list">
+        <el-table 
+            :data="emp_list.rows" 
+            border 
+            :row-key="id"
+        >
+            <el-table-column prop="id" label="编号" width="180" align="center" />
+            <el-table-column prop="name" label="姓名" width="180" align="center" />
+            <el-table-column prop="birth" label="出生日期" width="180" align="center" />
+            <el-table-column prop="sex" label="性别" width="180" align="center" />
+            <el-table-column prop="jobName" label="职位" width="180" align="center" />
+            <el-table-column prop="boardDate" label="入职日期" width="180" align="center" />
+            <el-table-column label="头像" align="center">
+                <template #default="scope">
+                    <el-avatar :size="40" :src="scope.row.avatarPath">
+                        <img src="https://cube.elemecdn.com/e/fd/0fc7d20532fdaf769a25683617711png.png" />
+                    </el-avatar>
+                </template>
+            </el-table-column>
+        </el-table>
+    </div>
+    <div class="page">
+        <el-pagination
+            v-model:current-page="page"
+            v-model:page-size="pageSize"
+            :page-sizes="[5, 10, 20, 50, 100]"
+            layout="total, ->, sizes, prev, pager, next, jumper"
+            :total=emp_list.total
+            @change="getEmpList"
+        >
+            <template #sizes="{ size }">
+                {{ size }}
+            </template>
+        </el-pagination>
+    </div>
+</div>
+</template>
+
+<style scoped>
+#emp {
+    text-align: center;
+}
+.search {
+    margin-bottom: 20px;
+}
+.search span {
+    margin-right: 20px;
+}
+.list {
+    width: 80%;
+    margin: 0 auto;
+    margin-bottom: 20px;
+}
+.page {
+    width: 80%;
+    margin: 0 auto;
+}
+</style>
+```
+
+> ![](javaweb2/5.png)
+
+### 进阶案例
+
+上文中我们已经实现了员工列表的基础查询效果，但是在实际的业务中，不仅有展示效果，还需要一些互动功能，如更新员工、删除员工等操作，现在我们根据`ElementPlus`提供的组件以及接口文档，来制作一个非常完善的员工管理界面
+

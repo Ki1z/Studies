@@ -391,7 +391,7 @@
     "deptName": "学工部",
     "jobName": "工程师",
     "boardDate": "2020-01-01",
-    "empExps": [
+    "empExpList": [
         {
             "startTime": "2020-01-01",
             "endTime": "2020-01-01",
