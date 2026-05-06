@@ -1,6 +1,6 @@
 # Java Web Medium
 
-`更新时间：2026-5-5`
+`更新时间：2026-5-6`
 
 注释解释：
 
@@ -1992,4 +1992,389 @@ const input = ref('')
 ### 进阶案例
 
 上文中我们已经实现了员工列表的基础查询效果，但是在实际的业务中，不仅有展示效果，还需要一些互动功能，如更新员工、删除员工等操作，现在我们根据`ElementPlus`提供的组件以及接口文档，来制作一个非常完善的员工管理界面
+
+#### 添加员工
+
+首先定义一个添加员工的按钮，布置在搜索按钮的右侧
+
+```vue
+<el-button type="success" @click="openAddEmpDialog">新增员工</el-button>
+```
+
+点击按钮后，打开添加员工的弹窗界面，这个界面被称为对话框`Dialog`，在`ElementPlus`中，对话框通过绑定一个布尔值变量来决定是否显示
+
+```vue
+<el-dialog
+    v-model="addEmpDialogVisible"
+    width="40%"
+    align="left"
+    style="margin-top: 100px;"
+>
+```
+
+如上，`addEmpDialogVisible`就是控制对话框是否显示的变量，所以我们需要定义这个变量，默认赋值为`false`
+
+```js
+// 新增员工对话框是否可见
+const addEmpDialogVisible = ref(false);
+```
+
+新增员工时需要在前端保存员工实例，然后提交给后端，定义这个实例，并同步定义一个重置方法，方便在操作完成后快捷重置
+
+```js
+// 新增员工属性
+const emp = ref({
+    name: null,
+    birth: null,
+    sex: null,
+    avatarPath: null,
+    deptName: null,
+    jobName: null,
+    boardDate: null,
+    empExpList: []
+});
+
+// 清空表单方法
+const clearForm = () => {
+    emp.value = { name: null, birth: null, sex: null, avatarPath: null, deptName: null, jobName: null, boardDate: null, empExpList: [] };
+}
+```
+
+然后定义`openAddEmpDialog`方法，点击按钮后，应该先打开界面，然后调用部门查询方法和职位查询方法，将所有的选项保存在前端
+
+```js
+// 部门列表
+const dept_list = ref([]);
+// 职位列表
+const job_list = ref([]);
+
+// 打开创建员工对话框方法
+const openAddEmpDialog = () => {
+    addEmpDialogVisible.value = true;
+    clearForm();
+    getDeptList();
+    getJobList();
+}
+
+// 获取部门列表
+const getDeptList = async () => {
+    const result = await axios.get('/api/depts')
+    dept_list.value = result.data.data;
+}
+
+// 获取职位列表
+const getJobList = async () => {
+    const result = await axios.get('/api/jobs')
+    job_list.value = result.data.data;
+}
+```
+
+接着实现上传头像，`ElementPlus`提供了多种上传文件的方式，我们使用最简单的立即上传模式。在对话框中定义头像`<div>`，然后通过`<el-avatar>`预览头像，再使用`<el-upload>`上传文件，通过一个`<el-button>`来触发。在`<el-upload>`的属性中，`action`表示文件上传路径，`name`是文件的参数名，`show-file-list`表示是否额外展示文件上传的列表，`before-upload`是在上传前执行的方法，`on-success`是上传成功后执行的方法
+
+```vue
+<!-- 头像 -->
+<div class="addEmpDialog-body-info-avatar" align="center">
+    <el-avatar :src="emp.avatarPath" :size="70">
+        <img src="https://cube.elemecdn.com/e/fd/0fc7d20532fdaf769a25683617711png.png" />
+    </el-avatar>
+    <el-upload
+        action="/api/upload"
+        name="file"
+        :show-file-list="false"
+        :before-upload="beforeAvatarUpload"
+        :on-success="handleAvatarSuccess"
+    >
+        <el-button type="success" style="margin-top: 10px;">点击上传</el-button>
+    </el-upload>
+</div>
+```
+
+在上传文件前，应当对文件的格式、大小进行一定限制，比如我们设置只能上传`jpg`、`png`、`jpeg`格式的文件，文件大小不超过`2MiB`
+
+```js
+// 头像上传限制
+const beforeAvatarUpload = (rawFile) => {
+  if (rawFile.type !== 'image/jpeg' && rawFile.type !== 'image/png' && rawFile.type !== 'image/jpg') {
+    ElMessage.error('必须为jpeg、png、jpg格式的图片')
+    return false
+  } else if (rawFile.size / 1024 / 1024 > 2) {
+    ElMessage.error('文件大小不能超过2MiB')
+    return false
+  }
+  return true
+}
+```
+
+文件上传成功后，将后端返回的文件目录添加到`emp`实例中，并提示上传成功
+
+```js
+// 头像上传成功方法
+const handleAvatarSuccess = (response) => {
+    emp.value.avatarPath = response.data;
+    ElMessage.success('上传成功')
+}
+```
+
+> ![](javaweb2/6.png)
+
+然后定义`emp`实例对应的输入框、选择框等等。需要注意，`ElementPlus`中的日期格式必须大写，如`YYYY-MM-DD`，小写无法正确解析
+
+```vue
+<div class="addEmpDialog-body-info" style="margin-top: -30px; font-size: 16px;">
+    <el-divider content-position="center">员工基本信息</el-divider>
+    <!-- 头像 -->
+    <div class="addEmpDialog-body-info-avatar" align="center">
+        <el-avatar :src="emp.avatarPath" :size="70">
+            <img src="https://cube.elemecdn.com/e/fd/0fc7d20532fdaf769a25683617711png.png" />
+        </el-avatar>
+        <el-upload
+            action="/api/upload"
+            name="file"
+            :show-file-list="false"
+            :before-upload="beforeAvatarUpload"
+            :on-success="handleAvatarSuccess"
+        >
+            <el-button type="success" style="margin-top: 10px;">点击上传</el-button>
+        </el-upload>
+    </div>
+    <!-- 员工信息 -->
+    <div class="addEmpDialog-body-info-empInfo" align="center" style="margin-top: 20px;">
+        <div class="empInfo">
+            <label>员工姓名：</label>
+            <el-input v-model="emp.name" style="width: 220px" placeholder="请输入姓名" />
+            <label style="margin-left: 20px">性别：</label>
+            <el-select v-model="emp.sex" placeholder="选择性别" style="width: 250px">
+                <el-option label="男" value="男" />
+                <el-option label="女" value="女" />
+            </el-select>
+        </div>
+        <div class="empInfo">
+            <label>出生日期：</label>
+            <el-date-picker
+                v-model="emp.birth"
+                type="date"
+                placeholder="选择日期"
+                value-format="YYYY-MM-DD"
+                style="width: 220px"
+            />
+            <label style="margin-left: 20px">部门：</label>
+            <el-select v-model="emp.deptName" placeholder="选择部门" style="width: 250px">
+                <el-option v-for="dept in dept_list" :key="dept.id" :label="dept.name" :value="dept.name" />
+            </el-select>
+        </div>
+        <div class="empInfo">
+            <label>职位：</label>
+            <el-select v-model="emp.jobName" placeholder="选择职位" style="width: 220px">
+                <el-option v-for="job in job_list" :key="job" :label="job" :value="job" />
+            </el-select>
+            <label style="margin-left: 20px">入职日期：</label>
+            <el-date-picker
+                v-model="emp.boardDate"
+                type="date"
+                placeholder="选择日期"
+                value-format="YYYY-MM-DD"
+                style="width: 250px"
+            />
+        </div>
+    </div>
+</div>
+```
+
+> ![](javaweb2/7.png)
+
+下面是员工工作经历信息，我们使用`v-for`循环遍历`emp`实例中的`empExpList`数组，每遍历到一个工作经历实例，则在页面中添加一个元素，元素中包含需要填入的工作经历信息。每个工作经历信息也需要一个`<el-button>`用于删除。在元素的最后再提供一个添加工作经历的按钮
+
+```vue
+<div class="addEmpDialog-body-empExpList" style="font-size: 16px;" align="center">
+    <el-divider content-position="center">员工工作经历</el-divider>
+    <el-scrollbar max-height="200px">
+        <div class="addEmpDialog-body-empExpList-empExp" v-for="(empExp, index) in emp.empExpList" :key="index">
+            <div class="empExp-info">
+                <label>开始时间：</label>
+                <el-date-picker
+                    v-model="empExp.startTime"
+                    type="date"
+                    placeholder="选择日期"
+                    value-format="YYYY-MM-DD"
+                    style="width: 220px"
+                />
+                <label style="margin-left: 20px">结束时间：</label>
+                <el-date-picker
+                    v-model="empExp.endTime"
+                    type="date"
+                    placeholder="选择日期"
+                    value-format="YYYY-MM-DD"
+                    style="width: 220px"
+                />
+            </div>
+            <div class="empExp-info">
+                <label>担任职位：</label>
+                <el-input v-model="empExp.job" style="width: 220px" placeholder="请输入职位" />
+                <label style="margin-left: 20px">公司名称：</label>
+                <el-input v-model="empExp.company" style="width: 220px" placeholder="请输入公司名称" />
+            </div>
+            <el-button type="danger" @click="deleteEmpExp(empExp.id)">点击删除</el-button>
+            <el-divider>
+                <el-icon><star-filled /></el-icon>
+            </el-divider>
+        </div>
+        <div class="addEmpExp-button">
+            <el-button type="success" @click="addEmpExp" style="margin-bottom: -10px;">点击添加</el-button>
+        </div>
+    </el-scrollbar>
+</div>
+```
+
+定义`deleteEmpExp`和`addEmpExp`方法，新增工作经历即是在`emp.empExpList`中新增一个值全为`null`的工作经历实例，删除则是直接从数组中删除一个实例即可
+
+```js
+// 删除工作经历
+const deleteEmpExp = async (index) => {
+    emp.value.empExpList.splice(index, 1);
+}
+
+// 新增工作经历
+const addEmpExp = () => {
+    emp.value.empExpList.push({
+        "startTime": null,
+        "endTime": null,
+        "company": null,
+        "job": null
+    });
+}
+```
+
+> <img src="javaweb2/8.png" style="zoom:80%;" />
+
+最后完成提交的方法即可，`POST`方法向`/api/emps`提交数据，根据后端返回的结果判断是否添加成功，同时关闭对话框，刷新员工列表，重置员工实例
+
+```js
+// 新增员工
+const addEmp = async () => {
+    const result = await axios.post('/api/emps', emp.value);
+    if (result.data.code !== 1) {
+        ElMessage.error(`添加失败！可能的原因：${result.data.message}`);
+    } else {
+        ElMessage.success(`添加成功！`);
+    }
+    addEmpDialogVisible.value = false;
+    getEmpList();
+    clearForm();
+}
+```
+
+#### 批量删除员工
+
+`ElementPlus`提供了表格多选框，通过设置表格的`type="selection"`即可快捷生成多选框
+
+```vue
+<el-table 
+    :data="emp_list.rows"
+    ref="table"
+    width="100%"
+    @selection-change="handleSelectionChange"
+>
+    <el-table-column width="100" type="selection" />
+    <el-table-column fixed prop="id" label="工号" width="100" />
+    <el-table-column prop="name" label="Name" width="150" />
+    <el-table-column prop="birth" label="出生日期" width="150" />
+    <el-table-column prop="sex" label="性别" width="120" />
+    <el-table-column label="头像" width="100">
+        <template #default="scope">
+            <el-avatar :src="scope.row.avatarPath">
+                <img src="https://cube.elemecdn.com/e/fd/0fc7d20532fdaf769a25683617711png.png" />
+            </el-avatar>
+        </template>
+    </el-table-column>
+    <el-table-column prop="deptName" label="部门" width="120" />
+    <el-table-column prop="jobName" label="职位" width="120" />
+    <el-table-column prop="boardDate" label="入职日期" width="150" />
+    <el-table-column prop="updateTime" label="上次修改时间" width="200" />
+    <el-table-column fixed="right" label="操作" min-width="80">
+    <template #default="scope">
+        <el-button link type="primary" @click="openUpdateEmpDialog(scope.row.id)">更新</el-button>
+    </template>
+    </el-table-column>
+</el-table>
+```
+
+`<el-table>`通过`ref`来绑定一个变量，变量得到的是`table`组件，而不是多选框中的内容，因此需要额外通过`@selection-change`设置一个监听器，在每次多选框内容更改时，监听器调用`table`组件的`getSelectionRows`方法获取其中选择的数据，数据由`table`组件本身的`:data`传递
+
+```js
+// 表格组件
+const table = ref();
+// 删除员工列表
+const deleteEmpList = ref([]);
+
+// 删除员工多选框监听器方法
+const handleSelectionChange = () => {
+    deleteEmpList.value = table.value.getSelectionRows();
+}
+```
+
+然后我们设置一个删除员工的按钮，按钮仅在多选框中有内容时出现
+
+```vue
+<el-button type="danger" @click="deleteEmpDialogVisible = true" v-show="deleteEmpList.length > 0">删除员工</el-button>
+```
+
+定义删除员工的对话框，对话框中显示需要删除的员工信息
+
+```vue
+<div class="deleteEmpDialog">
+    <el-dialog
+        v-model="deleteEmpDialogVisible"
+        width="35%"
+        align="left"
+        align-center="true"
+    >
+    <template #header>
+        <div class="my-header">
+            <h1 style="font-size: 24px;margin: 1px;">批量删除员工</h1>
+        </div>
+    </template>
+    <div class="deleteEmpDialog-body" style="margin-top: -30px;">
+        <label style="font-size: 16px;">是否删除以下员工</label>
+        <div class="deleteEmpDialog-body-empInfo" align="center">
+            <el-table :data="deleteEmpList" style="width: 100%" max-height="300px">
+                <el-table-column prop="id" label="工号" width="100" />
+                <el-table-column prop="name" label="姓名" width="120" />
+                <el-table-column prop="sex" label="性别" width="120" />
+                <el-table-column prop="deptName" label="部门" width="120" />
+                <el-table-column prop="jobName" label="职位" />
+            </el-table>
+        </div>
+    </div>
+    <template #footer>
+        <div class="deleteEmpDialog-footer">
+            <el-button @click="deleteEmpDialogVisible = false">关闭</el-button>
+            <el-button type="danger" @click="deleteEmp">确定</el-button>
+        </div>
+        </template>
+    </el-dialog>
+</div>
+```
+
+最后完善删除员工的请求方法，`deleteEmpList`中存储的是对象，所以我们通过`map()`方法转换为`id`数组，通过`axios`将数组作为参数传递到后端进行删除。操作完成后，刷新表格和选择内容
+
+```js
+// 删除员工方法
+const deleteEmp = async () => {
+    deleteEmpDialogVisible.value = false;
+    const deleteEmpListId = deleteEmpList.value.map(emp => emp.id);
+    const result = await axios.delete('/api/emps', {
+        params: {
+            ids: deleteEmpListId
+        }
+    })
+    if (result.data.code !== 1) {
+        ElMessage.error(`删除失败！可能的原因：${result.data.msg}`);
+
+    } else {
+        ElMessage.success(`删除成功！`);
+    }
+    getEmpList();
+    handleSelectionChange();
+}
+```
 
