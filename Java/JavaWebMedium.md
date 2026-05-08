@@ -1,6 +1,6 @@
 # Java Web Medium
 
-`更新时间：2026-5-7`
+`更新时间：2026-5-8`
 
 注释解释：
 
@@ -2378,3 +2378,421 @@ const deleteEmp = async () => {
 }
 ```
 
+## Vue Router
+
+`Vue Router` 是 `Vue.js` 官方提供的客户端路由解决方案，专为构建单页面应用设计。它通过将浏览器的 URL 与用户界面绑定，使页面无需重新加载即可实现导航。`Vue Router` 深度集成了` Vue` 的组件系统，提供了灵活且强大的路由管理功能。
+
+举个例子，在传统的页面布局中，假设页面中存在一个导航栏，用户每点击一个导航栏，就会打开一个新页面，或者在当前页面重新加载新页面。使用`Vue Router`可以在当前页面中加载其他页面，类似于`HTML`中的内联框架`<iframe>`，但是功能更为强大。
+
+### 快速入门
+
+首先安装`Vue Router`依赖
+
+```cmd0
+npm install vue-router --save
+```
+
+然后`main.js`中导入并使用`Vue Router`
+
+```js
+import router from './router'
+
+const app = createApp(App)
+app.use(router)
+app.mount('#app')
+```
+
+在`src`目录下创建`router`目录，并在`router`目录中创建文件`index.js`
+
+```js
+import { createRouter, createWebHistory} from 'vue-router'
+
+const routes = [
+
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes
+});
+
+export default router
+```
+
+`Vue Router`中，使用`<router-link>`标签设置需要路由的元素，使用属性`to`设置路由地址
+
+```vue
+<router-link to="/">
+    <el-button type="success">返回首页</el-button>
+</router-link>
+```
+
+然后使用`<router-view>`标签来设置路由显示的位置
+
+```vue
+<el-container>
+    <el-header>导航栏</el-header>
+    <el-container>
+        <el-aside>侧边栏</el-aside>
+        <el-main>
+            主要内容区
+            <router-view />
+        </el-main>
+    </el-container>
+</el-container>
+```
+
+路由的配置在`index.js`中设置，每个路由的格式如下，`component`接收的是一个组件对象，需要使用`import`导入
+
+```js
+{
+    path: '',
+    name: '',
+    component: 
+}
+```
+
+例如我们设置`/emp`访问`src/views/emp/index.vue`
+
+```js
+import EmpView from '@/views/emp/index.vue'
+
+const routes = [
+    {
+        path :'emp',
+        name: 'emp',
+        component: EmpView
+    }
+]
+```
+
+不难看出，`routes`是一个数组，因此可以配置多个路由
+
+```js
+import EmpView from '@/views/emp/index.vue'
+import DeptView from '@/views/dept/index.vue'
+
+const routes = [
+    {
+        path :'emp',
+        name: 'emp',
+        component: EmpView
+    },
+    {
+        path :'dept',
+        name: 'dept',
+        component: DeptView
+    }
+]
+```
+
+`Vue Router`也支持配置子路由，通过设置路由实例的`children`属性，当访问`/aaa/bbb`时，可以路由到`/aaa`的`/bbb`子路由
+
+```js
+const routes = [
+    {
+        path :'/aaa',
+        name: 'aaa',
+        component: aaa,
+        children: [
+            {
+                path: '/bbb',
+                name: 'bbb',
+                component: bbb
+            }
+        ]
+    }
+]
+```
+
+如果路由`a`对应的`vue`组件中存在一个`<router-view>`，那么其子路由会直接显示在`a`组件的对应位置
+
+`a.vue`
+
+```vue
+<script setup>
+
+</script>
+
+<template>
+aaa
+<router-view />
+ccc
+</template>
+
+<style scoped>
+
+</style>
+```
+
+`b.vue`
+
+```vue
+<script setup>
+
+</script>
+
+<template>
+bbb
+</template>
+
+<style scoped>
+
+</style>
+```
+
+访问`/aaa/bbb`即可得到
+
+> ![](javaweb2/9.png)
+
+因此可以构建单页面应用设计，设置一个布局组件，在布局组件中设置一个菜单，通过菜单路由到各个子组件，然后在布局组件中合适位置放置一个`<router-view>`，点击菜单中的按钮，即可在布局组件的指定位置显示子路由页面的内容
+
+> ![](javaweb2/10.png)
+
+### 进阶案例
+
+我们来制作上文图片中的网页效果，首先定义一个布局组件，在布局组件中使用`ElementPlus`的`<el-container>`容器来进行布局
+
+```vue
+<script setup>
+    
+</script>
+
+<template>
+<div class="container">
+    <el-container>
+        <el-header height="80px" class="container-header">
+            <h1 class="container-header-title" style="color: white;">艾欧希后台管理系统</h1>
+        </el-header>
+        <el-container class="container-body">
+            <el-aside width="200px" class="container-aside">
+               
+            </el-aside>
+            <el-main>
+                <router-view />
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+</template>
+
+<style scoped>
+.container-header {
+    background-color: #409EFF;
+    align-items: center;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+.container-body {
+    /* border: 1px solid #ccc; */
+    height: 89.5vh;
+}
+.container-aside {
+    border-right: #ccc 1px solid;
+}
+</style>
+```
+
+> ![](javaweb2/11.png)
+
+然后在左边栏使用`ElementPlus`中的`<el-menu>`侧边栏菜单组件设计一些菜单按钮
+
+```vue
+<script setup>
+    
+</script>
+
+<template>
+<div class="container">
+    <el-container>
+        <el-header height="80px" class="container-header">
+            <h1 class="container-header-title" style="color: white;">艾欧希后台管理系统</h1>
+        </el-header>
+        <el-container class="container-body">
+            <el-aside width="200px" class="container-aside">
+                <el-scrollbar height="100%">
+                    <el-menu router>
+                        <el-menu-item index="/index">
+                            <template #title>
+                                <el-icon><Promotion /></el-icon>
+                                <span>首页</span>
+                            </template>
+                        </el-menu-item>
+                        <el-sub-menu index="1">
+                            <template #title>
+                                <el-icon><Menu /></el-icon>
+                                <span>人员与机构管理</span>
+                            </template>
+                            <el-menu-item index="/emp">
+                                <template #title>
+                                    <el-icon><Avatar /></el-icon>
+                                    <span>员工管理</span>
+                                </template>
+                            </el-menu-item>
+                            <el-menu-item index="/dept">
+                                <template #title>
+                                    <el-icon><HomeFilled /></el-icon>
+                                    <span>部门管理</span>
+                                </template>
+                            </el-menu-item>
+                            <el-menu-item index="/student">
+                                <template #title>
+                                    <el-icon><UserFilled /></el-icon>
+                                    <span>学生管理</span>
+                                </template>
+                            </el-menu-item>
+                            <el-menu-item index="/class">
+                                <template #title>
+                                    <el-icon><HelpFilled /></el-icon>
+                                    <span>班级管理</span>
+                                </template>
+                            </el-menu-item>
+                        </el-sub-menu>
+                        <el-sub-menu index="2">
+                            <template #title>
+                                <el-icon><Histogram /></el-icon>
+                                <span>数据统计信息</span>
+                            </template>
+                            <el-menu-item index="/report/emp">
+                                <template #title>
+                                    <el-icon><InfoFilled /></el-icon>
+                                    <span>员工信息统计</span>
+                                </template>
+                            </el-menu-item>
+                            <el-menu-item index="/report/student">
+                                <template #title>
+                                    <el-icon><Share /></el-icon>
+                                    <span>学生信息统计</span>
+                                </template>
+                            </el-menu-item>
+                            <el-menu-item index="/log">
+                                <template #title>
+                                    <el-icon><Comment /></el-icon>
+                                    <span>系统日志</span>
+                                </template>
+                            </el-menu-item>
+                        </el-sub-menu>
+                    </el-menu>
+                </el-scrollbar>
+            </el-aside>
+            <el-main>
+                <router-view />
+            </el-main>
+        </el-container>
+    </el-container>
+</div>
+</template>
+
+<style scoped>
+.container-header {
+    background-color: #409EFF;
+    align-items: center;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+}
+.container-body {
+    /* border: 1px solid #ccc; */
+    height: 89.5vh;
+}
+.container-aside {
+    border-right: #ccc 1px solid;
+}
+</style>
+```
+
+> ![](javaweb2/12.png)
+
+然后在`index.js`中设置路由，同时创建对应的`vue`文件。`report`路由没有对应的组件，因此不需要`component`，但需要子路由`/emp`和`/student`
+
+```js
+import { createRouter, createWebHistory} from 'vue-router'
+
+import LayoutView from '@/views/layout/index.vue'
+import EmpView from '@/views/emp/index.vue'
+import IndexView from '@/views/index/index.vue'
+import DeptView from '@/views/dept/index.vue'
+import ClassView from '@/views/class/index.vue'
+import StudentView from '@/views/student/index.vue'
+import EmpReportView from '@/views/report/emp/index.vue'
+import StudentReportView from '@/views/report/student/index.vue'
+import LogView from '@/views/log/index.vue'
+
+const routes = [
+  {
+    path: '/',
+    name: 'layout',
+    component: LayoutView,
+    children: [
+      {
+        path :'emp',
+        name: 'emp',
+        component: EmpView
+      },
+      {
+        path :'index',
+        name: 'index',
+        component: IndexView
+      },
+      {
+        path :'dept',
+        name: 'dept',
+        component: DeptView
+      },
+      {
+        path :'class',
+        name: 'class',
+        component: ClassView
+      },
+      {
+        path :'student',
+        name: 'student',
+        component: StudentView
+      },
+      {
+        path :'report',
+        name: 'report',
+        children: [
+          {
+            path: 'emp',
+            name: 'empReport',
+            component: EmpReportView
+          },
+          {
+            path: 'student',
+            name: 'studentReport',
+            component: StudentReportView
+          }
+        ]
+      },
+      {
+        path: 'log',
+        name: 'log',
+        component: LogView
+      }
+    ]
+  }
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes
+});
+
+export default router
+```
+
+最后设计一个首页，在访问`/`时自动加载，在`index.js`中通过`redirect`来设置重定向的路由
+
+```js
+const routes = [
+  {
+    path: '/',
+    name: 'layout',
+    component: LayoutView,
+    redirect: 'index',
+    ...
+```
+
+点击员工管理，可以看到在右侧内容区中显示出了我们先前制作的员工管理界面
+
+> ![](javaweb2/13.png)
