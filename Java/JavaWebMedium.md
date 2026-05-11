@@ -1,6 +1,6 @@
 # Java Web Medium
 
-`更新时间：2026-5-9`
+`更新时间：2026-5-11`
 
 注释解释：
 
@@ -2796,3 +2796,340 @@ const routes = [
 点击员工管理，可以看到在右侧内容区中显示出了我们先前制作的员工管理界面
 
 > ![](javaweb2/13.png)
+
+## Docker
+
+如果想要部署一个`Web`项目，一般的手段是将前后端打包后的文件上传到服务器中，然后在服务器中启动`Nginx`与`Java`。但是这种方式存在一些问题，如果项目需要更新，那么就需要停止当前项目，然后重新运行，如果项目的启动过程比较麻烦，那么就会造成较长时间的服务不可用，这对于某些时间敏感业务来说是一种严重威胁。而且如果新版本的项目存在问题，那么又需要重新部署旧版本，同样会造成同样的问题。
+
+`Docker` 是一个开源的应用容器引擎，基于 `Go` 语言并遵从 `Apache2.0` 协议开源。`Docker` 可以让开发者打包他们的应用以及依赖包到一个轻量级、可移植的容器中，然后发布到任何流行的 `Linux` 机器上，也可以实现虚拟化。简单来说，`Docker`可以快速创建一个项目包，这个项目包可以在任何能够运行`Docker`的计算机上快捷运行。`Docker`也提供一些程序的快捷安装方式，不需要程序员进行繁琐的手动安装方式，用几行简洁的代码即可安装并使用。
+
+### 快速入门
+
+首先来安装`Docker`，`Docker`官方提供了快捷安装程序，阿里云也提供了镜像源
+
+**官方源**
+
+```bash
+curl -fsSL https://get.docker.com | bash -s docker
+```
+
+**阿里源**
+
+```bash
+curl -fsSL https://get.docker.com | bash -s docker --mirror Aliyun
+```
+
+但是如果使用`WSL`，可能会出现提示
+
+```bash
+# Executing docker install script, commit: 2687d91ddeb3bd6aeae37a90947761efdee87030
+
+WSL DETECTED: We recommend using Docker Desktop for Windows.
+Please get Docker Desktop from https://www.docker.com/products/docker-desktop/
+
+
+You may press Ctrl+C now to abort this script.
++ sleep 20
+```
+
+这是`Docker`安装程序检测到了`WSL`环境，推荐使用`Windows`环境的`Docker Desktop`，不过可以忽略这个提示手动安装
+
+```bash
+sudo apt install docker.io
+```
+
+安装完成后，使用如下命令启动
+
+```bash
+# 启动Docker
+sudo systemctl start docker
+
+# 设置开机启动
+sudo systemctl enable docker
+```
+
+然后检查`Docker`服务状态，保证正确安装并启动
+
+```bash
+sudo systemctl status docker
+```
+
+> ![](javaweb2/14.png)
+
+接着换源，上文提到，`Docker`提供了快捷安装程序的功能，实质是`Docker`官方维护了一个中央仓库，类似于`Maven`，`Docker`开发者可以通过访问中央仓库来下载需要的镜像，然后快捷部署在服务器上。但是由于`GFW`的存在，国内无法稳定访问中央仓库，所以官方、阿里云、网易等等提供了一些加速源
+
+```bash
+sudo nano /etc/docker/daemon.json
+
+{
+  "registry-mirrors": [
+    "https://registry.docker-cn.com",
+    "http://hub-mirror.c.163.com",
+    "https://docker.mirrors.ustc.edu.cn",
+    "https://mirror.ccs.tencentyun.com",
+    "https://registry.cn-hangzhou.aliyuncs.com",
+    "https://docker.mirrors.ustc.edu.cn"
+  ]
+}
+```
+
+然后重启服务
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+```
+
+然后输入以下命令从中央仓库拉取一个`MySQL8`镜像
+
+```bash
+sudo docker pull mysql:8
+```
+
+> ![](javaweb2/15.png)
+
+然后输入以下命令来运行一个实例，并设置暴露的端口为`3307`，`mysql`的`root`账户秘密设置为`root`
+
+```bash
+sudo docker run -d \
+	--name mysql \
+	-p 3307:3306 \
+	-e TZ=Asia/Shanghai \
+	-e MYSQL_ROOT_PASSWORD=root \
+	mysql:8
+```
+
+> ![](javaweb2/16.png)
+
+然后检查当前实例的列表
+
+```bash
+kiiz@DESKTOP-T1OASAN:~$ sudo docker ps
+CONTAINER ID   IMAGE     COMMAND                   CREATED          STATUS          PORTS                                                    NAMES
+f2866108ade5   mysql:8   "docker-entrypoint.s…"   59 seconds ago   Up 59 seconds   33060/tcp, 0.0.0.0:3307->3306/tcp, [::]:3307->3306/tcp   mysql
+```
+
+然后我们通过`Windows`去访问
+
+> ![](javaweb2/17.png)
+
+### 常用命令
+
+现在来解释一下刚才的命令
+
+```bash
+sudo docker run -d \
+	--name mysql \
+	-p 3307:3306 \
+	-e TZ=Asia/Shanghai \
+	-e MYSQL_ROOT_PASSWORD=root \
+	mysql:8
+```
+
+- `run`：创建一个容器，并运行指定的镜像实例
+- `-d`：容器后台运行，不占用前台窗口
+- `--name`：为容器命名
+- `-p`：格式为`port1:port2`，指定代理的端口，`port1`是暴露给外界的端口，即服务器中的端口，`port2`是容器内被代理的端口，`3307:3306`即表示代理容器内的`3306`端口，外界通过服务器的`3307`端口来访问
+- `-e`：`Environment`的缩写，表示环境变量，格式为`KEY=VALUE`，
+- `mysql:8`：指定需要运行的镜像，格式为`ImageName:Version`，版本如果不指定，默认使用最新版本
+
+#### Docker API
+
+| API      | 说明                                     |
+| -------- | ---------------------------------------- |
+| `pull`   | 从中央镜像仓库拉取镜像到本地             |
+| `push`   | 将本地镜像推送到中央仓库                 |
+| `build`  | 将本地`Dockerfile`构建为一个`Docker`镜像 |
+| `rmi`    | 删除本地镜像                             |
+| `save`   | 将本地镜像打包为归档文件                 |
+| `load`   | 从归档文件中加载镜像                     |
+| `run`    | 创建并启动一个新的容器                   |
+| `stop`   | 停止正在运行容器                         |
+| `start`  | 启动停止的容器                           |
+| `rm`     | 删除容器                                 |
+| `ps`     | 查看当前正在运行的容器                   |
+| `images` | 查看当前所有的本地镜像                   |
+| `logs`   | 查看容器运行日志                         |
+| `exec`   | 进入容器内部                             |
+
+### 数据卷
+
+数据卷是`Docker`中的一个虚拟目录，用于在容器和宿主机之间进行文件管理，因为容器内的系统默认并不提供任何文件编辑功能，文件的编辑必须通过宿主机完成。
+
+一般情况下，容器中创建的数据卷目录，会在宿主机的`/var/lib/docker/volumes`下创建对应的映射目录，映射目录中的`/_data`目录即是容器中对应的数据卷
+
+#### 数据卷 API
+
+| API       | 说明                     |
+| --------- | ------------------------ |
+| `create`  | 创建数据卷               |
+| `ls`      | 查看所有的数据卷         |
+| `rm`      | 删除指定数据卷           |
+| `inspect` | 查看某个数据卷的详细信息 |
+| `prune`   | 清除所有未使用的数据卷   |
+
+同时，在使用`run`创建容器时，也可以使用`-v`参数来创建数据卷
+
+```bash
+sudo docker run -v <VolumeName:Path>
+```
+
+例如给一个`Nginx`容器创建数据卷
+
+```bash
+sudo docker run -d \
+	--name nginx \
+	-p 80:80 \
+	-v html:/usr/share/nginx/html \
+	nginx:1.26.3
+```
+
+接着我们检查宿主机中是否创建了对应的映射目录
+
+```bash
+kiiz@DESKTOP-T1OASAN:~$ sudo ls /var/lib/docker/volumes
+32857f41d385506ff29ac4b8666ab43bbdd60503a50d50a9f0199c30a6e7b8c0  backingFsBlockDev  html  metadata.db
+kiiz@DESKTOP-T1OASAN:~$ sudo ls /var/lib/docker/volumes/html
+_data
+```
+
+可以看到，`html`目录已经成功创建，而且也包含了子目录`_data`。`html`数据卷挂载的是`Nginx`的默认目录，也就意味着`_data`目录中也应该包含`Nginx`初始文件，我们打开进行查看
+
+```bash
+kiiz@DESKTOP-T1OASAN:~$ sudo ls /var/lib/docker/volumes/html/_data
+50x.html  index.html
+```
+
+`_data`目录中出现了`Nginx`默认文件`50x.html`以及`index.html`，表明我们的数据卷创建并挂载成功。再通过`inspect`来查看数据卷的详细信息
+
+```bash
+kiiz@DESKTOP-T1OASAN:~$ sudo docker volume inspect html
+[
+    {
+        "CreatedAt": "2026-05-11T16:18:15+08:00",
+        "Driver": "local",
+        "Labels": null,
+        "Mountpoint": "/var/lib/docker/volumes/html/_data",
+        "Name": "html",
+        "Options": null,
+        "Scope": "local"
+    }
+]
+```
+
+#### 前端部署
+
+现在尝试将前端项目使用`Docker`部署到服务器中，首先创建一个`Nginx`容器，并添加数据卷
+
+```bash
+sudo docker run -d \
+	--name nginx \
+	-p 80:80 \
+	-v html:/usr/share/nginx/html \
+	nginx:1.26.3
+```
+
+接着查看`/var/lib/docker`目录的权限组
+
+```bash
+kiiz@DESKTOP-T1OASAN:~$ ls /var/lib/docker -ld
+drwx--x--- 11 root root 4096  5月 11 16:42 /var/lib/docker
+```
+
+可以看到`docker`目录属于`root`用户组，某些计算机可能属于`docker`用户组。默认情况下`docker`目录仅有所有者可以访问，因此我们需要切换到`root`用户，然后访问数据卷
+
+```bash
+kiiz@DESKTOP-T1OASAN:~$ su -
+密码：
+root@DESKTOP-T1OASAN:~# cd /var/lib/docker/volumes/html/_data
+root@DESKTOP-T1OASAN:/var/lib/docker/volumes/html/_data# ll
+total 28
+drwxr-xr-x 3 root root 4096 May 11 16:49 ./
+drwx-----x 3 root root 4096 May 11 16:48 ../
+-rw-r--r-- 1 root root  497 Feb  5  2025 50x.html
+-rw-r--r-- 1 root root  428 May 11 16:49 index.html
+```
+
+然后将打包好的前端项目复制到数据卷中
+
+```bash
+root@DESKTOP-T1OASAN:/var/lib/docker/volumes/html/_data# cp -r /mnt/d/PhpStudyPro/WWW/vue/vue-project/dist/. ./
+```
+
+然后查看`WSL`的`ip`进行访问
+
+```bash
+eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1280
+        inet 172.22.16.97  netmask 255.255.240.0  broadcast 172.22.31.255
+        inet6 fe80::215:5dff:fe43:891  prefixlen 64  scopeid 0x20<link>
+        ether 00:15:5d:43:08:91  txqueuelen 1000  (以太网)
+        RX packets 234  bytes 37635 (37.6 KB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 994  bytes 1588324 (1.5 MB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+```
+
+> ![](javaweb2/18.png)
+
+某些容器在创建时自己也会携带一个匿名数据卷，例如上文提到的`mysql`。在`/var/lib/docker/volumes`目录中，可以看到一个名字很奇怪的目录`32857f41d385506ff29ac4b8666ab43bbdd60503a50d50a9f0199c30a6e7b8c0`
+
+```bash
+root@DESKTOP-T1OASAN:/home/kiiz# ls /var/lib/docker/volumes/
+354529bb7f245d0a7559d0846bf671876757bac5c0ce329811ce94c9d37efc11  backingFsBlockDev  html  metadata.db
+```
+
+这个目录实质上就是`mysql`容器创建时自动创建的数据卷，可以通过`mysql`容器的详细信息来查看
+
+```bash
+root@DESKTOP-T1OASAN:/home/kiiz# docker inspect mysql | grep -A 10 Mounts
+        "Mounts": [
+            {
+                "Type": "volume",
+                "Name": "354529bb7f245d0a7559d0846bf671876757bac5c0ce329811ce94c9d37efc11",
+                "Source": "/var/lib/docker/volumes/354529bb7f245d0a7559d0846bf671876757bac5c0ce329811ce94c9d37efc11/_data",
+                "Destination": "/var/lib/mysql",
+                "Driver": "local",
+                "Mode": "",
+                "RW": true,
+                "Propagation": ""
+            }
+```
+
+查看其中的内容
+
+```bash
+root@DESKTOP-T1OASAN:/home/kiiz# ls /var/lib/docker/volumes/354529bb7f245d0a7559d0846bf671876757bac5c0ce329811ce94c9d37efc11/_data/
+ auto.cnf        ca.pem               ib_buffer_pool   mysql                   private_key.pem   undo_001
+ binlog.000001   client-cert.pem      ibdata1          mysql.ibd               public_key.pem    undo_002
+ binlog.000002   client-key.pem       ibtmp1           mysql.sock              server-cert.pem
+ binlog.index   '#ib_16384_0.dblwr'  '#innodb_redo'    mysql_upgrade_history   server-key.pem
+ ca-key.pem     '#ib_16384_1.dblwr'  '#innodb_temp'    performance_schema      sys
+```
+
+里面存储的是`mysql`的数据内容，包括所有的数据库、数据表、表结构等等。这个目录存在的意义是当容器被删除时，数据库中存储的数据仍能保留在服务器中，以免数据丢失。在容器删除时，并不会自动删除对应的数据卷
+
+```bash
+root@DESKTOP-T1OASAN:/home/kiiz# docker rm -f mysql
+mysql
+root@DESKTOP-T1OASAN:/home/kiiz# docker ps -a
+CONTAINER ID   IMAGE          COMMAND                   CREATED             STATUS          PORTS                                 NAMES
+a165b28cb672   nginx:1.26.3   "/docker-entrypoint.…"   About an hour ago   Up 31 minutes   0.0.0.0:80->80/tcp, [::]:80->80/tcp   nginx
+root@DESKTOP-T1OASAN:/home/kiiz# ls /var/lib/docker/volumes/
+354529bb7f245d0a7559d0846bf671876757bac5c0ce329811ce94c9d37efc11  backingFsBlockDev  html  metadata.db
+```
+
+#### 本地挂载
+
+数据卷挂载的默认位置其实比较深，而且`docker`目录的权限管理非常严格，因此实际操作中使用默认的数据卷挂载方式非常麻烦。`Docker`也提供了本地挂载的方式，即可以由用户自定义数据卷在宿主机中的挂载路径。本地挂载也是用`-v`参数，如果不以`.`或者`./`开头，`-v`参数默认挂载到`/var/lib/docker/volumes`
+
+```bash
+sudo docker run -v abc:abc
+```
+
+挂载到`/var/lib/docker/volumes/abc`
+
+```bash
+sudo docker run -v /home/kiiz/abc:abc
+```
+
+挂载到`~/abc`
