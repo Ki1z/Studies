@@ -1,6 +1,6 @@
 # Java Web Medium
 
-`更新时间：2026-5-11`
+`更新时间：2026-5-12`
 
 注释解释：
 
@@ -3133,3 +3133,248 @@ sudo docker run -v /home/kiiz/abc:abc
 ```
 
 挂载到`~/abc`
+
+**示例**
+
+我们新建一个`mysql`容器，并设置`mysql`的数据源、配置项、初始化脚本为数据卷。首先创建这三个目录，并在初始化脚本中存放建表脚本
+
+```bash
+kiiz@DESKTOP-T1OASAN:~/mysql$ ll
+总计 20
+drwxr-xr-x  5 kiiz kiiz 4096  5月 12 15:24 ./
+drwxr-x--- 14 kiiz kiiz 4096  5月 12 15:23 ../
+drwxr-xr-x  2 kiiz kiiz 4096  5月 12 15:24 conf/
+drwxr-xr-x  2 kiiz kiiz 4096  5月 12 15:23 data/
+drwxr-xr-x  2 kiiz kiiz 4096  5月 12 15:29 init/
+```
+
+然后创建容器并挂载数据卷，`mysql`的`docker`容器中，数据文件存放在`/var/lib/mysql`，配置文件存放在`/etc/mysql/conf.d`，初始化脚本存放在`/docker-entrypoint-initdb.d`。存放于初始化脚本目录中的所有`sql`文件会在启动时自动执行，因此我们编写或者直接生成对应的`DDL`语句
+
+```mysql
+CREATE DATABASE IF NOT EXISTS jdbc;
+
+create table if not exists jdbc.dept
+(
+    id          int unsigned auto_increment comment '部门编号'
+        primary key,
+    name        varchar(32) not null comment '部门名称',
+    create_time datetime    null comment '创建时间',
+    update_time datetime    null comment '修改时间',
+    constraint name
+        unique (name)
+)
+    comment '部门表';
+
+create table if not exists jdbc.education
+(
+    id             int          not null comment '学历编号'
+        primary key,
+    education_name varchar(255) not null comment '学历名称'
+);
+
+create table if not exists jdbc.emp_exp
+(
+    id         int          not null comment '员工编号',
+    start_time date         not null comment '开始时间',
+    end_time   date         null comment '结束时间',
+    company    varchar(255) null comment '公司名称',
+    job        varchar(255) null comment '职位名称',
+    primary key (id, start_time),
+    constraint chk_date_order
+        check (`end_time` > `start_time`)
+)
+    comment '员工工作经历表';
+
+create table if not exists jdbc.emp_info
+(
+    id          int auto_increment comment '员工编号'
+        primary key,
+    name        varchar(255)      not null comment '员工姓名',
+    birth       date              not null comment '员工出生日期',
+    sex         enum ('男', '女') not null comment '员工性别',
+    avatar_path varchar(255)      null comment '员工头像',
+    dept_id     int               null comment '员工部门编号',
+    job_id      int               null comment '员工职位编号',
+    board_date  date              null comment '入职日期',
+    update_time datetime          null comment '更新时间',
+    constraint emp_info_pk
+        unique (name)
+)
+    comment '员工信息表';
+
+create table if not exists jdbc.job
+(
+    id    int auto_increment comment '职位编号'
+        primary key,
+    title varchar(255) not null comment '职位名称'
+)
+    comment '职位表';
+
+create table if not exists jdbc.major
+(
+    id         int          not null comment '专业编号'
+        primary key,
+    major_name varchar(255) not null comment '专业名称',
+    constraint major_name
+        unique (major_name)
+);
+
+create table if not exists jdbc.operation_log
+(
+    id               int auto_increment comment '编号'
+        primary key,
+    user_id          int          null comment '员工编号',
+    operation_time   datetime     null comment '操作时间',
+    operation_class  varchar(255) null comment '操作类名',
+    operation_method varchar(255) null comment '操作方法名',
+    operation_params text         null comment '操作参数',
+    operation_result longtext     null comment '操作结果',
+    cost_time        bigint       null comment '操作耗时'
+);
+
+create table if not exists jdbc.student
+(
+    id           int               not null comment '学号'
+        primary key,
+    name         varchar(255)      not null comment '姓名',
+    sex          enum ('男', '女') null comment '性别',
+    birth        date              null comment '出生日期',
+    class_id     int               null comment '班级编号',
+    major_id     int               null comment '专业编号',
+    education_id int               null comment '学历编号',
+    update_time  datetime          null comment '更新时间'
+);
+
+create table if not exists jdbc.student_discipline
+(
+    student_id        int          null comment '学号',
+    discipline_date   date         null comment '违纪时间',
+    discipline_reason varchar(255) null comment '违纪原因',
+    deduction_points  float        null comment '扣分'
+);
+
+create table if not exists jdbc.users
+(
+    id       int          not null comment '员工编号'
+        primary key,
+    username varchar(255) not null comment '用户名',
+    password varchar(255) not null comment '密码',
+    constraint username
+        unique (username)
+)
+```
+
+然后执行容器创建命令
+
+```bash
+sudo docker run -d \
+	--name mysql \
+	-p 3306:3306 \
+	-e TZ=Asia/Shanghai \
+	-e MYSQL_ROOT_PASSWORD=root \
+	-v ./mysql/data:/var/lib/mysql \
+	-v ./mysql/init:/docker-entrypoint-initdb.d \
+	-v ./mysql/conf:/etc/mysql/conf.d \
+	mysql:8
+```
+
+> ![](javaweb2/19.png)
+
+可以看到数据库中也出现了`jdbc`库，我们尝试在`windows`中连接，并查看其中的表是否也正常创建
+
+> ![](javaweb2/20.png)
+
+可以看到其中的表也全部成功创建
+
+### 自定义镜像
+
+前端可以通过官方提供的`Nginx`容器进行部署，但是对于后端来说，并没有一个`Java`的官方`Docker`容器，所以就需要开发人员自己定于一个镜像，这个镜像中需要包含完整的`Java`运行环境，以及后端需要的一些环境变量等等
+
+#### Dockerfile
+
+`Dockerfile`本质是一个文本文件，其中包含一个个指令，用于描述要执行什么操作来构建镜像
+
+**API**
+
+| API          | 说明                               | 示例                                  |
+| ------------ | ---------------------------------- | ------------------------------------- |
+| `FROM`       | 指定基础镜像                       | `FROM Ubuntu:22.04`                   |
+| `ENV`        | 设置环境变量                       | `ENV key=value`                       |
+| `COPY`       | 将本地目录复制到镜像系统的指定目录 | `COPY ./jdk21.tar.gz /tmp`            |
+| `RUN`        | 执行`Linux`的`shell`命令           | `RUN tar -zxvf /tmp/jdk21.tar.gz`     |
+| `EXPOSE`     | 指定暴露的端口号                   | `EXPOSE 8080`                         |
+| `ENTRYPOINT` | 启动时命令                         | `ENTRYPOINT java -jar webProject.jar` |
+
+#### 快速入门
+
+我们使用`Ubuntu22.04`版本为例，制作一个后端镜像
+
+```dockerfile
+# 使用Ubuntu 22.04
+FROM ubuntu:22.04
+
+# 添加JDK
+COPY jdk21.tar.gz /usr/local/
+RUN tar -xzf /usr/local/jdk21.tar.gz -C /usr/local/ && rm /usr/local/jdk21.tar.gz
+
+# 设置环境变量
+ENV JAVA_HOME=/usr/local/jdk-21.0.11
+ENV PATH=$JAVA_HOME/bin:$PATH
+
+# 创建后端应用目录
+RUN mkdir -p /app
+WORKDIR /app
+
+# 复制JAR应用程序
+COPY app.jar app.jar
+
+# 暴露端口
+EXPOSE 8080
+
+# 启动脚本
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
+```
+
+接着执行构建镜像的命令
+
+```bash
+sudo docker -t <imageName>:<version> <dir>
+```
+
+- `imageName`：指定构建的镜像名
+- `version`：镜像的版本名，默认为`latest`
+- `dir`：构建文件`Dockerfile`所在路径
+
+```bash
+sudo docker build -t app:latest .
+```
+
+然后查看镜像列表
+
+```bash
+kiiz@DESKTOP-T1OASAN:~/webProject$ sudo docker images
+                                                                                                   i Info →   U  In Use
+IMAGE          ID             DISK USAGE   CONTENT SIZE   EXTRA
+app:latest     0e797b3c477b       1.15GB          469MB
+mysql:8        6e54d72c66fb       1.12GB          254MB    U
+nginx:1.26.3   41b194461e4b        282MB         75.2MB    U
+ubuntu:22.04   962f6cadeae0        119MB         31.7MB
+```
+
+启动镜像，暴露端口`8080`
+
+```bash
+sudo docker run -d \
+	--name app \
+	-p 8080:8080 \
+	-v ./log:/app/log \
+	app:latest
+```
+
+然后访问后端，成功返回了报错信息
+
+> ![](javaweb2/21.png)
+
+*注：如果`SpringBoot`没有正常启动，那么后端就不会返回正确的`Result`数据，因此这可以证明`SpringBoot`已经正确启动了。或者可以在启动命令中添加一个日志数据卷`-v ./log:/app/log \`，通过日志来确定`SpringBoot`的状态*
+
+> ![](javaweb2/22.png)
