@@ -1,6 +1,6 @@
 # Java Web Medium
 
-`更新时间：2026-5-12`
+`更新时间：2026-5-13`
 
 注释解释：
 
@@ -3378,3 +3378,353 @@ sudo docker run -d \
 *注：如果`SpringBoot`没有正常启动，那么后端就不会返回正确的`Result`数据，因此这可以证明`SpringBoot`已经正确启动了。或者可以在启动命令中添加一个日志数据卷`-v ./log:/app/log \`，通过日志来确定`SpringBoot`的状态*
 
 > ![](javaweb2/22.png)
+
+### 网络
+
+在上文搭建的三个容器`mysql`、`Nginx`、`Java`之间，实际上是可以进行通信的，`Docker`容器会默认将系统虚拟网卡`docker0`作为网桥，以`docker0`为网关搭建一个虚拟网段，然后连接到这个局域网中。但实际部署中并不会这么做，因为对于每个`Docker`容器来说，`ip`的分配是随机的，假设后端已经设定好了数据库的`ip`为`172.17.0.2`，但是数据库容器突然出现错误，需要创建新容器，而新容器的`ip`为`172.17.0.4`，此时后端就需要重新改写数据库`ip`，非常繁琐。
+
+为了解决这个问题，`Docker`提供了自定义网络功能，通过`network`命令访问
+
+#### API
+
+| API          | 说明                   |
+| ------------ | ---------------------- |
+| `create`     | 创建一个网络           |
+| `ls`         | 查看所有网络           |
+| `rm`         | 删除指定网络           |
+| `prune`      | 清除未使用的网络       |
+| `connect`    | 使指定容器连接加入网络 |
+| `disconnect` | 使指定容器连接断开网络 |
+| `inspect`    | 查看网络详细信息       |
+
+#### 快速入门
+
+查看默认的网络环境
+
+```bash
+kiiz@DESKTOP-T1OASAN:~$ sudo docker network ls
+NETWORK ID     NAME      DRIVER    SCOPE
+0af51e3e5eb4   bridge    bridge    local
+ef75ad4b26fa   host      host      local
+225c8ffedb6d   none      null      local
+```
+
+以上三个网络是`Docker`在安装时自动创建的，我们再创建一个网络，命名为`eiousee`
+
+```bash
+kiiz@DESKTOP-T1OASAN:~$ sudo docker network create eiousee
+683b5a6d4c45264cd360d45b541819601fbd38191de71811994220614c51890e
+kiiz@DESKTOP-T1OASAN:~$ sudo docker network ls
+NETWORK ID     NAME      DRIVER    SCOPE
+0af51e3e5eb4   bridge    bridge    local
+683b5a6d4c45   eiousee   bridge    local
+ef75ad4b26fa   host      host      local
+225c8ffedb6d   none      null      local
+```
+
+然后将`mysql`和`app`容器加入`eiousee`网络
+
+```bash
+kiiz@DESKTOP-T1OASAN:~/webProject$ sudo docker network connect eiousee mysql
+kiiz@DESKTOP-T1OASAN:~/webProject$ sudo docker network connect eiousee app
+```
+
+接着进入`app`，使用`getent`测试`mysql`容器的`dns`解析是否正常
+
+```bash
+kiiz@DESKTOP-T1OASAN:~$ sudo docker exec -it app bash
+root@ba1c51760080:/app# getent hosts mysql
+172.18.0.2      mysql
+```
+
+正确输出了`mysql`的地址，说明解析成功，然后使用`echo`重定向来测试`TCP`端口的连接
+
+```bash
+root@ba1c51760080:/app# (echo > /dev/tcp/mysql/3306) && echo OK || echo FAIL
+OK
+```
+
+对`mysql`的`3306`端口测试同样通过，说明自定义网络环境已经正确配置好了
+
+### 手动项目部署
+
+现在我们已经了解基础的部署过程，现在来尝试将前后端项目进行完整部署，并保证前端能获取到数据库中的正确数据
+
+1. 修改前后端配置，我们需要将后端`application.yml`中的数据库地址更改为容器名`mysql`，并且配置正确的用户名和密码
+
+```yml
+# 数据源
+datasource:
+    url: jdbc:mysql://mysql:3306/jdbc
+    username: root
+    password: root
+```
+
+2. 在`Dockerfile`中配置阿里云`OSS2`的密钥，以及设置统一编码
+
+```bash
+# 阿里云OSS2
+ENV OSS_ACCESS_KEY_ID=xxxxxxxxxxxxxxxxxxxxx
+ENV OSS_ACCESS_KEY_SECRET=xxxxxxxxxxxxxxxxxxxxxx
+
+# 统一编码
+ENV LANG=en_US.UTF-8
+ENV LANGUAGE=en_US:en
+ENV LC_ALL=en_US.UTF-8
+```
+
+3. 重新构建后端镜像
+
+```bash
+sudo docker build -t app:0.0.1-SNAPSHOT .
+```
+
+4. 创建容器，并指定网络以及`log`目录的数据卷
+
+```bash
+sudo docker run -d \
+	--name app \
+	--network eiousee \
+	-p 8080:8080 \
+	-v ./log:/app/log \
+	app:0.0.1-SNAPSHOT
+```
+
+5. 在`mysql`目录中准备好数据表创建文件和数据插入文件。需要注意的是每个文件必须设置编码集，否则中文会乱码
+
+```mysql
+SET NAMES utf8mb4 COLLATE utf8mb4_general_ci;
+
+...
+```
+
+6. 然后创建`mysql`容器，并加入`eiousee`网络
+
+```bash
+sudo docker run -d \
+	--name mysql \
+	--network eiousee \
+	-p 3306:3306 \
+	-e TZ=Asia/Shanghai \
+	-e MYSQL_ROOT_PASSWORD=root \
+	-v ./mysql/data:/var/lib/mysql \
+	-v ./mysql/init:/docker-entrypoint-initdb.d \
+	-v ./mysql/conf:/etc/mysql/conf.d \
+	mysql:8
+```
+
+7. 访问`wsl:8080/depts`，查看数据是否正确返回
+
+> ![](javaweb2/23.png)
+
+8. 创建`www`目录，以及子目录`html`和配置文件`nginx.conf`
+
+```conf
+#user  nobody;
+worker_processes  1;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+
+    sendfile        on;
+    keepalive_timeout  65;
+
+    server {
+        listen       80;
+        server_name  localhost;
+
+        root /usr/share/nginx/html;
+        index index.html;
+
+        location / {
+        }       
+
+        location /api/ {
+            proxy_pass http://app:8080/;
+
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_set_header X-Forwarded-Proto $scheme;
+
+            proxy_connect_timeout 60s;
+            proxy_read_timeout 60s;
+        }
+
+        error_page   500 502 503 504  /50x.html;
+        location = /50x.html {
+            root   html;
+        }
+    }
+}
+```
+
+9. 创建`Nginx`容器，并映射本地目录
+
+```bash
+sudo docker run -d \
+	--name nginx \
+	--network eiousee \
+	-p 80:80 \
+	-v ./www/html:/usr/share/nginx/html \
+	-v ./www/nginx.conf:/etc/nginx/nginx.conf \
+	nginx:1.26.3
+```
+
+10. 访问前端，并查看是否正确返回结果
+
+> ![](javaweb2/24.png)
+
+到此，整个项目的手动部署已经基本完成
+
+### DockerCompose
+
+目前的学习中，我们仅仅使用了三个容器来部署项目，但是实际的开发中，可能会使用大量的容器来部署不同的服务组件，各个服务组件之间相互依赖。而且各个容器之间实际上也存在一定的启动次序问题，例如需要先启动`mysql`、再启动`springboot`，最后启动`nginx`。手动部署这些容器非常繁琐，也很容易混淆。因此`Docker`提供了`DockerCompose`来完成自动化项目部署
+
+`DockerCompose`技术通过一份`docker-compose.yml`文件来描述容器结构，通过`docker-compose.yml`文件一键生成所有容器
+
+#### 快速入门
+
+以下是一份创建`mysql`容器的`DockerCompose`文件
+
+```yml
+services:
+	mysql:
+		image: mysql:8
+		container_name: mysql
+		ports:
+			- "3306:3306"
+		environment:
+			TZ: Asia/Shanghai
+			MYSQL_ROOT_PASSWORD: root
+		volumes:
+			- "./mysql/conf:/etc/mysql/conf.d"
+			- "./mysql/data:/var/lib/mysql"
+			- "./mysql/init:/docker-entrypoint-initdb.d"
+		networks:
+			- "app-net"
+networks:
+	app-net:
+		name: app
+```
+
+- `services`：容器列表
+- `mysql`：容器标识符，表示`docker-compose.yml`文件中的一个容器
+- `image`：容器镜像
+- `container_name`：真正的容器名
+- `ports`：容器端口映射
+- `environment`：容器内的环境变量
+- `volumes`：容器数据卷
+- `mysql-networks`：自定义的容器网络
+- `networks`：自定义的网络环境，值为网络环境标识符，而不是网络名
+- `app-net`：网络环境标识符，表示`docker-compose.yml`文件中的一个网络
+- `name`：真正的网络名
+
+同时，`DockerCompose`也允许直接构建镜像
+
+```yml
+services:
+	app:
+		build:
+			context: .
+			dockerfile: Dockerfile
+		container_name: app
+		ports:
+			- "8080:8080"
+		networks:
+        	- "app-net"
+        depends_on:
+        	- mysql
+```
+
+- `build`：表示该容器需要进行镜像构建
+- `context`：构建工作目录，相当于`sudo docker build -t xxx:xxx .`最后的`.`
+- `dockerfile`：`dockerfile`文件名
+- `depends_on`：容器依赖项，只有当对应容器创建完成后，才执行容器创建
+
+#### 自动项目部署
+
+现在已经了解了`DockerCompose`的基本用法，我们来构建一个`docker-compose.yml`进行自动部署
+
+```yml
+services:
+  mysql:
+    image: mysql:8
+    container_name: mysql
+    ports:
+      - "3306:3306"
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - "./mysql/conf:/etc/mysql/conf.d"
+      - "./mysql/data:/var/lib/mysql"
+      - "./mysql/init:/docker-entrypoint-initdb.d"
+    networks:
+      - app-net
+  app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: app
+    ports:
+      - "8080:8080"
+    volumes:
+      - "./log:/app/log"
+    networks:
+      - app-net
+    depends_on:
+      - mysql
+  nginx:
+    image: nginx:1.26.3
+    container_name: nginx
+    ports:
+      - "80:80"
+    volumes:
+      - "./www/html:/usr/share/nginx/html"
+      - "./www/nginx.conf:/etc/nginx/nginx.conf"
+    networks:
+      - app-net
+    depends_on:
+      - app
+
+networks:
+  app-net:
+    name: app-net
+```
+
+##### API
+
+简单了解一下`DockerCompose`的`API`
+
+| API       | 说明                                   |
+| --------- | -------------------------------------- |
+| `up`      | 通过`docker-compose`创建并启动所有容器 |
+| `down`    | 停止并移除所有创建的容器和网络         |
+| `ps`      | 列出所有启动的容器                     |
+| `logs`    | 查看指定容器的日志                     |
+| `stop`    | 停止容器                               |
+| `start`   | 启动容器                               |
+| `restart` | 重启容器                               |
+| `top`     | 查看当前运行的进程                     |
+
+根据`api`，我们将项目部署上线
+
+```bash
+kiiz@DESKTOP-T1OASAN:~/webProject$ sudo docker-compose up -d
+Creating network "app-net" with the default driver
+Creating mysql ... done
+Creating app   ... done
+Creating nginx ... done
+```
+
+然后访问前端页面
+
+> ![](javaweb2/25.png)
+
+可以看到，项目已经自动部署完成

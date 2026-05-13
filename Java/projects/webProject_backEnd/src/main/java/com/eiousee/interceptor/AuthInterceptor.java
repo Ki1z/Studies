@@ -1,6 +1,8 @@
 package com.eiousee.interceptor;
 
+import com.eiousee.utils.CurrentOperator;
 import com.eiousee.utils.JwtUtils;
+import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -23,12 +25,18 @@ public class AuthInterceptor implements HandlerInterceptor {
         }
         try {
             // 验证Token
-            JwtUtils.parseJwt(token);
+            Claims claims = JwtUtils.parseJwt(token);
+            CurrentOperator.setCurrentOperator(Integer.valueOf(claims.get("id").toString()));
         } catch (Exception e) {
             log.info("Token验证失败");
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             return false;
         }
         return true;
+    }
+
+    @Override
+    public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
+        CurrentOperator.clear();
     }
 }

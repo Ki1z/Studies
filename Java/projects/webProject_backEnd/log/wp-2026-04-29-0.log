@@ -1,0 +1,161 @@
+2026-04-29 14:12:12 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 33520 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-29 14:12:12 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-29 14:12:14 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-04-29 14:12:14 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2026-04-29 14:12:14 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-29 14:12:14 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-29 14:12:14 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-29 14:12:14 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 1606 ms
+2026-04-29 14:12:15 [main] INFO  o.s.b.actuate.endpoint.web.EndpointLinksResolver - Exposing 1 endpoint beneath base path '/actuator'
+2026-04-29 14:12:15 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2026-04-29 14:12:15 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2026-04-29 14:12:15 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 3.493 seconds (process running for 4.283)
+2026-04-29 14:12:16 [RMI TCP Connection(2)-192.168.1.45] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-29 14:12:16 [RMI TCP Connection(2)-192.168.1.45] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-29 14:12:16 [RMI TCP Connection(2)-192.168.1.45] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-29 14:12:16 [RMI TCP Connection(3)-192.168.1.45] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-29 14:12:44 [http-nio-8080-exec-1] INFO  com.eiousee.interceptor.AuthInterceptor - 请求开始：/jobs
+2026-04-29 14:12:44 [http-nio-8080-exec-3] INFO  com.eiousee.interceptor.AuthInterceptor - 请求开始：/depts
+2026-04-29 14:12:44 [http-nio-8080-exec-2] INFO  com.eiousee.interceptor.AuthInterceptor - 请求开始：/emps
+2026-04-29 14:12:44 [http-nio-8080-exec-1] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-04-29 14:12:44 [http-nio-8080-exec-3] INFO  com.eiousee.controller.DeptController - 查询所有部门数据
+2026-04-29 14:12:44 [http-nio-8080-exec-2] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)
+2026-04-29 14:12:44 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：107ms
+2026-04-29 14:12:44 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：109ms
+2026-04-29 14:12:44 [http-nio-8080-exec-1] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=13, operator=null, operationTime=2026-04-29T14:12:44.641364700, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=110)
+2026-04-29 14:12:44 [http-nio-8080-exec-3] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getAllDepts 执行耗时：112ms
+2026-04-29 14:12:44 [http-nio-8080-exec-3] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getAllDepts 执行耗时：114ms
+2026-04-29 14:12:44 [http-nio-8080-exec-3] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=13, operator=null, operationTime=2026-04-29T14:12:44.645111500, operationClass=com.eiousee.service.impl.DeptServiceImpl, operationMethod=getAllDepts, operationParams=[], operationResult=[Dept(id=14, name=行政部, createTime=2026-04-21T14:47:29, updateTime=2026-04-21T14:47:29), Dept(id=13, name=金融部, createTime=2026-04-17T15:07:45, updateTime=2026-04-17T15:07:45), Dept(id=5, name=人事部, createTime=2026-04-08T17:00, updateTime=2026-04-09T18:20:17), Dept(id=1, name=学工部, createTime=2026-04-08T17:00, updateTime=2026-04-08T17:00), Dept(id=2, name=教研部, createTime=2026-04-08T17:00, updateTime=2026-04-08T17:00), Dept(id=3, name=咨询部, createTime=2026-04-08T17:00, updateTime=2026-04-08T17:00), Dept(id=4, name=就业部, createTime=2026-04-08T17:00, updateTime=2026-04-08T17:00)], costTime=114)
+2026-04-29 14:12:44 [http-nio-8080-exec-3] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：26ms
+2026-04-29 14:12:44 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：28ms
+2026-04-29 14:12:44 [http-nio-8080-exec-3] INFO  com.eiousee.aop.RecordTimeAspect - 方法 list 执行耗时：141ms
+2026-04-29 14:12:44 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：141ms
+2026-04-29 14:12:44 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpList 执行耗时：141ms
+2026-04-29 14:12:44 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpList 执行耗时：141ms
+2026-04-29 14:12:44 [http-nio-8080-exec-2] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=13, operator=null, operationTime=2026-04-29T14:12:44.693847600, operationClass=com.eiousee.service.impl.EmpServiceImpl, operationMethod=getEmpList, operationParams=[EmpQueryParam(name=, sex=, begin=null, end=null, page=1, pageSize=10)], operationResult=PageResult(total=11, rows=Page{count=true, pageNum=1, pageSize=10, startRow=0, endRow=10, total=11, pages=2, reasonable=false, pageSizeZero=false}[Employee(id=1, name=张三, birth=1990-01-01, sex=男, avatarPath=null, deptName=行政部, jobName=讲师, boardDate=2020-01-01, updateTime=2026-04-21T14:47:39, empExpList=null), Employee(id=2, name=李四, birth=1991-01-01, sex=女, avatarPath=null, deptName=行政部, jobName=讲师, boardDate=2020-01-01, updateTime=2026-04-21T14:47:42, empExpList=null), Employee(id=3, name=王五, birth=1992-01-01, sex=男, avatarPath=null, deptName=行政部, jobName=副教授, boardDate=2020-01-01, updateTime=2026-04-21T14:47:45, empExpList=null), Employee(id=4, name=赵六, birth=1993-01-01, sex=女, avatarPath=null, deptName=行政部, jobName=教授, boardDate=2020-01-01, updateTime=2026-04-21T14:47:47, empExpList=null), Employee(id=5, name=张伟, birth=1994-05-15, sex=男, avatarPath=null, deptName=行政部, jobName=助教, boardDate=2021-03-15, updateTime=2026-04-21T14:47:49, empExpList=null), Employee(id=6, name=王芳, birth=1995-08-20, sex=女, avatarPath=null, deptName=咨询部, jobName=工程师, boardDate=2021-06-01, updateTime=2021-06-01T00:00, empExpList=null), Employee(id=7, name=李军, birth=1988-12-10, sex=男, avatarPath=null, deptName=就业部, jobName=助教, boardDate=2019-11-11, updateTime=2019-11-11T00:00, empExpList=null), Employee(id=8, name=杨敏, birth=1996-02-28, sex=女, avatarPath=null, deptName=人事部, jobName=工程师, boardDate=2022-01-05, updateTime=2022-01-05T00:00, empExpList=null), Employee(id=9, name=刘洋, birth=1992-07-07, sex=男, avatarPath=null, deptName=行政部, jobName=助教, boardDate=2020-07-07, updateTime=2026-04-21T14:47:51, empExpList=null), Employee(id=10, name=李娜, birth=1998-03-12, sex=女, avatarPath=null, deptName=教研部, jobName=工程师, boardDate=2023-02-14, updateTime=2023-02-14T00:00, empExpList=null)]), costTime=141)
+2026-04-29 14:12:44 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：6ms
+2026-04-29 14:12:44 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpList 执行耗时：151ms
+2026-04-29 14:12:46 [http-nio-8080-exec-4] INFO  com.eiousee.interceptor.AuthInterceptor - 请求开始：/emps
+2026-04-29 14:12:46 [http-nio-8080-exec-4] INFO  com.eiousee.controller.EmpController - 查询员工列表，参数：EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)
+2026-04-29 14:12:46 [http-nio-8080-exec-4] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpList 执行耗时：10ms
+2026-04-29 14:12:46 [http-nio-8080-exec-4] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpList 执行耗时：10ms
+2026-04-29 14:12:46 [http-nio-8080-exec-4] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=13, operator=null, operationTime=2026-04-29T14:12:46.718606800, operationClass=com.eiousee.service.impl.EmpServiceImpl, operationMethod=getEmpList, operationParams=[EmpQueryParam(name=, sex=, begin=null, end=null, page=2, pageSize=10)], operationResult=PageResult(total=11, rows=Page{count=true, pageNum=2, pageSize=10, startRow=10, endRow=20, total=11, pages=2, reasonable=false, pageSizeZero=false}[Employee(id=13, name=浔麟, birth=1994-02-16, sex=男, avatarPath=https://eiousee-java-web.oss-cn-beijing.aliyuncs.com/daa2261d-7e2e-4c0b-b221-9c988f0371df_热海牌-溟汐 150px.png, deptName=教研部, jobName=主任, boardDate=2026-04-14, updateTime=2026-04-27T18:45:43, empExpList=null)]), costTime=10)
+2026-04-29 14:12:46 [http-nio-8080-exec-4] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：5ms
+2026-04-29 14:12:46 [http-nio-8080-exec-4] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpList 执行耗时：15ms
+2026-04-29 14:12:50 [http-nio-8080-exec-5] INFO  com.eiousee.interceptor.AuthInterceptor - 请求开始：/emps/13
+2026-04-29 14:12:50 [http-nio-8080-exec-5] INFO  com.eiousee.controller.EmpController - 查询员工，参数：13
+2026-04-29 14:12:50 [http-nio-8080-exec-5] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpAndExpById 执行耗时：10ms
+2026-04-29 14:12:50 [http-nio-8080-exec-5] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpById 执行耗时：10ms
+2026-04-29 14:12:50 [http-nio-8080-exec-5] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=13, operator=null, operationTime=2026-04-29T14:12:50.572310800, operationClass=com.eiousee.service.impl.EmpServiceImpl, operationMethod=getEmpById, operationParams=[13], operationResult=Employee(id=null, name=浔麟, birth=1994-02-16, sex=男, avatarPath=https://eiousee-java-web.oss-cn-beijing.aliyuncs.com/daa2261d-7e2e-4c0b-b221-9c988f0371df_热海牌-溟汐 150px.png, deptName=教研部, jobName=主任, boardDate=2026-04-14, updateTime=null, empExpList=[EmpExp(id=null, startTime=2018-01-20, endTime=2019-05-03, company=艾欧希科技股份有限公司, job=Java开发工程师), EmpExp(id=null, startTime=2020-01-13, endTime=2022-03-31, company=艾欧希科技股份有限公司, job=开发部主管), EmpExp(id=null, startTime=2022-04-01, endTime=2026-04-02, company=艾欧希科技股份有限公司, job=董事长)]), costTime=10)
+2026-04-29 14:12:50 [http-nio-8080-exec-5] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：3ms
+2026-04-29 14:12:50 [http-nio-8080-exec-5] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpById 执行耗时：14ms
+2026-04-29 14:12:59 [http-nio-8080-exec-6] INFO  com.eiousee.interceptor.AuthInterceptor - 请求开始：/upload
+2026-04-29 14:12:59 [http-nio-8080-exec-6] INFO  com.eiousee.controller.UploadController - 上传文件：热海牌-浔麟 250px.png
+2026-04-29 14:13:00 [http-nio-8080-exec-6] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：null
+2026-04-29 14:13:37 [http-nio-8080-exec-7] INFO  com.eiousee.interceptor.AuthInterceptor - 请求开始：/emps/13
+2026-04-29 14:13:37 [http-nio-8080-exec-7] INFO  com.eiousee.controller.EmpController - 查询员工，参数：13
+2026-04-29 14:13:37 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpAndExpById 执行耗时：4ms
+2026-04-29 14:13:37 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpById 执行耗时：4ms
+2026-04-29 14:13:37 [http-nio-8080-exec-7] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=13, operator=null, operationTime=2026-04-29T14:13:37.764857900, operationClass=com.eiousee.service.impl.EmpServiceImpl, operationMethod=getEmpById, operationParams=[13], operationResult=Employee(id=null, name=浔麟, birth=1994-02-16, sex=男, avatarPath=https://eiousee-java-web.oss-cn-beijing.aliyuncs.com/daa2261d-7e2e-4c0b-b221-9c988f0371df_热海牌-溟汐 150px.png, deptName=教研部, jobName=主任, boardDate=2026-04-14, updateTime=null, empExpList=[EmpExp(id=null, startTime=2018-01-20, endTime=2019-05-03, company=艾欧希科技股份有限公司, job=Java开发工程师), EmpExp(id=null, startTime=2020-01-13, endTime=2022-03-31, company=艾欧希科技股份有限公司, job=开发部主管), EmpExp(id=null, startTime=2022-04-01, endTime=2026-04-02, company=艾欧希科技股份有限公司, job=董事长)]), costTime=4)
+2026-04-29 14:13:37 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：3ms
+2026-04-29 14:13:37 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpById 执行耗时：8ms
+2026-04-29 14:13:40 [http-nio-8080-exec-8] INFO  com.eiousee.interceptor.AuthInterceptor - 请求开始：/upload
+2026-04-29 14:13:40 [http-nio-8080-exec-8] INFO  com.eiousee.controller.UploadController - 上传文件：热海牌-浔麟 250px.png
+2026-04-29 14:13:40 [http-nio-8080-exec-8] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：null
+2026-04-29 14:16:21 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-29 14:16:21 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-29 14:16:21 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-29 14:16:21 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-29 14:16:24 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 10872 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-29 14:16:24 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-29 14:16:25 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-04-29 14:16:25 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2026-04-29 14:16:25 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-29 14:16:25 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-29 14:16:25 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-29 14:16:25 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 1329 ms
+2026-04-29 14:16:27 [main] INFO  o.s.b.actuate.endpoint.web.EndpointLinksResolver - Exposing 1 endpoint beneath base path '/actuator'
+2026-04-29 14:16:27 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2026-04-29 14:16:27 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2026-04-29 14:16:27 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 3.012 seconds (process running for 3.769)
+2026-04-29 14:16:27 [RMI TCP Connection(2)-192.168.1.45] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-29 14:16:27 [RMI TCP Connection(2)-192.168.1.45] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-29 14:16:27 [RMI TCP Connection(2)-192.168.1.45] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-29 14:16:27 [RMI TCP Connection(1)-192.168.1.45] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-29 14:16:34 [http-nio-8080-exec-1] INFO  com.eiousee.interceptor.AuthInterceptor - 请求开始：/emps/13
+2026-04-29 14:16:34 [http-nio-8080-exec-1] INFO  com.eiousee.controller.EmpController - 查询员工，参数：13
+2026-04-29 14:16:34 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpAndExpById 执行耗时：50ms
+2026-04-29 14:16:34 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpById 执行耗时：50ms
+2026-04-29 14:16:34 [http-nio-8080-exec-1] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=13, operator=null, operationTime=2026-04-29T14:16:34.691900600, operationClass=com.eiousee.service.impl.EmpServiceImpl, operationMethod=getEmpById, operationParams=[13], operationResult=Employee(id=null, name=浔麟, birth=1994-02-16, sex=男, avatarPath=https://eiousee-java-web.oss-cn-beijing.aliyuncs.com/daa2261d-7e2e-4c0b-b221-9c988f0371df_热海牌-溟汐 150px.png, deptName=教研部, jobName=主任, boardDate=2026-04-14, updateTime=null, empExpList=[EmpExp(id=null, startTime=2018-01-20, endTime=2019-05-03, company=艾欧希科技股份有限公司, job=Java开发工程师), EmpExp(id=null, startTime=2020-01-13, endTime=2022-03-31, company=艾欧希科技股份有限公司, job=开发部主管), EmpExp(id=null, startTime=2022-04-01, endTime=2026-04-02, company=艾欧希科技股份有限公司, job=董事长)]), costTime=50)
+2026-04-29 14:16:34 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：6ms
+2026-04-29 14:16:34 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpById 执行耗时：59ms
+2026-04-29 14:16:43 [http-nio-8080-exec-2] INFO  com.eiousee.interceptor.AuthInterceptor - 请求开始：/upload
+2026-04-29 14:16:43 [http-nio-8080-exec-2] INFO  com.eiousee.controller.UploadController - 上传文件：热海牌-浔麟 250px.png
+2026-04-29 14:16:43 [http-nio-8080-exec-2] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：null
+2026-04-29 14:18:17 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-29 14:18:17 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-29 14:18:17 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-29 14:18:17 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-29 14:18:20 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 16900 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-29 14:18:20 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-29 14:18:21 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-04-29 14:18:21 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2026-04-29 14:18:21 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-29 14:18:21 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-29 14:18:21 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-29 14:18:21 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 1209 ms
+2026-04-29 14:18:23 [main] INFO  o.s.b.actuate.endpoint.web.EndpointLinksResolver - Exposing 1 endpoint beneath base path '/actuator'
+2026-04-29 14:18:23 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2026-04-29 14:18:23 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2026-04-29 14:18:23 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 2.758 seconds (process running for 3.399)
+2026-04-29 14:18:23 [RMI TCP Connection(2)-192.168.1.45] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-29 14:18:23 [RMI TCP Connection(2)-192.168.1.45] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-29 14:18:23 [RMI TCP Connection(2)-192.168.1.45] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-29 14:18:23 [RMI TCP Connection(1)-192.168.1.45] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-29 14:18:46 [http-nio-8080-exec-1] INFO  com.eiousee.interceptor.AuthInterceptor - 请求开始：/emps/13
+2026-04-29 14:18:46 [http-nio-8080-exec-1] INFO  com.eiousee.controller.EmpController - 查询员工，参数：13
+2026-04-29 14:18:46 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpAndExpById 执行耗时：45ms
+2026-04-29 14:18:46 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpById 执行耗时：47ms
+2026-04-29 14:18:46 [http-nio-8080-exec-1] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=13, operator=null, operationTime=2026-04-29T14:18:46.790175900, operationClass=com.eiousee.service.impl.EmpServiceImpl, operationMethod=getEmpById, operationParams=[13], operationResult=Employee(id=null, name=浔麟, birth=1994-02-16, sex=男, avatarPath=https://eiousee-java-web.oss-cn-beijing.aliyuncs.com/daa2261d-7e2e-4c0b-b221-9c988f0371df_热海牌-溟汐 150px.png, deptName=教研部, jobName=主任, boardDate=2026-04-14, updateTime=null, empExpList=[EmpExp(id=null, startTime=2018-01-20, endTime=2019-05-03, company=艾欧希科技股份有限公司, job=Java开发工程师), EmpExp(id=null, startTime=2020-01-13, endTime=2022-03-31, company=艾欧希科技股份有限公司, job=开发部主管), EmpExp(id=null, startTime=2022-04-01, endTime=2026-04-02, company=艾欧希科技股份有限公司, job=董事长)]), costTime=47)
+2026-04-29 14:18:46 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：8ms
+2026-04-29 14:18:46 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpById 执行耗时：57ms
+2026-04-29 14:18:49 [http-nio-8080-exec-2] INFO  com.eiousee.interceptor.AuthInterceptor - 请求开始：/upload
+2026-04-29 14:18:49 [http-nio-8080-exec-2] INFO  com.eiousee.controller.UploadController - 上传文件：热海牌-浔麟 250px.png
+2026-04-29 14:18:49 [http-nio-8080-exec-2] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：null
+2026-04-29 14:20:47 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-29 14:20:47 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-29 14:20:47 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-29 14:20:47 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-04-29 14:20:50 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 14448 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-04-29 14:20:50 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-04-29 14:20:51 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-04-29 14:20:51 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2026-04-29 14:20:51 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-04-29 14:20:51 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-04-29 14:20:51 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-04-29 14:20:51 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 1284 ms
+2026-04-29 14:20:52 [main] INFO  o.s.b.actuate.endpoint.web.EndpointLinksResolver - Exposing 1 endpoint beneath base path '/actuator'
+2026-04-29 14:20:52 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2026-04-29 14:20:52 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2026-04-29 14:20:52 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 2.871 seconds (process running for 3.49)
+2026-04-29 14:20:53 [RMI TCP Connection(2)-192.168.1.45] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-04-29 14:20:53 [RMI TCP Connection(2)-192.168.1.45] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-04-29 14:20:53 [RMI TCP Connection(2)-192.168.1.45] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-04-29 14:20:53 [RMI TCP Connection(3)-192.168.1.45] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-04-29 14:20:58 [http-nio-8080-exec-2] INFO  com.eiousee.interceptor.AuthInterceptor - 请求开始：/emps/13
+2026-04-29 14:20:58 [http-nio-8080-exec-2] INFO  com.eiousee.controller.EmpController - 查询员工，参数：13
+2026-04-29 14:20:58 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpAndExpById 执行耗时：50ms
+2026-04-29 14:20:58 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpById 执行耗时：51ms
+2026-04-29 14:20:58 [http-nio-8080-exec-2] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=13, operator=null, operationTime=2026-04-29T14:20:58.390549900, operationClass=com.eiousee.service.impl.EmpServiceImpl, operationMethod=getEmpById, operationParams=[13], operationResult=Employee(id=null, name=浔麟, birth=1994-02-16, sex=男, avatarPath=https://eiousee-java-web.oss-cn-beijing.aliyuncs.com/daa2261d-7e2e-4c0b-b221-9c988f0371df_热海牌-溟汐 150px.png, deptName=教研部, jobName=主任, boardDate=2026-04-14, updateTime=null, empExpList=[EmpExp(id=null, startTime=2018-01-20, endTime=2019-05-03, company=艾欧希科技股份有限公司, job=Java开发工程师), EmpExp(id=null, startTime=2020-01-13, endTime=2022-03-31, company=艾欧希科技股份有限公司, job=开发部主管), EmpExp(id=null, startTime=2022-04-01, endTime=2026-04-02, company=艾欧希科技股份有限公司, job=董事长)]), costTime=51)
+2026-04-29 14:20:58 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：13ms
+2026-04-29 14:20:58 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getEmpById 执行耗时：66ms
+2026-04-29 14:21:03 [http-nio-8080-exec-5] INFO  com.eiousee.interceptor.AuthInterceptor - 请求开始：/upload
+2026-04-29 14:21:03 [http-nio-8080-exec-5] INFO  com.eiousee.controller.UploadController - 上传文件：热海牌-浔麟 250px.png
+2026-04-29 14:21:04 [http-nio-8080-exec-5] INFO  com.eiousee.aop.RecordTimeAspect - 方法 putObject 执行耗时：520ms
+2026-04-29 14:21:04 [http-nio-8080-exec-5] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=13, operator=null, operationTime=2026-04-29T14:21:04.308652700, operationClass=com.eiousee.service.impl.UploadServiceImpl, operationMethod=putObject, operationParams=[org.springframework.web.multipart.support.StandardMultipartHttpServletRequest$StandardMultipartFile@5aed10ff], operationResult=Result(code=1, msg=success, data=https://eiousee-java-web.oss-cn-beijing.aliyuncs.com/b812b522-395f-4c7c-845b-beb630c7b95b_热海牌-浔麟 250px.png), costTime=520)
+2026-04-29 14:21:04 [http-nio-8080-exec-5] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：3ms
+2026-04-29 14:21:04 [http-nio-8080-exec-5] INFO  com.eiousee.aop.RecordTimeAspect - 方法 upload 执行耗时：525ms
+2026-04-29 17:17:28 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-04-29 17:17:28 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-04-29 17:17:28 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-04-29 17:17:28 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed

@@ -1,8 +1,8 @@
 package com.eiousee.service.impl;
 
+import com.eiousee.oss.AliyunOSS2Operator;
 import com.eiousee.pojo.Result;
 import com.eiousee.service.UploadService;
-import com.eiousee.utils.AliyunOSS2Operator;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,6 +21,8 @@ public class UploadServiceImpl implements UploadService {
     @Override
     public Result putObject(MultipartFile file) {
         String fileName = UUID.randomUUID() + "_" + file.getOriginalFilename();
+        // 将文件名中的空格换成下划线
+        fileName = fileName.replaceAll("\\s+", "_");
         String url;
         try {
             url = aliyunOSS2Operator.putObject(fileName, file.getBytes());

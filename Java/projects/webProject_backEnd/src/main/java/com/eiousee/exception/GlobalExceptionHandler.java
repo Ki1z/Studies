@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 
 @Slf4j
 @RestControllerAdvice
@@ -15,13 +16,26 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler
     public Result handleException(Exception e) {
-        log.error("服务器异常：" + e.getMessage());
+        log.error("服务器异常：{}", e.getMessage());
+
+        String message = e.getMessage();
+
+        if (message.contains("SQLIntegrityConstraintViolationException")) {
+            if (message.contains("'name' cannot be null")) {
+                return Result.error("员工姓名不能为空");
+            } else if (message.contains("'birth' cannot be null")) {
+                return Result.error("出生日期不能为空");
+            } else if (message.contains("'sex' cannot be null")) {
+                return Result.error("性别不能为空");
+            }
+        }
+
         return Result.error("服务器异常");
     }
 
     @ExceptionHandler
     public Result handleUncategorizedSQLException(UncategorizedSQLException e) {
-        log.error("SQL异常：" + e.getMessage());
+        log.error("SQL异常：{}", e.getMessage());
         if (e.getMessage().contains("'chk_date_order' is violated")) {
             return Result.error("入职时间不能大于离职时间");
         }
@@ -30,7 +44,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler
     public Result handleDuplicateKeyException(DuplicateKeyException e) {
-        log.error("DuplicateKeyException异常：" + e.getMessage());
+        log.error("DuplicateKeyException异常：{}", e.getMessage());
         // 获取异常信息
         String message = e.getMessage();
         // 获取索引

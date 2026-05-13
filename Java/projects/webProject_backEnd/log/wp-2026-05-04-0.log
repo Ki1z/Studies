@@ -1,0 +1,256 @@
+2026-05-04 16:34:55 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 34760 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-05-04 16:34:55 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-05-04 16:34:57 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-05-04 16:34:57 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2026-05-04 16:34:57 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-05-04 16:34:57 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-05-04 16:34:57 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-05-04 16:34:57 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 1663 ms
+2026-05-04 16:34:58 [main] INFO  o.s.b.actuate.endpoint.web.EndpointLinksResolver - Exposing 1 endpoint beneath base path '/actuator'
+2026-05-04 16:34:58 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2026-05-04 16:34:58 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2026-05-04 16:34:58 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 3.679 seconds (process running for 4.617)
+2026-05-04 16:34:59 [RMI TCP Connection(3)-192.168.1.45] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-05-04 16:34:59 [RMI TCP Connection(3)-192.168.1.45] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-05-04 16:34:59 [RMI TCP Connection(3)-192.168.1.45] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 3 ms
+2026-05-04 16:34:59 [RMI TCP Connection(2)-192.168.1.45] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-05-04 16:35:18 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-05-04 16:35:18 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-05-04 16:35:18 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-05-04 16:35:18 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed
+2026-05-04 16:35:22 [main] INFO  com.eiousee.WebProjectApplication - Starting WebProjectApplication using Java 21.0.4 with PID 26992 (D:\JetBrains_Files\Java_Files\webProject\target\classes started by kiiz in D:\JetBrains_Files\Java_Files\webProject)
+2026-05-04 16:35:22 [main] INFO  com.eiousee.WebProjectApplication - No active profile set, falling back to 1 default profile: "default"
+2026-05-04 16:35:23 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat initialized with port 8080 (http)
+2026-05-04 16:35:23 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Initializing ProtocolHandler ["http-nio-8080"]
+2026-05-04 16:35:23 [main] INFO  org.apache.catalina.core.StandardService - Starting service [Tomcat]
+2026-05-04 16:35:23 [main] INFO  org.apache.catalina.core.StandardEngine - Starting Servlet engine: [Apache Tomcat/10.1.53]
+2026-05-04 16:35:23 [main] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring embedded WebApplicationContext
+2026-05-04 16:35:23 [main] INFO  o.s.b.w.s.c.ServletWebServerApplicationContext - Root WebApplicationContext: initialization completed in 1273 ms
+2026-05-04 16:35:24 [main] INFO  o.s.b.actuate.endpoint.web.EndpointLinksResolver - Exposing 1 endpoint beneath base path '/actuator'
+2026-05-04 16:35:25 [main] INFO  org.apache.coyote.http11.Http11NioProtocol - Starting ProtocolHandler ["http-nio-8080"]
+2026-05-04 16:35:25 [main] INFO  o.s.boot.web.embedded.tomcat.TomcatWebServer - Tomcat started on port 8080 (http) with context path '/'
+2026-05-04 16:35:25 [main] INFO  com.eiousee.WebProjectApplication - Started WebProjectApplication in 2.841 seconds (process running for 3.491)
+2026-05-04 16:35:25 [RMI TCP Connection(1)-192.168.1.45] INFO  o.a.c.core.ContainerBase.[Tomcat].[localhost].[/] - Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-05-04 16:35:25 [RMI TCP Connection(1)-192.168.1.45] INFO  org.springframework.web.servlet.DispatcherServlet - Initializing Servlet 'dispatcherServlet'
+2026-05-04 16:35:25 [RMI TCP Connection(1)-192.168.1.45] INFO  org.springframework.web.servlet.DispatcherServlet - Completed initialization in 1 ms
+2026-05-04 16:35:25 [RMI TCP Connection(2)-192.168.1.45] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} inited
+2026-05-04 16:57:15 [http-nio-8080-exec-1] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource api/jobs.
+2026-05-04 16:57:19 [http-nio-8080-exec-2] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource api/jobs.
+2026-05-04 16:57:29 [http-nio-8080-exec-3] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource api/jobs.
+2026-05-04 16:57:29 [http-nio-8080-exec-4] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-05-04 16:58:06 [http-nio-8080-exec-7] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 16:58:06 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：181ms
+2026-05-04 16:58:06 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：185ms
+2026-05-04 16:58:06 [http-nio-8080-exec-7] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T16:58:06.831300800, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=185)
+2026-05-04 16:58:06 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：37ms
+2026-05-04 16:58:06 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：225ms
+2026-05-04 16:58:24 [http-nio-8080-exec-9] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 16:58:24 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 16:58:24 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 16:58:24 [http-nio-8080-exec-9] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T16:58:24.132035300, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 16:58:24 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：6ms
+2026-05-04 16:58:24 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：9ms
+2026-05-04 16:58:24 [http-nio-8080-exec-5] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-05-04 16:58:39 [http-nio-8080-exec-1] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 16:58:39 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 16:58:39 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：4ms
+2026-05-04 16:58:39 [http-nio-8080-exec-1] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T16:58:39.288073900, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=4)
+2026-05-04 16:58:39 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：3ms
+2026-05-04 16:58:39 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：7ms
+2026-05-04 16:58:42 [http-nio-8080-exec-2] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 16:58:42 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：2ms
+2026-05-04 16:58:42 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 16:58:42 [http-nio-8080-exec-2] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T16:58:42.041384700, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 16:58:42 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：7ms
+2026-05-04 16:58:42 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：12ms
+2026-05-04 17:10:15 [http-nio-8080-exec-7] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:10:15 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:10:15 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:10:15 [http-nio-8080-exec-7] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:10:15.981420500, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=4)
+2026-05-04 17:10:15 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：7ms
+2026-05-04 17:10:15 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：11ms
+2026-05-04 17:11:33 [http-nio-8080-exec-9] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:11:33 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：4ms
+2026-05-04 17:11:33 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：4ms
+2026-05-04 17:11:33 [http-nio-8080-exec-9] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:11:33.663352800, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=4)
+2026-05-04 17:11:33 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：7ms
+2026-05-04 17:11:33 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：11ms
+2026-05-04 17:11:33 [http-nio-8080-exec-5] ERROR com.eiousee.exception.GlobalExceptionHandler - 服务器异常：No static resource favicon.ico.
+2026-05-04 17:11:37 [http-nio-8080-exec-10] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:11:37 [http-nio-8080-exec-10] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：2ms
+2026-05-04 17:11:37 [http-nio-8080-exec-10] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:11:37 [http-nio-8080-exec-10] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:11:37.835275, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 17:11:37 [http-nio-8080-exec-10] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：3ms
+2026-05-04 17:11:37 [http-nio-8080-exec-10] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：7ms
+2026-05-04 17:14:22 [http-nio-8080-exec-4] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:14:22 [http-nio-8080-exec-4] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:14:22 [http-nio-8080-exec-4] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:14:22 [http-nio-8080-exec-4] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:14:22.666719900, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=4)
+2026-05-04 17:14:22 [http-nio-8080-exec-4] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：5ms
+2026-05-04 17:14:22 [http-nio-8080-exec-4] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：10ms
+2026-05-04 17:15:15 [http-nio-8080-exec-8] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:15:15 [http-nio-8080-exec-8] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:15:15 [http-nio-8080-exec-8] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:15:15 [http-nio-8080-exec-8] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:15:15.709722100, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 17:15:15 [http-nio-8080-exec-8] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：3ms
+2026-05-04 17:15:15 [http-nio-8080-exec-8] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：8ms
+2026-05-04 17:15:18 [http-nio-8080-exec-7] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:15:18 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：2ms
+2026-05-04 17:15:18 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：2ms
+2026-05-04 17:15:18 [http-nio-8080-exec-7] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:15:18.370762700, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=2)
+2026-05-04 17:15:18 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：5ms
+2026-05-04 17:15:18 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：8ms
+2026-05-04 17:16:04 [http-nio-8080-exec-6] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:16:04 [http-nio-8080-exec-6] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:16:04 [http-nio-8080-exec-6] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:16:04 [http-nio-8080-exec-6] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:16:04.433034800, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 17:16:04 [http-nio-8080-exec-6] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：3ms
+2026-05-04 17:16:04 [http-nio-8080-exec-6] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：6ms
+2026-05-04 17:16:21 [http-nio-8080-exec-9] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:16:21 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:16:21 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：4ms
+2026-05-04 17:16:21 [http-nio-8080-exec-9] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:16:21.774187, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=4)
+2026-05-04 17:16:21 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：4ms
+2026-05-04 17:16:21 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：8ms
+2026-05-04 17:16:38 [http-nio-8080-exec-5] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:16:38 [http-nio-8080-exec-5] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:16:38 [http-nio-8080-exec-5] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:16:38 [http-nio-8080-exec-5] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:16:38.805149400, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 17:16:38 [http-nio-8080-exec-5] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：3ms
+2026-05-04 17:16:38 [http-nio-8080-exec-5] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：7ms
+2026-05-04 17:16:42 [http-nio-8080-exec-10] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:16:42 [http-nio-8080-exec-10] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:16:42 [http-nio-8080-exec-10] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:16:42 [http-nio-8080-exec-10] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:16:42.489811300, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 17:16:42 [http-nio-8080-exec-10] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：3ms
+2026-05-04 17:16:42 [http-nio-8080-exec-10] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：8ms
+2026-05-04 17:16:44 [http-nio-8080-exec-1] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:16:44 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：2ms
+2026-05-04 17:16:44 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:16:44 [http-nio-8080-exec-1] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:16:44.264362600, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 17:16:44 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：4ms
+2026-05-04 17:16:44 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：7ms
+2026-05-04 17:18:23 [http-nio-8080-exec-3] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:18:23 [http-nio-8080-exec-3] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：4ms
+2026-05-04 17:18:23 [http-nio-8080-exec-3] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：4ms
+2026-05-04 17:18:23 [http-nio-8080-exec-3] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:18:23.579597, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=4)
+2026-05-04 17:18:23 [http-nio-8080-exec-3] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：8ms
+2026-05-04 17:18:23 [http-nio-8080-exec-3] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：13ms
+2026-05-04 17:18:31 [http-nio-8080-exec-4] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:18:31 [http-nio-8080-exec-4] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:18:31 [http-nio-8080-exec-4] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:18:31 [http-nio-8080-exec-4] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:18:31.322951, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 17:18:31 [http-nio-8080-exec-4] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：4ms
+2026-05-04 17:18:31 [http-nio-8080-exec-4] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：7ms
+2026-05-04 17:20:38 [http-nio-8080-exec-8] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:20:38 [http-nio-8080-exec-8] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:20:38 [http-nio-8080-exec-8] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:20:38 [http-nio-8080-exec-8] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:20:38.308276500, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 17:20:38 [http-nio-8080-exec-8] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：3ms
+2026-05-04 17:20:38 [http-nio-8080-exec-8] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：7ms
+2026-05-04 17:32:33 [http-nio-8080-exec-7] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:32:33 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：28ms
+2026-05-04 17:32:33 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：30ms
+2026-05-04 17:32:33 [http-nio-8080-exec-7] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:32:33.451511900, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=30)
+2026-05-04 17:32:33 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：10ms
+2026-05-04 17:32:33 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：44ms
+2026-05-04 17:36:35 [http-nio-8080-exec-6] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:36:35 [http-nio-8080-exec-6] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:36:35 [http-nio-8080-exec-6] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:36:35 [http-nio-8080-exec-6] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:36:35.193932700, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 17:36:35 [http-nio-8080-exec-6] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：10ms
+2026-05-04 17:36:35 [http-nio-8080-exec-6] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：14ms
+2026-05-04 17:40:37 [http-nio-8080-exec-9] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:40:37 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:40:37 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:40:37 [http-nio-8080-exec-9] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:40:37.187786, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 17:40:37 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：8ms
+2026-05-04 17:40:37 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：12ms
+2026-05-04 17:44:39 [http-nio-8080-exec-5] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:44:39 [http-nio-8080-exec-5] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:44:39 [http-nio-8080-exec-5] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:44:39 [http-nio-8080-exec-5] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:44:39.189390100, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 17:44:39 [http-nio-8080-exec-5] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：3ms
+2026-05-04 17:44:39 [http-nio-8080-exec-5] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：6ms
+2026-05-04 17:48:41 [http-nio-8080-exec-10] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:48:41 [http-nio-8080-exec-10] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:48:41 [http-nio-8080-exec-10] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:48:41 [http-nio-8080-exec-10] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:48:41.192271100, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 17:48:41 [http-nio-8080-exec-10] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：3ms
+2026-05-04 17:48:41 [http-nio-8080-exec-10] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：6ms
+2026-05-04 17:53:41 [http-nio-8080-exec-1] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:53:41 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:53:41 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 17:53:41 [http-nio-8080-exec-1] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:53:41.198671900, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 17:53:41 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：10ms
+2026-05-04 17:53:41 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：14ms
+2026-05-04 17:59:41 [http-nio-8080-exec-2] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 17:59:41 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：6ms
+2026-05-04 17:59:41 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：6ms
+2026-05-04 17:59:41 [http-nio-8080-exec-2] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T17:59:41.231783, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=6)
+2026-05-04 17:59:41 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：4ms
+2026-05-04 17:59:41 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：11ms
+2026-05-04 18:21:13 [http-nio-8080-exec-3] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 18:21:13 [http-nio-8080-exec-3] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 18:21:13 [http-nio-8080-exec-3] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 18:21:13 [http-nio-8080-exec-3] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T18:21:13.202861500, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 18:21:13 [http-nio-8080-exec-3] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：35ms
+2026-05-04 18:21:13 [http-nio-8080-exec-3] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：38ms
+2026-05-04 18:25:15 [http-nio-8080-exec-4] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 18:25:15 [http-nio-8080-exec-4] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 18:25:15 [http-nio-8080-exec-4] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 18:25:15 [http-nio-8080-exec-4] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T18:25:15.115251700, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 18:25:15 [http-nio-8080-exec-4] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：4ms
+2026-05-04 18:25:15 [http-nio-8080-exec-4] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：7ms
+2026-05-04 18:29:17 [http-nio-8080-exec-8] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 18:29:17 [http-nio-8080-exec-8] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：11ms
+2026-05-04 18:29:17 [http-nio-8080-exec-8] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：11ms
+2026-05-04 18:29:17 [http-nio-8080-exec-8] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T18:29:17.155175700, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=12)
+2026-05-04 18:29:17 [http-nio-8080-exec-8] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：34ms
+2026-05-04 18:29:17 [http-nio-8080-exec-8] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：46ms
+2026-05-04 18:33:19 [http-nio-8080-exec-7] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 18:33:19 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：2ms
+2026-05-04 18:33:19 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 18:33:19 [http-nio-8080-exec-7] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T18:33:19.119591200, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 18:33:19 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：3ms
+2026-05-04 18:33:19 [http-nio-8080-exec-7] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：7ms
+2026-05-04 18:37:21 [http-nio-8080-exec-6] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 18:37:21 [http-nio-8080-exec-6] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：2ms
+2026-05-04 18:37:21 [http-nio-8080-exec-6] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：2ms
+2026-05-04 18:37:21 [http-nio-8080-exec-6] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T18:37:21.113353600, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=2)
+2026-05-04 18:37:21 [http-nio-8080-exec-6] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：7ms
+2026-05-04 18:37:21 [http-nio-8080-exec-6] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：9ms
+2026-05-04 18:41:23 [http-nio-8080-exec-9] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 18:41:23 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：2ms
+2026-05-04 18:41:23 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：2ms
+2026-05-04 18:41:23 [http-nio-8080-exec-9] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T18:41:23.109852200, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=2)
+2026-05-04 18:41:23 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：3ms
+2026-05-04 18:41:23 [http-nio-8080-exec-9] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：5ms
+2026-05-04 18:45:25 [http-nio-8080-exec-5] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 18:45:25 [http-nio-8080-exec-5] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 18:45:25 [http-nio-8080-exec-5] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 18:45:25 [http-nio-8080-exec-5] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T18:45:25.117131900, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 18:45:25 [http-nio-8080-exec-5] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：6ms
+2026-05-04 18:45:25 [http-nio-8080-exec-5] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：15ms
+2026-05-04 18:49:27 [http-nio-8080-exec-10] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 18:49:27 [http-nio-8080-exec-10] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：2ms
+2026-05-04 18:49:27 [http-nio-8080-exec-10] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 18:49:27 [http-nio-8080-exec-10] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T18:49:27.122064600, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 18:49:27 [http-nio-8080-exec-10] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：2ms
+2026-05-04 18:49:27 [http-nio-8080-exec-10] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：5ms
+2026-05-04 18:53:29 [http-nio-8080-exec-1] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 18:53:29 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 18:53:29 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：3ms
+2026-05-04 18:53:29 [http-nio-8080-exec-1] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T18:53:29.126553800, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=3)
+2026-05-04 18:53:29 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：3ms
+2026-05-04 18:53:29 [http-nio-8080-exec-1] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：7ms
+2026-05-04 18:57:31 [http-nio-8080-exec-2] INFO  com.eiousee.controller.JobController - 查询职位列表
+2026-05-04 18:57:31 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：9ms
+2026-05-04 18:57:31 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJobList 执行耗时：9ms
+2026-05-04 18:57:31 [http-nio-8080-exec-2] INFO  com.eiousee.aop.LogAspect - 操作日志：OperationLog(id=null, operator=null, operationTime=2026-05-04T18:57:31.165097900, operationClass=com.eiousee.service.impl.JobServiceImpl, operationMethod=getJobList, operationParams=[], operationResult=[助教, 讲师, 副教授, 教授, 副主任, 主任, 工程师], costTime=9)
+2026-05-04 18:57:31 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 addLog 执行耗时：5ms
+2026-05-04 18:57:31 [http-nio-8080-exec-2] INFO  com.eiousee.aop.RecordTimeAspect - 方法 getJob 执行耗时：14ms
+2026-05-04 19:00:58 [SpringApplicationShutdownHook] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Commencing graceful shutdown. Waiting for active requests to complete
+2026-05-04 19:00:58 [tomcat-shutdown] INFO  o.s.boot.web.embedded.tomcat.GracefulShutdown - Graceful shutdown complete
+2026-05-04 19:00:58 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closing ...
+2026-05-04 19:00:58 [SpringApplicationShutdownHook] INFO  com.alibaba.druid.pool.DruidDataSource - {dataSource-1} closed

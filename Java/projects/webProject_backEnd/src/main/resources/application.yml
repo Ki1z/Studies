@@ -7,7 +7,7 @@ spring:
     name: webProject
   # 数据源
   datasource:
-    url: jdbc:mysql://localhost:3306/jdbc
+    url: jdbc:mysql://mysql:3306/jdbc
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver

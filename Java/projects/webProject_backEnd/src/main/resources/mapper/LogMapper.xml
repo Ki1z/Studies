@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.eiousee.mapper.LogMapper">
+
+    <insert id="addLog">
+        INSERT INTO
+            operation_log(user_id, operation_time, operation_class, operation_method, operation_params, operation_result, cost_time)
+        VALUES (
+                   #{id},
+                   #{operationTime},
+                   #{operationClass},
+                   #{operationMethod},
+                   #{operationParams},
+                   #{operationResult},
+                   #{costTime}
+               )
+    </insert>
+
+    <select id="getLogs" resultType="com.eiousee.pojo.OperationLog">
+        SELECT
+            username AS operator,
+            operation_time AS operationTime,
+            operation_class AS operationClass,
+            operation_method AS operationMethod,
+            operation_params AS operationParams,
+            operation_result AS operationResult,
+            cost_time AS costTime
+        FROM
+            operation_log
+        LEFT JOIN jdbc.users u on u.id = operation_log.user_id
+    </select>
+</mapper>
