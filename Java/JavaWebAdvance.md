@@ -1,6 +1,6 @@
 # Java Web Advance
 
-`更新时间：2026-5-14`
+`更新时间：2026-5-15`
 
 注释解释：
 
@@ -412,3 +412,341 @@ public interface EmployeeMapper {
 
 为此，`Nginx`提供了反向代理的功能，即将前端发送到后端的请求由`Nginx`进行中转，开发人员在`Nginx`中配置反向代理的服务器，例如设置所有`/api/`的`URI`视为向后端发送的请求，然后由`Nginx`代理转发到后端服务器，并接收后端服务器返回的数据，再返回给前端
 
+#### 配置Nginx反向代理
+
+`Nginx`的反向代理在配置文件`nginx.conf`中进行
+
+```conf
+server {
+	location /api/ {
+		proxy_pass http://localhost:8080/;
+	}
+}
+```
+
+`/api/`表示路由所有`URI`为`/api/`前缀的请求，然后转发请求到`http://localhost:8080/`中，这里需要注意，`/api/`这个前缀不会转发，只作为标识符出现。例如，前端请求为`http://localhost/api/stu`，转发到后端的请求为`http://localhost:8080/stu`
+
+#### 配置负载均衡
+
+`Nginx`的负载均衡同样在`nginx.conf`中进行
+
+```conf
+upstream servers {
+	server 192.168.100.128:8080;
+	server 192.168.100.129:8080
+}
+
+server {
+	location /api/ {
+		proxy_pass http://servers:8080/;
+	}
+}
+```
+
+通过`upstream`关键字声明一个服务器群组，命名为`servers`，然后在群组中定义各个服务器的`ip`地址，在反向代理时使用服务器群组的名称，`Nginx`就会根据负载均衡策略自动选择对应的服务器
+
+| 策略         | 说明                                                  |
+| ------------ | ----------------------------------------------------- |
+| 轮询         | 默认方式，所有请求顺序地分配给每个服务器              |
+| `weight`     | 权重分配，默认为1，权重越高，被分配地客户端请求就越多 |
+| `ip_hash`    | 根据`ip`分配，每个访客可以固定访问同一个后端服务器    |
+| `least_conn` | 最少连接分配，请求会优先分配给连接数最少的服务器      |
+| `url_hash`   | `url`分配，相同的`url`会被分配到同一个服务器          |
+| `fair`       | 响应时间分配，服务器响应时间越短，被分配的连接数越多  |
+
+## 项目实战
+
+### 完善登录功能
+
+在目前的初始项目中，登录功能实际上并不够完善，员工表中的密码目前仍然通过明文存储，安全性较低，因此我们将对登录逻辑进行改造，使用`md5`加密算法来加密数据库中的密码字段
+
+`Spring`框架中其实默认提供了`md5`的加密方法，通过`DigestUtils`工具类的`md5DigestAsHex()`，接收的数据类型为`byte[]`，返回值类型为`String`
+
+```java
+// TODO 后期需要进行md5加密，然后再进行比对
+password = DigestUtils.md5DigestAsHex(password.getBytes());
+if (!password.equals(employee.getPassword())) {
+    //密码错误
+    throw new PasswordErrorException(MessageConstant.PASSWORD_ERROR);
+}
+```
+
+这样，登陆加密功能就简单完成了
+
+### Swagger
+
+`Swagger` 是一套用于设计、构建、文档化和测试 `RESTful API` 的开源工具集。`Swagger` 提供了一种标准化的方式来描述 `API` 的结构、请求参数、响应格式等信息，使得前后端开发人员能够更高效地协作。`Swagger` 是由 `SmartBear Software` 提供的一套 `API` 开发工具集，最初是独立的 `API` 规范，现在已成为 `OpenAPI Specification` 的基础
+
+简单来说，`Swagger`可以快捷生成接口文档，并进行在线测试
+
+#### knife4j
+
+`knife4j`是一个基于`Spring`的`Swagger`项目，可以通过`maven`导入到`Spring`项目中，使用`Swagger`的功能
+
+1. 导入依赖
+
+```xml
+<dependency>
+    <groupId>com.github.xiaoymin</groupId>
+    <artifactId>knife4j-spring-boot-starter</artifactId>
+</dependency>
+```
+
+2. 在配置类中加入`knife4j`的相关配置
+
+```java
+/**
+ * 通过knife4j生成接口文档
+ * @return
+ */
+@Bean
+public Docket docket() {
+    ApiInfo apiInfo = new ApiInfoBuilder()
+            .title("苍穹外卖项目接口文档")
+            .version("2.0")
+            .description("苍穹外卖项目接口文档")
+            .build();
+    Docket docket = new Docket(DocumentationType.SWAGGER_2)
+            .apiInfo(apiInfo)
+            .select()
+            .apis(RequestHandlerSelectors.basePackage("com.sky.controller"))
+            .paths(PathSelectors.any())
+            .build();
+    return docket;
+}
+```
+
+3. 设置静态资源映射
+
+静态资源映射的为了让`Tomcat`服务器能够正确解析接口文档生成的位置，让我们能够通过`/doc.html`来访问接口文档。如果不设置静态资源映射，访问`/doc.html`时就会认为我们在访问某个`Controller`，从而报错`404`
+
+```java
+/**
+ * 设置静态资源映射
+ * @param registry
+ */
+protected void addResourceHandlers(ResourceHandlerRegistry registry) {
+    registry.addResourceHandler("/doc.html").addResourceLocations("classpath:/META-INF/resources/");
+    registry.addResourceHandler("/webjars/**").addResourceLocations("classpath:/META-INF/resources/webjars/");
+}
+```
+
+4. 访问后端`api`文档
+
+> ![](javaweb2/32.png)
+
+#### 常用注解
+
+| 注解                | 属性值        | 说明                       |
+| ------------------- | ------------- | -------------------------- |
+| `@Api`              | `tags`        | 业务类说明                 |
+| `@ApiModel`         | `description` | 实体类说明                 |
+| `@ApiModelProperty` | `value`       | 属性说明，用于描述属性信息 |
+| `@ApiOperation`     | `value`       | 方法说明，用于说明方法用途 |
+
+**示例**
+
+```java
+@RestController
+@Api(tags = "员工操作接口")
+public class EmployeeController {
+    
+    @PostMapping("/login")
+    @ApiOperation("员工登录")
+    Result login() {}
+}
+
+@Data
+@ApiModel(description = "员工登录时传递的数据模型")
+public class EmployeeLoginDTO implements Serializable {
+
+    @ApiModelProperty("用户名")
+    private String username;
+}
+```
+
+### 新增员工
+
+在`Java Web Medium`的学习中，我们已经掌握了基础的`CRUD`操作，为了提高效率，从`Java Web Advance`开始，将不会对已经学过的知识点做过多解释，如有不懂得地方，请查阅[JavaWebMedium](./JavaWebMedium.md)的相关内容
+
+这个项目我们不再全套使用一个实体类，而是为不同的功能设计不同用处的特定实例类
+
+`EmployeeDTO`
+
+用于接收前端请求参数
+
+```java
+package com.sky.dto;
+
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.Data;
+
+import java.io.Serializable;
+
+@Data
+@ApiModel(description = "新增员工时传递的数据模型")
+public class EmployeeDTO implements Serializable {
+
+    @ApiModelProperty("员工id")
+    private Long id;
+
+    @ApiModelProperty("员工登录用户名")
+    private String username;
+
+    @ApiModelProperty("员工姓名")
+    private String name;
+
+    @ApiModelProperty("员工手机号")
+    private String phone;
+
+    @ApiModelProperty("员工性别")
+    private String sex;
+
+    @ApiModelProperty("员工身份证号")
+    private String idNumber;
+
+}
+```
+
+`Employee`
+
+用于封装为数据库对象
+
+```java
+package com.sky.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Employee implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    private Long id;
+
+    private String username;
+
+    private String name;
+
+    private String password;
+
+    private String phone;
+
+    private String sex;
+
+    private String idNumber;
+
+    private Integer status;
+
+    //@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime createTime;
+
+    //@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime updateTime;
+
+    private Long createUser;
+
+    private Long updateUser;
+
+}
+```
+
+`Controller`
+
+```java
+@PostMapping
+@ApiOperation("新增员工")
+public Result<String> add(@RequestBody EmployeeDTO employeeDTO) {
+    log.info("新增员工，员工数据：{}", employeeDTO);
+    employeeService.add(employeeDTO);
+    return Result.success();
+}
+```
+
+`Service`
+
+在数据校验模块，我们为不同的错误类型抛出不同的自定义异常类，所有的自定义异常类都继承自`BaseException`异常类，通过全局异常处理器捕获。所有的报错信息由`MessageConstant`常量类定义。创建人`ID`和修改人`ID`使用`ThreadLocal`封装而成的`BaseContext`上下文工具类设置和获取
+
+```java
+@Override
+public void add(EmployeeDTO employeeDTO) {
+    String username = employeeDTO.getUsername();
+    String name = employeeDTO.getName();
+    String phone = employeeDTO.getPhone();
+    String sex = employeeDTO.getSex();
+    String idNumber = employeeDTO.getIdNumber();
+
+    // 数据校验
+    // 用户名校验
+    if (username == null || username.isEmpty())
+        throw new FormValueIsNullException(MessageConstant.USERNAME_IS_NULL);
+    else if (username.length() < 4 || username.length() > 32)
+        throw new UsernameLengthWrongException(MessageConstant.USERNAME_LENGTH_WRONG);
+    Employee employee = employeeMapper.getByUsername(username);
+    // 已经注册
+    if (employee != null) throw new UsernameExistsException(MessageConstant.USERNAME_EXISTS);
+
+    // 姓名校验
+    if (name == null || name.isEmpty())
+        throw new FormValueIsNullException(MessageConstant.NAME_IS_NULL);
+    else if (name.length() < 2 || name.length() > 32)
+        throw new NameLengthWrongException(MessageConstant.NAME_LENGTH_WRONG);
+
+    // 手机号校验
+    if (phone == null || phone.isEmpty())
+        throw new FormValueIsNullException(MessageConstant.PHONE_NUMBER_IS_NULL);
+    else if (!phone.matches("^1[3-9]\\d{9}$"))
+        throw new PhoneNumberIllegalException(MessageConstant.PHONE_NUMBER_ILLEGAL);
+
+    // 性别校验
+    if (!Objects.equals(sex, "1") && !Objects.equals(sex, "2")) throw new SexNotExistException(MessageConstant.SEX_NOT_EXIST);
+
+    // 身份证号码校验
+    if (idNumber == null || idNumber.isEmpty())
+        throw new FormValueIsNullException(MessageConstant.ID_NUMBER_IS_NULL);
+    else if (!idNumber.matches("^[1-9]\\d{5}(18|19|20)\\d{2}((0[1-9])|(10|11|12))(([0-2][1-9])|10|20|30|31)\\d{3}[0-9Xx]$"))
+        throw new IdNumberIllegalException(MessageConstant.ID_NUMBER_ILLEGAL);
+
+    employee = new Employee();
+    // 复制属性
+    BeanUtils.copyProperties(employeeDTO, employee);
+    // 设置默认密码123456
+    employee.setPassword(DigestUtils.md5DigestAsHex("123456".getBytes()));
+    // 设置账号状态
+    employee.setStatus(StatusConstant.ENABLE);
+    // 设置创建时间和更新时间
+    employee.setCreateTime(LocalDateTime.now());
+    employee.setUpdateTime(LocalDateTime.now());
+
+    // 设置创建人ID和修改人ID
+    Long id = BaseContext.getCurrentId();
+    employee.setCreateUser(id);
+    employee.setUpdateUser(id);
+
+    // 插入数据
+    employeeMapper.insert(employee);
+}
+```
+
+`Mapper.xml`
+
+```xml
+<insert id="insert">
+    INSERT INTO
+        employee(username,name,password,phone,sex,id_number,status,create_time,update_time,create_user,update_user)
+    VALUES
+        (#{username},#{name},#{password},#{phone},#{sex},#{idNumber},#{status},#{createTime},#{updateTime},#{createUser},#{updateUser})
+</insert>
+```
+
+> ![](javaweb2/33.png)
