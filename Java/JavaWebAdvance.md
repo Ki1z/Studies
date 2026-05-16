@@ -1,6 +1,6 @@
 # Java Web Advance
 
-`更新时间：2026-5-15`
+`更新时间：2026-5-16`
 
 注释解释：
 
@@ -750,3 +750,293 @@ public void add(EmployeeDTO employeeDTO) {
 ```
 
 > ![](javaweb2/33.png)
+
+### 员工分页查询
+
+分页查询的功能我们在艾欧希后台管理系统中已经实现过了，简单概述一下，就是使用`MyBatis`的`PageHelper`插件，根据`MyBatis`的拦截器拦截数据库连接请求，然后构建动态`SQL`语句，最后使用`PageHepler`的返回值`Page<>`获取数据即可
+
+`Controller`
+
+```java
+@GetMapping("/page")
+@ApiOperation("员工分页查询")
+public Result<EmployeePageVO> pageQuery(EmployeePageQueryDTO employeePageQueryDTO) {
+    log.info("员工分页查询：{}", employeePageQueryDTO);
+    EmployeePageVO employeePageVO = employeeService.pageQuery(employeePageQueryDTO);
+    return employeePageVO == null ? Result.error(MessageConstant.UNKNOWN_ERROR) : Result.success(employeePageVO);
+}
+```
+
+`Service`
+
+```java
+@Override
+public EmployeePageVO pageQuery(EmployeePageQueryDTO employeePageQueryDTO) {
+    try (Page<Employee> page = PageHelper.startPage(employeePageQueryDTO.getPage(), employeePageQueryDTO.getPageSize())) {
+        employeeMapper.pageQuery(employeePageQueryDTO);
+        return new EmployeePageVO(page.getTotal(), page.getResult());
+    }
+}
+```
+
+`Mapper.xml`
+
+```xml
+<!--    分页查询查询员工-->
+<select id="pageQuery" resultType="com.sky.entity.Employee">
+    SELECT
+        id,username,name,phone,sex,id_number,status,create_time,update_time,create_user,update_user
+    FROM
+        employee
+    <if test="name != null and name != ''">
+        WHERE name LIKE CONCAT('%',#{name},'%')
+    </if>
+</select>
+```
+
+#### 消息转换器
+
+在上文的代码中，`Employee`实体类被注释了两个注解
+
+```java
+//@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+private LocalDateTime createTime;
+
+//@JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+private LocalDateTime updateTime;
+```
+
+这两行注解是设置`Employee`对象从后台接收数据的数据格式，在不加注解的情况下，日期数据格式实质是一个数组
+
+```json
+{
+    "id": 1,
+    "username": "admin",
+    "name": "管理员",
+    "password": null,
+    "phone": "13812312312",
+    "sex": "1",
+    "idNumber": "110101199001010047",
+    "status": 1,
+    "createTime": [
+      2022,
+      2,
+      15,
+      15,
+      51,
+      20
+    ],
+    "updateTime": [
+      2022,
+      2,
+      17,
+      9,
+      16,
+      20
+    ],
+    "createUser": 10,
+    "updateUser": 1
+}
+```
+
+所以需要这两个注解来转换数据格式
+
+```json
+{
+    "id": 1,
+    "username": "admin",
+    "name": "管理员",
+    "password": null,
+    "phone": "13812312312",
+    "sex": "1",
+    "idNumber": "110101199001010047",
+    "status": 1,
+    "createTime": "2022-02-15 15:51:20",
+    "updateTime": "2022-02-17 09:16:20",
+    "createUser": 10,
+    "updateUser": 1
+}
+```
+
+但是实际上，`Spring MVC`也可以通过扩展消息转换器来实现对日期类型数据格式的统一管理
+
+首先创建一个配置类，继承`WebMvcConfigurationSupport`
+
+```java
+@Configuration
+public class WebMvcConfiguration extends WebMvcConfigurationSupport {}
+```
+
+然后重写`extendMessageConverters`方法
+
+```java
+protected void extendMessageConverters(List<HttpMessageConverter<?>> converters) {}
+```
+
+定义一个消息转换器类`JacksonObjectMapper`，继承`ObjectMapper`。在`JacksonObjectMapper`中定义一些日期格式的常量
+
+```java
+    public static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd";
+    public static final String DEFAULT_DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
+//    public static final String DEFAULT_DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm";
+    public static final String DEFAULT_TIME_FORMAT = "HH:mm:ss";
+```
+
+定义`JacksonObjectMapper`的构造器，在构造器中调用父类构造器，然后调用自身的方法`configure()`忽略报错信息，再调用`getDeserializationConfig()`定义对象属性不存在时的应对策略
+
+```java
+public JacksonObjectMapper() {
+    super();
+    //收到未知属性时不报异常
+    this.configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+    //反序列化时，属性不存在的兼容处理
+    this.getDeserializationConfig().withoutFeatures(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+}
+```
+
+接着实例化一个`SimpleModule`对象，使用`addDeserializer()`、`addSerializer()`方法设置转换映射，最后调用`registerModule()`方法注册功能模块
+
+```java
+package com.sky.json;
+
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.deser.LocalTimeDeserializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
+import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+
+import static com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES;
+
+/**
+ * 对象映射器:基于jackson将Java对象转为json，或者将json转为Java对象
+ * 将JSON解析为Java对象的过程称为 [从JSON反序列化Java对象]
+ * 从Java对象生成JSON的过程称为 [序列化Java对象到JSON]
+ */
+public class JacksonObjectMapper extends ObjectMapper {
+
+    public static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd";
+    public static final String DEFAULT_DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
+//    public static final String DEFAULT_DATE_TIME_FORMAT = "yyyy-MM-dd HH:mm";
+    public static final String DEFAULT_TIME_FORMAT = "HH:mm:ss";
+
+    public JacksonObjectMapper() {
+        super();
+        //收到未知属性时不报异常
+        this.configure(FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+        //反序列化时，属性不存在的兼容处理
+        this.getDeserializationConfig().withoutFeatures(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
+        SimpleModule simpleModule = new SimpleModule()
+                .addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(DateTimeFormatter.ofPattern(DEFAULT_DATE_TIME_FORMAT)))
+                .addDeserializer(LocalDate.class, new LocalDateDeserializer(DateTimeFormatter.ofPattern(DEFAULT_DATE_FORMAT)))
+                .addDeserializer(LocalTime.class, new LocalTimeDeserializer(DateTimeFormatter.ofPattern(DEFAULT_TIME_FORMAT)))
+                .addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(DateTimeFormatter.ofPattern(DEFAULT_DATE_TIME_FORMAT)))
+                .addSerializer(LocalDate.class, new LocalDateSerializer(DateTimeFormatter.ofPattern(DEFAULT_DATE_FORMAT)))
+                .addSerializer(LocalTime.class, new LocalTimeSerializer(DateTimeFormatter.ofPattern(DEFAULT_TIME_FORMAT)));
+
+        //注册功能模块 例如，可以添加自定义序列化器和反序列化器
+        this.registerModule(simpleModule);
+    }
+}
+```
+
+回到`extendMessageConverters()`中，我们先创建一个消息转换器对象，为消息转换器设置对象转换器，即`JacksonObjectMapper`，最后将消息转换器添加到`converters`数组中，注意需要添加到第一个
+
+```java
+@Override
+protected void extendMessageConverters(List<HttpMessageConverter<?>> converters) {
+    log.info("扩展消息转换器...");
+    // 创建消息转换器对象
+    MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter();
+    // 添加对象转换器
+    converter.setObjectMapper(new JacksonObjectMapper());
+    // 将消息转换器对象追加到converters中
+    converters.add(0, converter);
+}
+```
+
+### 员工账号状态更改
+
+`Controller`
+
+```java
+@PostMapping("/status/{status}")
+@ApiOperation("更改员工账号状态")
+public Result<String> changeStatus(@PathVariable Integer status, Long id) {
+    log.info("更改员工账号状态：{}", id);
+    employeeService.changeStatus(status, id);
+    return Result.success();
+}
+```
+
+`Service`
+
+```java
+@Override
+public void changeStatus(Integer status, Long id) {
+    if (!Objects.equals(status, StatusConstant.ENABLE) && !Objects.equals(status, StatusConstant.DISABLE))
+        throw new FormValueIsNullException(MessageConstant.STATUS_IS_NOT_DEFINED);
+    if (id == null || id <= 0)
+        throw new FormValueIsNullException(MessageConstant.EMPLOYEE_NOT_FOUND);
+    Integer count = employeeMapper.changeStatus(status, id);
+    if (count != 1)
+        throw new EmployeeStatusChangeFailedException(MessageConstant.EMPLOYEE_STATUS_CHANGE_FAILED);
+}
+```
+
+`Mapper`
+
+```java
+@Update("update employee set status = #{status} where id = #{id}")
+Integer changeStatus(Integer status, Long id);
+```
+
+### 根据ID查询员工
+
+`Controller`
+
+```java
+@GetMapping("/{id}")
+@ApiOperation("根据id查询员工信息")
+public Result<Employee> getById(@PathVariable Long id) {
+    log.info("根据id查询员工信息：{}", id);
+    Employee employee = employeeService.getById(id);
+    return Result.success(employee);
+}
+```
+
+`Service`
+
+```java
+@Override
+public Employee getById(Long id) {
+    if (id == null || id <= 0)
+        throw new FormValueIsNullException(MessageConstant.EMPLOYEE_NOT_FOUND);
+    Employee employee = employeeMapper.getById(id);
+    if (employee == null)
+        throw new EmployeeNotFoundException(MessageConstant.EMPLOYEE_NOT_FOUND);
+    return employee;
+}
+```
+
+`Mapper`
+
+```java
+@Select("select id, name, username, phone, sex, id_number, status, create_time, update_time, create_user, update_user" +
+        " from employee where id = #{id}")
+Employee getById(Long id);
+```
+
+### 编辑员工
+
