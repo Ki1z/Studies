@@ -1,6 +1,6 @@
 # Java Web Advance
 
-`更新时间：2026-5-16`
+`更新时间：2026-5-18`
 
 注释解释：
 
@@ -1040,3 +1040,497 @@ Employee getById(Long id);
 
 ### 编辑员工
 
+`Controller`
+
+```java
+@PutMapping
+@ApiOperation("编辑员工信息")
+public Result<String> update(@RequestBody EmployeeDTO employeeDTO) {
+    log.info("编辑员工信息：{}", employeeDTO);
+    employeeService.update(employeeDTO);
+    return Result.success();
+}
+```
+
+`Service`
+
+数据校验逻辑与新增员工类似，但是在检测用户名是否被占用时，不能直接检测数据库中是否存在当前用户，因为查询的结果中包含用户本身，所以我们用用户输入的新用户名来查询用户，然后判断用户`id`是否相同
+
+```java
+@Override
+public void update(EmployeeDTO employeeDTO) {
+    String username = employeeDTO.getUsername();
+    String name = employeeDTO.getName();
+    String phone = employeeDTO.getPhone();
+    String sex = employeeDTO.getSex();
+    String idNumber = employeeDTO.getIdNumber();
+
+    // 数据校验
+    // 用户名校验
+    if (username == null || username.isEmpty())
+        throw new FormValueIsNullException(MessageConstant.USERNAME_IS_NULL);
+    else if (username.length() < 4 || username.length() > 32)
+        throw new UsernameLengthWrongException(MessageConstant.USERNAME_LENGTH_WRONG);
+    Employee employee = employeeMapper.getByUsername(username);
+    // 用户名已经被占用
+    if (employee != null && !Objects.equals(employee.getId(), employeeDTO.getId())) throw new UsernameExistsException(MessageConstant.USERNAME_EXISTS);
+
+    // 姓名校验
+    if (name == null || name.isEmpty())
+        throw new FormValueIsNullException(MessageConstant.NAME_IS_NULL);
+    else if (name.length() < 2 || name.length() > 32)
+        throw new NameLengthWrongException(MessageConstant.NAME_LENGTH_WRONG);
+
+    // 手机号校验
+    if (phone == null || phone.isEmpty())
+        throw new FormValueIsNullException(MessageConstant.PHONE_NUMBER_IS_NULL);
+    else if (!phone.matches("^1[3-9]\\d{9}$"))
+        throw new PhoneNumberIllegalException(MessageConstant.PHONE_NUMBER_ILLEGAL);
+
+    // 性别校验
+    if (!Objects.equals(sex, "0") && !Objects.equals(sex, "1")) throw new SexNotExistException(MessageConstant.SEX_NOT_EXIST);
+
+    // 身份证号码校验
+    if (idNumber == null || idNumber.isEmpty())
+        throw new FormValueIsNullException(MessageConstant.ID_NUMBER_IS_NULL);
+    else if (!idNumber.matches("^[1-9]\\d{5}(18|19|20)\\d{2}((0[1-9])|(10|11|12))(([0-2][1-9])|10|20|30|31)\\d{3}[0-9Xx]$"))
+        throw new IdNumberIllegalException(MessageConstant.ID_NUMBER_ILLEGAL);
+
+    // 封装对象
+    employee = new Employee();
+    BeanUtils.copyProperties(employeeDTO, employee);
+    // 设置更新时间
+    employee.setUpdateTime(LocalDateTime.now());
+    // 设置更新人ID
+    employee.setUpdateUser(BaseContext.getCurrentId());
+    // 更新数据
+    Integer count = employeeMapper.update(employee);
+    if (count != 1) throw new EmplyeeUpdateFailedException(MessageConstant.EMPLOYEE_UPDATE_FAILED);
+}
+```
+
+`Mapper.xml`
+
+```xml
+<!--    更新员工信息-->
+<update id="update" parameterType="com.sky.entity.Employee">
+    UPDATE employee
+    <set>
+        <if test="username != null and username != ''">username = #{username},</if>
+        <if test="name != null and name != ''">name = #{name},</if>
+        <if test="password != null and password != ''">password = #{password},</if>
+        <if test="phone != null and phone != ''">phone = #{phone},</if>
+        <if test="sex != null">sex = #{sex},</if>
+        <if test="idNumber != null and idNumber != ''">id_number = #{idNumber},</if>
+        <if test="status != null">status = #{status},</if>
+        <if test="createTime != null">create_time = #{createTime},</if>
+        <if test="updateTime != null">update_time = #{updateTime},</if>
+        <if test="createUser != null and createUser != ''">create_user = #{createUser},</if>
+        <if test="updateUser != null and updateUser != ''">update_user = #{updateUser},</if>
+    </set>
+    WHERE id = #{id}
+</update>
+```
+
+### 分类相关接口
+
+分类相关接口的逻辑大致与员工操作相当，所以这里仅展示代码
+
+`Controller`
+
+```java
+package com.sky.controller.admin;
+
+import com.sky.dto.CategoryDTO;
+import com.sky.dto.CategoryPageQueryDTO;
+import com.sky.entity.Category;
+import com.sky.result.PageResult;
+import com.sky.result.Result;
+import com.sky.service.impl.CategoryServiceImpl;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * 分类管理
+ */
+@RestController
+@RequestMapping("/admin/category")
+@Slf4j
+@Api(tags = "分类管理接口")
+public class CategoryController {
+
+    @Autowired
+    private CategoryServiceImpl categoryService;
+
+    /**
+     * 分类分页查询
+     * @param categoryPageQueryDTO
+     * @return
+     */
+    @GetMapping("/page")
+    @ApiOperation("分类分页查询")
+    public Result<PageResult<Category>> pageQuery(CategoryPageQueryDTO categoryPageQueryDTO) {
+        log.info("分页查询：{}", categoryPageQueryDTO);
+        PageResult<Category> pageResult = categoryService.pageQuery(categoryPageQueryDTO);
+        return Result.success(pageResult);
+    }
+
+    /**
+     * 新增分类
+     * @param categoryDTO
+     * @return
+     */
+    @PutMapping
+    @ApiOperation("修改分类")
+    public Result<String> update(@RequestBody CategoryDTO categoryDTO) {
+        log.info("修改分类：{}", categoryDTO);
+        categoryService.update(categoryDTO);
+        return Result.success();
+    }
+
+    /**
+     * 修改分类状态
+     * @param status
+     * @param id
+     * @return
+     */
+    @PostMapping("/status/{status}")
+    @ApiOperation("更改分类状态")
+    public Result<String> changeStatus(@PathVariable Integer status, Long id) {
+        log.info("更改分类状态：{}", status);
+        categoryService.changeStatus(status, id);
+        return Result.success();
+    }
+
+    /**
+     * 新增分类
+     * @param categoryDTO
+     * @return
+     */
+    @PostMapping
+    @ApiOperation("新增分类")
+    public Result<String> add(@RequestBody CategoryDTO categoryDTO) {
+        log.info("新增分类：{}", categoryDTO);
+        categoryService.add(categoryDTO);
+        return Result.success();
+    }
+
+    /**
+     * 删除分类
+     * @param id
+     * @return
+     */
+    @DeleteMapping
+    @ApiOperation("删除分类")
+    public Result<String> delete(Long id) {
+        log.info("删除分类：{}", id);
+        categoryService.delete(id);
+        return Result.success();
+    }
+
+    /**
+     * 根据类型查询
+     * @param type
+     * @return
+     */
+    @GetMapping("/list")
+    @ApiOperation("根据类型查询分类")
+    public Result<List<Category>> list(Integer type) {
+        log.info("根据类型查询分类：{}", type);
+        List<Category> list = categoryService.list(type);
+        return Result.success(list);
+    }
+}
+```
+
+`Service`
+
+```java
+package com.sky.service.impl;
+
+import com.github.pagehelper.Page;
+import com.github.pagehelper.PageHelper;
+import com.sky.constant.MessageConstant;
+import com.sky.constant.StatusConstant;
+import com.sky.context.BaseContext;
+import com.sky.dto.CategoryDTO;
+import com.sky.dto.CategoryPageQueryDTO;
+import com.sky.entity.Category;
+import com.sky.exception.*;
+import com.sky.mapper.CategoryMapper;
+import com.sky.result.PageResult;
+import com.sky.service.CategoryService;
+import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+public class CategoryServiceImpl implements CategoryService {
+
+    @Autowired
+    private CategoryMapper categoryMapper;
+
+    /**
+     * 分类分页查询
+     * @param categoryPageQueryDTO
+     * @return
+     */
+    @Override
+    public PageResult<Category> pageQuery(CategoryPageQueryDTO categoryPageQueryDTO) {
+        Page<Category> page = PageHelper.startPage(categoryPageQueryDTO.getPage(), categoryPageQueryDTO.getPageSize());
+        categoryMapper.pageQuery(categoryPageQueryDTO);
+        return new PageResult<>(page.getTotal(), page.getResult());
+    }
+
+    /**
+     * 修改分类
+     * @param categoryDTO
+     */
+    @Override
+    public void update(CategoryDTO categoryDTO) {
+        Long id = categoryDTO.getId();
+        String name = categoryDTO.getName();
+        Integer sort = categoryDTO.getSort();
+
+        // 参数校验
+        if (id == null)
+            throw new FormValueIsNullException(MessageConstant.CANNOT_FOUND_CATEGORY);
+        if (name == null || name.length() > 20 || name.length() < 2)
+            throw new CategoryNameIllegalException(MessageConstant.CATEGORY_NAME_LENGTH_WRONG);
+        Category category = categoryMapper.getByName(name);
+        if (category != null && !category.getId().equals(id))
+            throw new CategoryNameIllegalException(MessageConstant.CATEGORY_NAME_EXISTS);
+        if (sort == null || sort < 0)
+            throw new CategorySortIllegalException(MessageConstant.CATEGORY_SORT_ILLEGAL);
+
+        category = new Category();
+        BeanUtils.copyProperties(categoryDTO, category);
+        category.setUpdateTime(LocalDateTime.now());
+        category.setUpdateUser(BaseContext.getCurrentId());
+
+        Integer result = categoryMapper.update(category);
+        if (result != 1)
+            throw new CategoryUpdateFailedException(MessageConstant.CATEGORY_UPDATE_FAILED);
+    }
+
+    /**
+     * 修改分类状态
+     * @param status
+     * @param id
+     */
+    @Override
+    public void changeStatus(Integer status, Long id) {
+        if (id == null)
+            throw new FormValueIsNullException(MessageConstant.CANNOT_FOUND_CATEGORY);
+        if (status == null || !status.equals(0) && !status.equals(1))
+            throw new CategoryStatusIllegalException(MessageConstant.CATEGORY_STATUS_ILLEGAL);
+        Integer count = categoryMapper.changeStatus(status, id);
+        if (count != 1)
+            throw new CategoryUpdateFailedException(MessageConstant.CATEGORY_STATUS_UPDATE_FAILED);
+    }
+
+    /**
+     * 新增分类
+     * @param categoryDTO
+     */
+    @Override
+    public void add(CategoryDTO categoryDTO) {
+        String name = categoryDTO.getName();
+        Integer sort = categoryDTO.getSort();
+        Integer type = categoryDTO.getType();
+
+        // 参数校验
+        if (name == null || name.length() > 20 || name.length() < 2)
+            throw new CategoryNameIllegalException(MessageConstant.CATEGORY_NAME_LENGTH_WRONG);
+        Category category = categoryMapper.getByName(name);
+        if (category != null)
+            throw new CategoryNameIllegalException(MessageConstant.CATEGORY_NAME_EXISTS);
+        if (sort == null || sort < 0)
+            throw new CategorySortIllegalException(MessageConstant.CATEGORY_SORT_ILLEGAL);
+        if (type == null || !type.equals(1) && !type.equals(2))
+            throw new CategoryTypeIllegalException(MessageConstant.CATEGORY_TYPE_ILLEGAL);
+
+        category = new Category();
+        BeanUtils.copyProperties(categoryDTO, category);
+        category.setUpdateTime(LocalDateTime.now());
+        category.setUpdateUser(BaseContext.getCurrentId());
+        category.setCreateTime(LocalDateTime.now());
+        category.setCreateUser(BaseContext.getCurrentId());
+        category.setStatus(StatusConstant.ENABLE);
+
+        Integer result = categoryMapper.add(category);
+        if (result != 1)
+            throw new CategoryInsertFailedException(MessageConstant.CATEGORY_INSERT_FAILED);
+    }
+
+    /**
+     * 删除分类
+     * @param id
+     */
+    @Override
+    public void delete(Long id) {
+       if (id == null)
+           throw new FormValueIsNullException(MessageConstant.CANNOT_FOUND_CATEGORY);
+       Integer count = categoryMapper.delete(id);
+       if (count != 1)
+           throw new CategoryDeleteFailedException(MessageConstant.CATEGORY_DELETE_FAILED);
+    }
+
+    /**
+     * 根据类型查询
+     * @param type
+     * @return
+     */
+    @Override
+    public List<Category> list(Integer type) {
+        if (type == null || !type.equals(1) && !type.equals(2))
+            throw new CategoryTypeIllegalException(MessageConstant.CATEGORY_TYPE_ILLEGAL);
+        return categoryMapper.list(type);
+    }
+}
+```
+
+`Mapper`
+
+```java
+package com.sky.mapper;
+
+import com.sky.dto.CategoryDTO;
+import com.sky.dto.CategoryPageQueryDTO;
+import com.sky.entity.Category;
+import io.swagger.models.auth.In;
+import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
+
+import java.util.List;
+
+@Mapper
+public interface CategoryMapper {
+    /**
+     * 分页查询
+     * @param categoryPageQueryDTO
+     * @return
+     */
+    List<Category> pageQuery(CategoryPageQueryDTO categoryPageQueryDTO);
+
+    /**
+     * 根据名称查询
+     * @param name
+     * @return
+     */
+    @Select("select id, type, name, sort, status, create_time, update_time, create_user, update_user from category where name = #{name}")
+    Category getByName(String name);
+
+    /**
+     * 修改分类
+     * @param category
+     */
+    Integer update(Category category);
+
+    /**
+     * 修改分类状态
+     * @param status
+     * @param id
+     * @return
+     */
+    @Update("update category set status = #{status} where id = #{id}")
+    Integer changeStatus(Integer status, Long id);
+
+    /**
+     * 新增分类
+     * @param category
+     * @return
+     */
+    Integer add(Category category);
+
+    /**
+     * 删除分类
+     * @param id
+     * @return
+     */
+    @Delete("delete from category where id = #{id}")
+    Integer delete(Long id);
+
+    /**
+     * 根据类型查询
+     * @param type
+     * @return
+     */
+    @Select("select id, type, name, sort, status, create_time, update_time, create_user, update_user " +
+            "from category where type = #{type} order by sort")
+    List<Category> list(Integer type);
+}
+```
+
+`Mapper.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sky.mapper.CategoryMapper">
+<!--    新增分类-->
+    <insert id="add" parameterType="com.sky.entity.Category">
+        INSERT INTO
+        category(type, name, sort, status, create_time, update_time, create_user, update_user)
+        VALUES
+        (#{type}, #{name}, #{sort}, #{status}, #{createTime}, #{updateTime}, #{createUser}, #{updateUser})
+    </insert>
+    <!--    修改分类-->
+    <update id="update" parameterType="com.sky.entity.Category">
+        UPDATE category
+        <set>
+            <if test="name != null">
+                name = #{name},
+            </if>
+            <if test="sort != null">
+                sort = #{sort},
+            </if>
+            <if test="status != null">
+                status = #{status},
+            </if>
+            <if test="updateTime != null">
+                update_time = #{updateTime},
+            </if>
+            <if test="updateUser != null">
+                update_user = #{updateUser},
+            </if>
+        </set>
+        WHERE id = #{id}
+    </update>
+    <!-- 分页查询-->
+    <select id="pageQuery" resultType="com.sky.entity.Category">
+        SELECT
+            id, type, name, sort, status, create_time, update_time, create_user, update_user
+        FROM
+            category
+        <where>
+            <if test="type != null">
+                type = #{type}
+            </if>
+            <if test="name != null and name != ''">
+                AND name LIKE '%${name}%'
+            </if>
+        </where>
+        ORDER BY sort
+    </select>
+</mapper>
+```
+
+*注：在进行数据校验时，建议使用`Objects.equals()`，因为`Objects.equals()`中进行了空值判断，直接调用属性的`equals()`方法可能导致空指针异常*
+
+```java
+public static boolean equals(Object a, Object b) {
+    return (a == b) || (a != null && a.equals(b));
+}
+```
