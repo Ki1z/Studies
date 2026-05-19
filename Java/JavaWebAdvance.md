@@ -1,6 +1,6 @@
 # Java Web Advance
 
-`更新时间：2026-5-18`
+`更新时间：2026-5-19`
 
 注释解释：
 
@@ -1532,5 +1532,177 @@ public interface CategoryMapper {
 ```java
 public static boolean equals(Object a, Object b) {
     return (a == b) || (a != null && a.equals(b));
+}
+```
+
+### 公共字段自动填充
+
+在上文的项目实战中，不难发现在执行更新或插入操作时，我们需要为实体类的更新时间、操作员工`id`、创建人、创建时间进行单独的赋值，如下
+
+```java
+category.setUpdateTime(LocalDateTime.now());
+category.setUpdateUser(BaseContext.getCurrentId());
+category.setCreateTime(LocalDateTime.now());
+category.setCreateUser(BaseContext.getCurrentId());
+```
+
+如果项目中有几十上百个类似的实体类及其字段，很可能导致某一个实体类的信息被漏掉，而且也不便于项目维护。因此我们可以利用`Spring AOP`来切分一个切面，在数据库事务操作之前通过切面类为相关字段赋值
+
+1. 逻辑概述
+
+通过`Spring AOP`定义一个切面类，切入点为所有的`Mapper`操作，但是必须是所有的插入和更新操作，这一步可以由方法名约束，但我们的方法命名比较随意，所以需要通过自定义注解来约束。在自定义注解中，我们再使用枚举类来区分更新和插入操作，因为通知中需要对更新和插入执行不同的字段填充，更新操作不能填充创建人和创建时间字段
+
+2. 定义`AutoFill`注解和枚举类`OperationType`
+
+`AutoFill`
+
+```java
+package com.sky.annotation;
+
+import com.sky.enumeration.OperationType;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@Target(ElementType.METHOD)
+@Retention(RetentionPolicy.RUNTIME)
+public @interface AutoFill {
+    OperationType value();
+}
+```
+
+`OperationType`
+
+```java
+package com.sky.enumeration;
+
+/**
+ * 数据库操作类型
+ */
+public enum OperationType {
+
+    /**
+     * 更新操作
+     */
+    UPDATE,
+
+    /**
+     * 插入操作
+     */
+    INSERT
+
+}
+```
+
+2. 定义切面类`FieldAutoFillAspect`
+
+```java
+package com.sky.aspect;
+
+import com.sky.annotation.AutoFill;
+import com.sky.constant.AutoFillConstant;
+import com.sky.context.BaseContext;
+import com.sky.enumeration.OperationType;
+import lombok.extern.slf4j.Slf4j;
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Before;
+import org.aspectj.lang.annotation.Pointcut;
+import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.stereotype.Component;
+
+import java.lang.reflect.Method;
+import java.time.LocalDateTime;
+
+@Aspect
+@Component
+@Slf4j
+public class FieldAutoFillAspect {
+
+}
+```
+
+3. 定义切入点，需要切入所有带有`AutoFill`注解的`Mapper`方法
+
+```java
+@Pointcut("execution(* com.sky.mapper.*.*(..)) && @annotation(com.sky.annotation.AutoFill)")
+public void autoFill() {}
+```
+
+4. 定义通知方法，通知类型为前置通知，必须在`Mapper`方法执行之前完成字段填充，否则会数据插入数据库时会造成数据缺失
+
+```java
+@Before("autoFill()")
+public void autoFill(JoinPoint joinPoint) {}
+```
+
+5. 定义自动填充逻辑
+
+首先截取到传递给数据库的实例，然后获取当前操作用户和系统时间，从方法的注解中获取操作类型，最后根据不同的操作类型，通过`Java`反射为实例赋值。赋值的逻辑则是获取实例的`Class`对象，通过`Class`对象获取其`setter`方法，然后利用`setter`方法赋值，而不是通过`Java`直接修改其访问权限并赋值，保证逻辑的安全性
+
+```java
+@Before("autoFill()")
+public void autoFill(JoinPoint joinPoint) {
+    log.info("开始进行数据填充");
+    // 获取更新或新增的实例
+    Object[] args = joinPoint.getArgs();
+    if (args == null || args.length == 0) {
+        return;
+    }
+    Object object = args[0];
+    // 获取当前时间与操作用户
+    LocalDateTime now = LocalDateTime.now();
+    Long currentId = BaseContext.getCurrentId();
+    // 获取操作类型
+    MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+    AutoFill annotation = signature.getMethod().getAnnotation(AutoFill.class);
+
+    if (annotation == null) {
+        return;
+    }
+    // 根据操作类型执行不同的操作逻辑
+    if (annotation.value() == OperationType.INSERT) {
+        setFieldValue(object, AutoFillConstant.SET_CREATE_TIME, now);
+        setFieldValue(object, AutoFillConstant.SET_UPDATE_TIME, now);
+        setFieldValue(object, AutoFillConstant.SET_CREATE_USER, currentId);
+        setFieldValue(object, AutoFillConstant.SET_UPDATE_USER, currentId);
+    } else if (annotation.value() == OperationType.UPDATE) {
+        setFieldValue(object, AutoFillConstant.SET_UPDATE_TIME, now);
+        setFieldValue(object, AutoFillConstant.SET_UPDATE_USER, currentId);
+    }
+}
+
+private void setFieldValue(Object object, String fieldName, Object param) {
+    try {
+        // 获取object的Class对象
+        Class<?> clazz = object.getClass();
+        // 获取object的fieldName字段的setter方法
+        Method setter = clazz.getDeclaredMethod(fieldName, param.getClass());
+        // 调用setter方法，为字段赋值
+        setter.invoke(object, param);
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+```
+
+这里的`fieldName`参数使用了常量类`AutoFillConstant`，以保证所有的相关字段名称是相同的，避免拼写错误。
+
+```java
+package com.sky.constant;
+
+/**
+ * 公共字段自动填充相关常量
+ */
+public class AutoFillConstant {
+    /**
+     * 实体类中的方法名称
+     */
+    public static final String SET_CREATE_TIME = "setCreateTime";
+    public static final String SET_UPDATE_TIME = "setUpdateTime";
+    public static final String SET_CREATE_USER = "setCreateUser";
+    public static final String SET_UPDATE_USER = "setUpdateUser";
 }
 ```
