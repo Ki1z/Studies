@@ -1,6 +1,6 @@
 # Java Web Advance
 
-`更新时间：2026-5-21`
+`更新时间：2026-5-22`
 
 注释解释：
 
@@ -1706,3 +1706,294 @@ public class AutoFillConstant {
     public static final String SET_UPDATE_USER = "setUpdateUser";
 }
 ```
+
+### Mybatis参数解析
+
+在编写`Mybatis`的`XML`映射文件时，我们通常使用`#{}`来表示一个实例属性，例如
+
+```xml
+<insert id="add" parameterType="com.sky.entity.Dish">
+    INSERT INTO
+        dish(name, category_id, price, image, description, status, create_time, update_time, create_user, update_user)
+    VALUES (
+            #{name},
+            #{categoryId},
+            #{price},
+            #{image},
+            #{description},
+            #{status},
+            #{createTime},
+            #{updateTime},
+            #{createUser},
+            #{updateUser}
+        )
+</insert>
+```
+
+在实体类`Category`中只要包含这些属性，就能够直接访问
+
+```java
+package com.sky.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+/**
+ * 菜品
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class Dish implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    private Long id;
+
+    //菜品名称
+    private String name;
+
+    //菜品分类id
+    private Long categoryId;
+
+    //菜品价格
+    private BigDecimal price;
+
+    //图片
+    private String image;
+
+    //描述信息
+    private String description;
+
+    //0 停售 1 起售
+    private Integer status;
+
+    private LocalDateTime createTime;
+
+    private LocalDateTime updateTime;
+
+    private Long createUser;
+
+    private Long updateUser;
+
+}
+```
+
+但其实有一个问题，当`Mapper`中使用了`@Param`注解的时候，`XML`文件中必须使用`@Param`指定的参数名来访问属性，否则会报错
+
+```java
+org.apache.ibatis.binding.BindingException: Parameter 'name' not found. Available parameters are [dish, param1]
+```
+
+#### 单参数
+
+当参数列表只有一个参数，并且没有使用`@Param`注解时，`Mybatis`会将这个参数作为根参数，`XML`中编写的如`#{name}`这样的表达式都是通过访问对象的`getter`方法获取的，相当于`dish.getName()`。也就是说，即使定义了一个没有属性的实体，但是提供了一个假的`getter`
+
+```java
+public class fakeEntity {
+    public String getName() {
+        return "fake";
+    }
+}
+```
+
+你仍然可以在`XML`文件中通过`#{name}`来得到字符串`"fake"`。
+
+如果是基本数据类型，如`int`、`Integer`、`String`等等，`XML`中无论定义怎样的`#{aaa}`、`#{bbb}`，都可以访问到对应数据，因为这里只需要一个参数，不需要考虑参数名。
+
+#### 多参数
+
+而当参数列表中使用`@Param`注解，或者有多个参数时，`Mybatis`会自动生成一个参数`Map`，这个`Map`记录了参数名与参数值之间的对应关系
+
+```java
+{
+    "Dish" -> Dish对象;
+    "param1" -> Dish对象;
+}
+```
+
+如果使用了`@Param`注解，`Map`中会自动添加一个参数名与对象的映射，同时添加一个`param1`到对象的映射。如果是多个参数，也会添加对应的映射
+
+```java
+{
+    "Dish" -> Dish对象;
+    "Category" -> Category对象;
+    "param1" -> Dish对象;
+    "param2" -> Category对象;
+}
+```
+
+此时如果在`XML`文件中使用`#{name}`就会自动在`Map`中寻找对应的映射，如果没有这个映射，就会导致报错
+
+```log
+org.apache.ibatis.binding.BindingException: Parameter 'name' not found. Available parameters are [dish, param1]
+```
+
+因此如果想要访问对象属性，则必须使用对象的参数名称来访问，如`dish.name`或者`param1.name`。`param1`和`param2`是`Mybatis`为每个参数设置的默认名称，作为兜底策略，如果不指定`@Param`，开发人员就必须使用`paramX`来访问对应的对象，如果指定了`@Param`，这些默认的名称也并不会被删除。
+
+上文提到，在单参数情况中，如果是基本数据类型，`Mybatis`会忽略参数名，因为只有一个参数可用。但如果同时存在多个基本参数类型
+
+```java
+@Update("update category set status = #{status} where id = #{id}")
+Integer changeStatus(Integer status, Long id);
+```
+
+理论上来说，`status`和`id`的参数名不会被记录，默认是`param1`和`param2`，但查询语句`"update category set status = #{status} where id = #{id}"`仍然可以生效。这是因为`SpringBoot2.x+`版本中，默认使用了`-parameters`参数，让编译器在进行编译时能够保留参数名
+
+```java
+/**
+ * 测试
+ * @return
+ */
+@Select("select concat(#{c},#{b},#{a})")
+String test(String a, String b, String c);
+```
+
+> ![](javaweb2/34.png)
+
+而去除`-parameters`后，参数名不作保留，就会导致报错
+
+```log
+org.apache.ibatis.binding.BindingException: Parameter 'c' not found. Available parameters are [arg2, arg1, arg0, param3, param1, param2]
+```
+
+#### 源码追踪
+
+你有没有考虑过，默认的`[arg2, arg1, arg0, param3, param1, param2]`从何而来？
+
+我们来查看`Mybatis`的源码，位于`org.apache.ibatis.reflection.ParamNameResolver`
+
+```java
+public static final String GENERIC_NAME_PREFIX = "param";
+private final SortedMap<Integer, String> names;
+```
+
+可以看到，在`ParamNameResolver`中定义了两个关键属性，参数名前缀和参数名称列表
+
+```java
+public ParamNameResolver(Configuration config, Method method) {
+  this.useActualParamName = config.isUseActualParamName();
+  final Class<?>[] paramTypes = method.getParameterTypes();
+  final Annotation[][] paramAnnotations = method.getParameterAnnotations();
+  final SortedMap<Integer, String> map = new TreeMap<>();
+  int paramCount = paramAnnotations.length;
+  // get names from @Param annotations
+  for (int paramIndex = 0; paramIndex < paramCount; paramIndex++) {
+    if (isSpecialParameter(paramTypes[paramIndex])) {
+      // skip special parameters
+      continue;
+    }
+    String name = null;
+    for (Annotation annotation : paramAnnotations[paramIndex]) {
+      if (annotation instanceof Param) {
+        hasParamAnnotation = true;
+        name = ((Param) annotation).value();
+        break;
+      }
+    }
+    if (name == null) {
+      // @Param was not specified.
+      if (useActualParamName) {
+        name = getActualParamName(method, paramIndex);
+      }
+      if (name == null) {
+        // use the parameter index as the name ("0", "1", ...)
+        // gcode issue #71
+        name = String.valueOf(map.size());
+      }
+    }
+    map.put(paramIndex, name);
+  }
+  names = Collections.unmodifiableSortedMap(map);
+}
+```
+
+在构造器中，首先获取参数中的`@Param`注解，接着调用`getActualParamName()`来获取参数的参数名称，最后使用`String.valueOf(map.size())`来作为兜底参数名。
+
+`arg0`、`arg1`来源于`Java`反射获取的默认名称，如果在编译时不使用`-parameters`参数，虽然不会保留参数名称，但是`name = getActualParamName(method, paramIndex);`可以获得一个名称，这个名称便源自于`Java`反射中`Executable`类的`synthesizeAllParams()`方法
+
+我们先来看`getActualParamName()`方法
+
+```java
+private String getActualParamName(Method method, int paramIndex) {
+  return ParamNameUtil.getParamNames(method).get(paramIndex);
+}
+```
+
+追踪到`ParamNameUtil.getParamNames()`
+
+```java
+private static List<String> getParameterNames(Executable executable) {
+  return Arrays.stream(executable.getParameters()).map(Parameter::getName).collect(Collectors.toList());
+}
+```
+
+这里使用了`Java`反射`API`中的`executable.getParameters()`方法
+
+```java
+public Parameter[] getParameters() {
+    // TODO: This may eventually need to be guarded by security
+    // mechanisms similar to those in Field, Method, etc.
+    //
+    // Need to copy the cached array to prevent users from messing
+    // with it.  Since parameters are immutable, we can
+    // shallow-copy.
+    return parameterData().parameters.clone();
+}
+```
+
+查看`parameterData()`
+
+```java
+private ParameterData parameterData() {
+    ParameterData parameterData = this.parameterData;
+    if (parameterData != null) {
+        return parameterData;
+    }
+
+    Parameter[] tmp;
+    // Go to the JVM to get them
+    try {
+        tmp = getParameters0();
+    } catch (IllegalArgumentException e) {
+        // Rethrow ClassFormatErrors
+        throw new MalformedParametersException("Invalid constant pool index");
+    }
+
+    // If we get back nothing, then synthesize parameters
+    if (tmp == null) {
+        tmp = synthesizeAllParams();
+        parameterData = new ParameterData(tmp, false);
+    } else {
+        verifyParameters(tmp);
+        parameterData = new ParameterData(tmp, true);
+    }
+    return this.parameterData = parameterData;
+}
+```
+
+首先调用`tmp = getParameters0()`从`class`文件中读取所有的参数，由于编译时没有使用`-parameters`，因此`tmp`为`null`，执行`tmp = synthesizeAllParams();`
+
+```java
+private Parameter[] synthesizeAllParams() {
+    final int realparams = getParameterCount();
+    final Parameter[] out = new Parameter[realparams];
+    for (int i = 0; i < realparams; i++)
+        // TODO: is there a way to synthetically derive the
+        // modifiers?  Probably not in the general case, since
+        // we'd have no way of knowing about them, but there
+        // may be specific cases.
+        out[i] = new Parameter("arg" + i, 0, this, i);
+    return out;
+}
+```
+
+在这里，参数才真正被命名为`"arg" + i`
+
+*注：`arg0`的来源常被误解为`Parameter`实体类的`getName()`方法*
