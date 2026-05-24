@@ -1,6 +1,6 @@
 # Java Web Advance
 
-`更新时间：2026-5-22`
+`更新时间：2026-5-24`
 
 注释解释：
 
@@ -1865,7 +1865,7 @@ org.apache.ibatis.binding.BindingException: Parameter 'c' not found. Available p
 
 #### 源码追踪
 
-你有没有考虑过，默认的`[arg2, arg1, arg0, param3, param1, param2]`从何而来？
+你有没有考虑过，默认的`[arg2, arg1, arg0]`从何而来？
 
 我们来查看`Mybatis`的源码，位于`org.apache.ibatis.reflection.ParamNameResolver`
 
@@ -1997,3 +1997,84 @@ private Parameter[] synthesizeAllParams() {
 在这里，参数才真正被命名为`"arg" + i`
 
 *注：`arg0`的来源常被误解为`Parameter`实体类的`getName()`方法*
+
+### 菜品相关接口
+
+菜品相关接口中，主要的难点就是新增和修改菜品中涉及到的多表操作，以及文件上传操作，这里着重概述一些容易踩坑的知识点
+
+**分页查询的每页记录数量不足**
+
+如果在`Mapper`定义的分页查询`SQL`中使用了`JOIN`关键字连接查询`flavor`表中的内容，就会导致第一分页中查询数量少于指定数量，其根本原因在于，使用`JOIN`关键字后，如果一个菜品在`flavor`表中有多条数据，`JOIN`会为每个口味生成一条数据，如下
+
+```mysql
+SELECT
+    d.id AS id,
+    d.name AS name,
+    df.value AS flavor
+FROM dish AS d
+    LEFT JOIN dish_flavor AS df ON d.id = df.dish_id
+ORDER BY
+    d.id
+LIMIT
+    0, 10;
+```
+
+> ![](javaweb2/36.png)
+
+而`PageHelper`的分页本质就是使用`LIMIT`关键字，`PageHelper`并不知道前`10`行数据中有多行数据属于同一个实体，因此会造成实际显示的查询数量少于指定的每页数量
+
+最直接的解决方法便是在分页查询中不使用`JOIN`关键字查询口味，而是分为两次查询，第一次使用分页查询在`dish`表中查询对应的基本信息，第二次查询不使用分页查询而是使用第一次查询获取的所有`dish.id`，在`dish_flavor`表中查询所有的口味数据，最后将两个记录组合在一起，再返回给前端
+
+**主键返回失效**
+
+`Mybatis`的主键返回有两种常用的方式，一种是使用`@Options`注解，另一种是在`XML`文件中使用对应的属性，但是这两种方式不能混用。假设你在`Mapper`定义了
+
+```java
+/**
+ * 插入数据
+ * @param test
+ */
+@Options(useGeneratedKeys = true, keyColumn = "id", keyProperty = "test.id")
+void insertTest(@Param("test") Test test);
+```
+
+这里的`@options`是无法在`XML`文件中生效的，`@Options`只能配合注解查询`@Insert`使用，而`XML`文件中的查询语句则只能使用属性关键字来定义
+
+```xml
+<insert id="insertTest" parameterType="com.sky.entity.Test" keyProperty="id" useGeneratedKeys="true">
+    insert into test(name) values(#{name})
+</insert>
+```
+
+## Redis
+
+`REmote DIctionary Server`，即`Redis` 是一个由 `Salvatore Sanfilippo` 写的 `key-value`键值对存储系统，是跨平台的非关系型数据库
+
+`Redis`的最大优点就是通过内存存储数据，读写性能极高。由于`Redis`基于内存，从容量上也极大地限制了`Redis`的使用，`Redis`一般只用于存储访问数量极高的数据，如热点商品、咨询、新闻等等
+
+### Redis快速入门
+
+#### 连接
+
+`Redis`的客户端连接命令与`MySQL`类似，使用`-h`指定主机，`-p`指定端口号
+
+```cmd
+redis-cli.exe -h localhost -p 6379
+```
+
+#### 身份认证
+
+`Redis`默认不设置任何的身份认证，如果要设置密码，需要更改`redis.conf`文件中新增一行
+
+```conf
+requirepass <password>
+```
+
+然后使用`-a`使用密码登录
+
+```
+redis-cli.exe -h localhost -p 6379 -a <password>
+```
+
+在`Redis6`之前，并没有登录用户的概念，`Redis`的身份验证仅通过密码来实施，而在`Redis6`之后引入了多用户认证技术`ACL`，支持设置不同的用户名与密码。但是本项目中仅使用单因素认证
+
