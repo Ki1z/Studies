@@ -1,6 +1,6 @@
 # Java Web Advance
 
-`更新时间：2026-5-24`
+`更新时间：2026-5-25`
 
 注释解释：
 
@@ -2078,3 +2078,332 @@ redis-cli.exe -h localhost -p 6379 -a <password>
 
 在`Redis6`之前，并没有登录用户的概念，`Redis`的身份验证仅通过密码来实施，而在`Redis6`之后引入了多用户认证技术`ACL`，支持设置不同的用户名与密码。但是本项目中仅使用单因素认证
 
+#### 数据类型
+
+在`Redis`中，常用的数据类型有5种，分别是`string`、`hash`、`list`、`set`和`zset`
+
+- `string`：字符串，最简单的数据类型
+- `hash`：哈希，类似于`Java`中的`HashMap`，存储的是一个由多个键值对组成的数据结构，一般用于存储对象
+- `list`：有序列表，类似于`Java`中的`LinkedList`，可以有重复元素，按照插入顺序排序
+- `set`：集合，类似于`Java`中的`HashSet`，不允许重复元素，无序
+- `zset`：有序集合，又称为`sorted set`，在`Redis`中有序集合每个元素对应一个分数，分数越小， 排序越靠前
+
+### Redis常用命令
+
+与`SQL`不同，`Redis`对不同的数据类型的操作命令也不同
+
+#### 字符串操作
+
+| 命令                            | 说明                                 |
+| ------------------------------- | ------------------------------------ |
+| `SET <key> <value>`             | 设置指定`key`的值                    |
+| `GET <key>`                     | 获取指定`key`的值                    |
+| `SETEX <key> <seconds> <value>` | 设置`key`的值，并设置`key`的存活时长 |
+| `SETNX <key> <value>`           | 只有当`key`不存在时才设置`key`的值   |
+
+#### 哈希操作
+
+| 命令                         | 说明                             |
+| ---------------------------- | -------------------------------- |
+| `HSET <key> <field> <value>` | 设置哈希表`key`中字段`field`的值 |
+| `HGET <key> <field>`         | 获取`key`中字段`field`的值       |
+| `HDEL <key> <field>`         | 删除`key`中的指定字段            |
+| `HKEYS <key>`                | 获取`key`中所有字段名            |
+| `HVALS <key>`                | 获取`key`中所有字段值            |
+
+#### 列表操作
+
+| 命令                                 | 说明                         |
+| ------------------------------------ | ---------------------------- |
+| `LPUSH <key> <value1> [<value2>...]` | 将一个或多个值插入到列表头部 |
+| `LRANGE <key> <start> <top>`         | 获取列表指定范围内的元素     |
+| `RPOP <key>`                         | 移除并获取最后一个元素       |
+| `LLEN <key>`                         | 获取列表长度                 |
+
+#### 集合操作
+
+| 命令                                  | 说明                       |
+| ------------------------------------- | -------------------------- |
+| `SADD <key> <member1> [<member2>...]` | 向集合中添加一个或多个成员 |
+| `SEMEMBERS <key>`                     | 返回集合中所有的成员       |
+| `SCARD <key>`                         | 获取集合中的成员数量       |
+| `SINTER <key1> [<key2>...]`           | 返回给定所有集合的交集     |
+| `SUNION <key1> [<key2>...]`           | 返回给定所有集合的并集     |
+| `SREM <key> <member1> [<member2>...]` | 删除集合中一个或多个成员   |
+
+#### 有序集合操作
+
+| 命令                                                    | 说明                                                     |
+| ------------------------------------------------------- | -------------------------------------------------------- |
+| `ZADD <key> <score1> <member1> [<score2> <member2>...]` | 向有序集合中添加一个或多个成员                           |
+| `ZRANGE <key> <start> <stop> [WITHSCORES]`              | 通过索引区间返回有序集合中指定区间内的成员，可选附带分数 |
+| `ZINCRBY <key> <increment> <member>`                    | 对有序集合中指定成员的分数增加增量                       |
+| `ZREM <key> <member1> [<member2>...]`                   | 移除有序集合中的一个或多个成员                           |
+
+#### 通用命令
+
+| 命令             | 说明                        |
+| ---------------- | --------------------------- |
+| `KEYS <pattern>` | 查找所有符合给定模式的`key` |
+| `EXISTS <key>`   | 检查`key`是否存在           |
+| `TYPE <key>`     | 返回`key`存储的数据类型     |
+| `DEL <key>`      | 删除`key`                   |
+
+### Spring Data Redis
+
+在`Java`中，有三种常用的`Redis`客户端，`Jedis`、`Lettuce`和`Spring Data Redis`
+
+`Spring Data Redis`是`Spring`提供的，封装了`Jedis`以及`Lettuce`的客户端，相比前两者开发效率更高，与`SpringBoot`框架融合度也更高，因此我们使用`Spring Data Redis`
+
+#### 快速入门
+
+1. 导入依赖
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-redis</artifactId>
+</dependency>
+```
+
+2. 在`application.yml`配置文件中配置`Redis`数据源
+
+```
+spring:
+  redis:
+    host: localhost
+    port: 6379
+    password: root
+```
+
+3. 编写配置类，创建`RedisTemplate`对象
+
+```java
+package com.sky.config;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
+
+@Configuration
+@Slf4j
+public class RedisConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean
+    public RedisTemplate redisTemplate(RedisConnectionFactory redisConnectionFactory) {
+        log.info("开始创建RedisTemplate对象...");
+        RedisTemplate redisTemplate = new RedisTemplate();
+        // 设置RedisConnectionFactory
+        redisTemplate.setConnectionFactory(redisConnectionFactory);
+        // 设置key序列化器
+        redisTemplate.setKeySerializer(new StringRedisSerializer());
+
+        return redisTemplate;
+    }
+}
+```
+
+4. 通过`RedisTemplate`对象来操作`Redis`
+
+```java
+package com.sky.test;
+
+import lombok.AllArgsConstructor;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.RedisTemplate;
+
+@SpringBootTest
+public class SpringDataRedisTest {
+
+    @Autowired
+    private RedisTemplate redisTemplate;
+
+    @Test
+    public void testRedisTemplate() {
+        redisTemplate.opsForValue().set("name", "张三");
+        System.out.println(redisTemplate.opsForValue().get("name"));
+    }
+}
+```
+
+> ![](javaweb2/37.png)
+
+由于我们使用的是`Java`客户端来存储数据，因此`Redis`数据库中存储的实际数据并不一定是可见字符
+
+> ![](javaweb2/38.png)
+
+其本质原因是`Java`客户端在插入数据时会进行序列化来保留一定的数据信息，这些不可见字符就是数据的序列化属性，如果缺少这些信息，`Java`客户端就不能正常解析`Redis`数据库中的数据
+
+> ![](javaweb2/39.png)
+
+如上，我们在`Redis`中存储了一个`Hash`，键名为`username`，值为`kiiz`，然后在`Java`中尝试获取这个数据
+
+```java
+@Test
+public void testRedisTemplate() {
+    System.out.println("尝试获取kiiz -> username");
+    System.out.println(redisTemplate.opsForHash().get("kiiz", "username"));
+}
+```
+
+> ![](javaweb2/41.png)
+
+实际上`Java`获取的并不是`key`为`username`的值，而是`��username`的值，因此结果为`null`
+
+### 店铺营业状态设置
+
+依据`Redis`，我们就可以来实现店铺营业状态的设置逻辑，如果使用传统关系型数据库，用一张表存储一个营业状态字段会非常浪费资源，因此我们可以仅使用`Redis`中的一个字符串字段来存储
+
+在`SpringBoot`项目中，`Redis`操作使用`Repository`类来操作，`Repository`类与`Service`相似，需要设计单独的接口类与实现类方便维护
+
+`Controller`
+
+```java
+package com.sky.controller.admin;
+
+import com.sky.result.Result;
+import com.sky.service.ShopService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/admin/shop")
+@Slf4j
+@Api(tags = "店铺相关接口")
+public class ShopController {
+
+    @Autowired
+    private ShopService shopService;
+
+    /**
+     * 修改店铺状态
+     * @param status
+     * @return
+     */
+    @PutMapping("/{status}")
+    @ApiOperation("修改店铺状态")
+    public Result<String> changeStatus(@PathVariable Integer status) {
+        log.info("修改店铺状态：{}", status);
+        shopService.changeStatus(status);
+        return Result.success();
+    }
+
+    @GetMapping("/status")
+    @ApiOperation("获取店铺状态")
+    public Result<Integer> getStatus() {
+        Integer status = shopService.getStatus();
+        log.info("获取店铺状态：{}", status);
+        return Result.success(status);
+    }
+}
+```
+
+`Service`
+
+```java
+package com.sky.service.impl;
+
+import com.sky.constant.StatusConstant;
+import com.sky.exception.BaseException;
+import com.sky.exception.FormValueIsNullException;
+import com.sky.exception.ShopStatusChangeFailedException;
+import com.sky.exception.ShopStatusGetFailedException;
+import com.sky.repository.ShopRepository;
+import com.sky.service.ShopService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import com.sky.constant.MessageConstant;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Objects;
+
+@Service
+public class ShopServiceImpl implements ShopService {
+
+    @Autowired
+    private ShopRepository shopRepository;
+
+    /**
+     * 改变店铺状态
+     *
+     * @param status
+     */
+    @Override
+    public void changeStatus(Integer status) {
+        if (status == null || !Objects.equals(status, StatusConstant.ENABLE) && !Objects.equals(status, StatusConstant.DISABLE))
+            throw new FormValueIsNullException(MessageConstant.STATUS_IS_NOT_DEFINED);
+        Integer count = shopRepository.changeStatus(status);
+        if (count == 0)
+            throw new ShopStatusChangeFailedException(MessageConstant.SHOP_STATUS_CHANGE_FAILED);
+    }
+
+    /**
+     * 获取店铺状态
+     *
+     * @return
+     */
+    @Override
+    public Integer getStatus() {
+        Integer status = shopRepository.getStatus();
+        if (status == null || !Objects.equals(status, StatusConstant.ENABLE) && !Objects.equals(status, StatusConstant.DISABLE))
+            throw new ShopStatusGetFailedException(MessageConstant.STATUS_IS_NOT_DEFINED);
+
+        return status;
+    }
+}
+```
+
+`Repository`
+
+```java
+package com.sky.repository.impl;
+
+import com.sky.repository.ShopRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.stereotype.Repository;
+
+import java.util.Objects;
+
+@Repository
+public class ShopRepositoryImpl implements ShopRepository {
+
+    @Autowired
+    private RedisTemplate redisTemplate;
+
+    private static final String KEY_SHOP_STATUS = "SHOP:STATUS";
+
+    /**
+     * 改变店铺状态
+     * @param status
+     * @return
+     */
+    @Override
+    public Integer changeStatus(Integer status) {
+        ValueOperations ops = redisTemplate.opsForValue();
+        ops.set(KEY_SHOP_STATUS, status);
+        return Objects.equals(ops.get(KEY_SHOP_STATUS), status) ? 1 : 0;
+    }
+
+    /**
+     * 获取店铺状态
+     * @return
+     */
+    @Override
+    public Integer getStatus() {
+        ValueOperations ops = redisTemplate.opsForValue();
+        return (Integer) ops.get(KEY_SHOP_STATUS);
+    }
+}
+```
