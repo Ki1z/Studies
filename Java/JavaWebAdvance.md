@@ -1,6 +1,6 @@
 # Java Web Advance
 
-`更新时间：2026-5-25`
+`更新时间：2026-5-26`
 
 注释解释：
 
@@ -2407,3 +2407,136 @@ public class ShopRepositoryImpl implements ShopRepository {
     }
 }
 ```
+
+## HttpClient
+
+`HttpClient`是`Apache Jakarta Common`下的子项目，可以用来提供高效的，最新的，功能丰富的支持`HTTP`协议的客户端编程工具包，并且支持`HTTP`协议最新版本和建议
+
+### 快速入门
+
+1. 引入依赖
+
+```xml
+<dependency>
+    <groupId>org.apache.httpcomponents.client5</groupId>
+    <artifactId>httpclient5</artifactId>
+    <version>5.3</version>
+</dependency>
+```
+
+2. 创建`HttpClient`实例
+
+```java
+package com.sky.test;
+
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+public class HttpClientTest {
+
+    @Test
+    public void test1() {
+        // 创建HttpClient对象
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+    }
+}
+```
+
+3. 在`HttpClient`中，每个请求类型对应不同的请求对象类型，这里我们创建一个`GET`请求
+
+```java
+package com.sky.test;
+
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@SpringBootTest
+public class HttpClientTest {
+
+    @Test
+    public void test1() {
+        // 创建HttpClient对象
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+        // 创建GET请求对象
+        HttpGet httpGet = new HttpGet("http://localhost:8080/user/shop/status");
+    }
+}
+```
+
+4. 调用`execute`方法发送请求，并接收响应
+
+```java
+package com.sky.test;
+
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import java.io.IOException;
+
+@SpringBootTest
+public class HttpClientTest {
+
+    @Test
+    public void test1() throws Exception {
+        // 创建HttpClient对象
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+        // 创建GET请求对象
+        HttpGet httpGet = new HttpGet("http://localhost:8080/user/shop/status");
+        // 发送GET请求，并获取响应
+        CloseableHttpResponse response = httpClient.execute(httpGet);
+        HttpEntity entity = response.getEntity();
+        System.out.println(EntityUtils.toString(entity));
+    }
+}
+```
+
+5. 最后释放所有资源
+
+```java
+package com.sky.test;
+
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+
+import java.io.IOException;
+
+@SpringBootTest
+public class HttpClientTest {
+
+    @Test
+    public void test1() throws Exception {
+        // 创建HttpClient对象
+        CloseableHttpClient httpClient = HttpClients.createDefault();
+        // 创建GET请求对象
+        HttpGet httpGet = new HttpGet("http://localhost:8080/user/shop/status");
+        // 发送GET请求，并获取响应
+        CloseableHttpResponse response = httpClient.execute(httpGet);
+        HttpEntity entity = response.getEntity();
+        System.out.println(EntityUtils.toString(entity));
+
+        // 释放资源
+        response.close();
+        httpClient.close();
+    }
+}
+```
+
+> ![](javaweb2/42.png)
