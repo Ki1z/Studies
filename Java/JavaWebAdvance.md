@@ -1,6 +1,6 @@
 # Java Web Advance
 
-`更新时间：2026-5-26`
+`更新时间：2026-5-27`
 
 注释解释：
 
@@ -2540,3 +2540,164 @@ public class HttpClientTest {
 ```
 
 > ![](javaweb2/42.png)
+
+### 微信登录功能
+
+微信官方提供了小程序登录的时序图
+
+> ![](javaweb2/43.png)
+
+开发者服务器即是我们自己的后端服务器，从图中可以看出，后端需要实现的逻辑是接收小程序发来的`code`，然后转发到微信接口服务，后端从接口服务得到`session_key`和`openid`，再返回到小程序中，最后小程序携带自定义的登录状态请求后端服务器，后端根据自定义登录态进行确认即可
+
+接着我们来测试微信接口服务，在`Postman`中输入官方接口`https://api.weixin.qq.com/sns/jscode2session`，然后填入必要的参数
+
+| 参数名       | 类型     | 必填 | 说明                                            |
+| :----------- | :------- | :--- | :---------------------------------------------- |
+| `appid`      | `string` | 是   | 小程序 `appId`                                  |
+| `secret`     | `string` | 是   | 小程序 `appSecret`                              |
+| `js_code`    | `string` | 是   | 登录时获取的 `code`，可通过`wx.login()`方法获取 |
+| `grant_type` | `string` | 是   | 授权类型，此处只需填写 `authorization_code`     |
+
+然后我们使用自己的信息发送请求
+
+> ![](javaweb2/45.png)
+
+可以看到，成功返回了`session_key`和`openid`
+
+接着我们就可以根据开发文档来编写小程序登录的逻辑，首先定义`Controller`，请求路径为`/user/user`
+
+```java
+package com.sky.controller.user;
+
+import com.sky.dto.UserLoginDTO;
+import com.sky.result.Result;
+import com.sky.service.UserService;
+import com.sky.vo.UserLoginVO;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/user/user")
+@Slf4j
+@Api(tags = "C端用户接口")
+public class UserController {
+
+    @Autowired
+    private UserService userService;
+
+    /**
+     * 登录
+     *
+     * @param userLoginDTO
+     * @return
+     */
+    @PostMapping("/login")
+    @ApiOperation("C端用户登录")
+    public Result<UserLoginVO> login(@RequestBody UserLoginDTO userLoginDTO) {
+        log.info("用户登录，微信授权码:{}", userLoginDTO);
+        UserLoginVO userLoginVO = userService.login(userLoginDTO);
+        return Result.success(userLoginVO);
+    }
+}
+```
+
+然后在`Service`中，首先进行参数校验，接着通过`WeChatLoginUtil`向微信开放平台的登录接口发送请求，在接收到数据后进行校验，如果为空则表示登录失败。然后在数据库中查询`openid`所属的用户是否存在，不存在则创建一个新账户。最后根据用户`id`以及`openid`生成`jwt`令牌，返回给微信小程序
+
+```java
+package com.sky.service.impl;
+
+import com.sky.constant.JwtClaimsConstant;
+import com.sky.constant.MessageConstant;
+import com.sky.dto.UserLoginDTO;
+import com.sky.entity.User;
+import com.sky.exception.BaseException;
+import com.sky.exception.CannotGetOpenIdException;
+import com.sky.exception.FormValueIsNullException;
+import com.sky.exception.LoginFailedException;
+import com.sky.mapper.UserMapper;
+import com.sky.properties.JwtProperties;
+import com.sky.service.UserService;
+import com.sky.utils.JwtUtil;
+import com.sky.utils.WeChatLoginUtil;
+import com.sky.vo.UserLoginVO;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
+
+@Service
+public class UserServiceImpl implements UserService {
+
+    @Autowired
+    private UserMapper userMapper;
+
+    @Autowired
+    private WeChatLoginUtil weChatLoginUtil;
+
+    @Autowired
+    private JwtProperties jwtProperties;
+
+    /**
+     * 用户登录
+     * @param userLoginDTO
+     * @return
+     */
+    @Override
+    @Transactional(rollbackFor = BaseException.class)
+    public UserLoginVO login(UserLoginDTO userLoginDTO) {
+        // 参数校验
+        String code = userLoginDTO.getCode();
+        if (code == null)
+            throw new FormValueIsNullException(MessageConstant.LOGIN_CODE_IS_NULL);
+        if (code.length() != 32 && !code.startsWith("0"))
+            throw new FormValueIsNullException(MessageConstant.LOGIN_CODE_FORMATE_ERROR);
+
+        // 获取openid
+        String openid = weChatLoginUtil.getOpenId(code);
+        if (openid == null)
+            throw new LoginFailedException(MessageConstant.LOGIN_FAILED);
+
+        // 判断是否为新用户
+        User user = userMapper.getByOpenid(openid);
+        // 新用户完成自动注册
+        if (user == null) {
+            user = User.builder()
+                    .openid(openid)
+                    .createTime(LocalDateTime.now())
+                    .build();
+            Integer count = userMapper.add(user);
+            if (count <= 0)
+                throw new LoginFailedException(MessageConstant.LOGIN_FAILED);
+        }
+
+        // 创建jwt令牌
+        Map<String, Object> userClaim = new HashMap<>();
+        userClaim.put(JwtClaimsConstant.USER_ID, user.getId());
+        userClaim.put(jwtProperties.getUserTokenName(), openid);
+        String token = JwtUtil.createJWT(
+                jwtProperties.getUserSecretKey(),
+                jwtProperties.getUserTtl(),
+                userClaim);
+
+        return UserLoginVO.builder()
+                .id(user.getId())
+                .openid(openid)
+                .token(token)
+                .build();
+    }
+}
+```
+
+## 缓存
+
+现在我们已经完成了用户端和管理端的基础功能实现，但是目前仍然存在一定的问题，当请求人数过多时，`MySQL`数据库的每次请求都会造成大量的性能开销，可能会导致用户在点击页面后，后台执行两三秒才返回数据，对于用户而言，这样的体验是毁灭性的，因此我们需要利用缓存来改善用户体验
+
