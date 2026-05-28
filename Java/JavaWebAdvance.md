@@ -1,6 +1,6 @@
 # Java Web Advance
 
-`更新时间：2026-5-27`
+`更新时间：2026-5-28`
 
 注释解释：
 
@@ -2699,5 +2699,236 @@ public class UserServiceImpl implements UserService {
 
 ## 缓存
 
-现在我们已经完成了用户端和管理端的基础功能实现，但是目前仍然存在一定的问题，当请求人数过多时，`MySQL`数据库的每次请求都会造成大量的性能开销，可能会导致用户在点击页面后，后台执行两三秒才返回数据，对于用户而言，这样的体验是毁灭性的，因此我们需要利用缓存来改善用户体验
+现在我们已经完成了用户端和管理端的基础功能实现，但是目前仍然存在一定的问题，当请求人数过多时，`MySQL`数据库的每次请求都会造成大量的性能开销，可能会导致用户在点击页面后，后台执行两三秒才返回数据，对于用户而言，这样的体验是灾难级的，因此我们需要利用缓存来改善用户体验
+
+根据我们目前的程序设计，用户通过小程序登陆后，首先需要加载所有的分类信息
+
+我们来改造`Service`，在数据库查询之前首先查询缓存，然后判断缓存中是否存在数据，如果不存在，再查询数据库，并将数据添加到缓存中
+
+`Service`
+
+```java
+@Override
+public List<Category> list(Integer type) {
+    // 查询缓存
+    List<Category> list = categoryRepository.getCategoryCache(type);
+    // 缓存中存在数据，直接返回
+    if (list != null && !list.isEmpty()) {
+        log.info("查询缓存成功：{}", list);
+        return list;
+    }
+    // 缓存中没有数据，查询数据库
+    list =  categoryMapper.list(type);
+    // 缓存数据
+    categoryRepository.addCategoryCache(list);
+    return list;
+}
+```
+
+新建一个`CategoryRepository`，用户操作`Redis`
+
+```java
+package com.sky.repository.impl;
+
+import com.sky.entity.Category;
+import com.sky.repository.CategoryRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.Objects;
+
+@Repository
+public class CategoryRepositoryImpl implements CategoryRepository {
+
+    @Autowired
+    private RedisTemplate redisTemplate;
+
+    private static final String KEY_CATEGORY_LIST = "CATEGORY:LIST";
+
+    /**
+     * 查询分类缓存
+     * @param type
+     * @return
+     */
+    @Override
+    public List<Category> getCategoryCache(Integer type) {
+        ValueOperations ops = redisTemplate.opsForValue();
+        // 查询所有缓存
+        List<Category> list = (List<Category>) ops.get(KEY_CATEGORY_LIST);
+        // 筛选指定类型的缓存
+        if (type != null) {
+            list.removeIf(category -> !Objects.equals(category.getType(), type));
+        }
+        return list;
+    }
+
+
+    /**
+     * 添加分类缓存
+     * @param list
+     */
+    @Override
+    public void addCategoryCache(List<Category> list) {
+        ValueOperations ops = redisTemplate.opsForValue();
+        // 添加缓存
+        ops.set(KEY_CATEGORY_LIST, list);
+    }
+}
+```
+
+现在来进行实际测试，第二次查询中可以看到已经从缓存中获取了数据
+
+> ![](javaweb2/47.png)
+
+但是现在会存在一个问题，假设我们在后台对分类进行更改，例如禁用`蜀味烤鱼`分类
+
+> ![](javaweb2/48.png)
+
+但是用户端仍然能够访问，并且获取其中的内容
+
+> ![](javaweb2/49.png)
+
+本质原因在于缓存中的数据与数据库中的数据不同步，我们更新了数据库中的数据，但是缓存数据并没有更新。最直接的解决方法就是在每次数据库操作后，同步删除对应的缓存数据，只有当用户再进行一次查询时，才生成新的缓存数据
+
+这里我们定义了一个切面类，专门用于缓存操作，同时定义了缓存操作方法枚举类，用于指定缓存操作类型
+
+`CacheOperationType`
+
+```java
+package com.sky.enumeration;
+
+public enum CacheOperationType {
+    /**
+     * 新增缓存
+     */
+    INSERT,
+    /**
+     * 删除缓存
+     */
+    DELETE
+}
+```
+
+`CacheOperationAspect`
+
+```java
+package com.sky.aspect;
+
+import com.sky.annotation.Cache;
+import com.sky.enumeration.CacheOperationType;
+import lombok.extern.slf4j.Slf4j;
+import org.aspectj.lang.JoinPoint;
+import org.aspectj.lang.annotation.After;
+import org.aspectj.lang.annotation.AfterReturning;
+import org.aspectj.lang.annotation.Aspect;
+import org.aspectj.lang.annotation.Pointcut;
+import org.aspectj.lang.reflect.MethodSignature;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Component;
+
+import java.util.Objects;
+
+@Aspect
+@Slf4j
+@Component
+public class CacheOperationAspect {
+
+    @Autowired
+    private RedisTemplate redisTemplate;
+
+    @Pointcut("execution(* com.sky.service.impl.*.*(..)) && @annotation(com.sky.annotation.Cache)")
+    public void cacheOperation() {}
+
+    @AfterReturning(pointcut = "cacheOperation()", returning = "result")
+    public void cacheOperation(JoinPoint joinPoint, Object result) {
+        log.info("开始进行缓存操作");
+        // 获取缓存操作类型
+        MethodSignature signature = (MethodSignature) joinPoint.getSignature();
+        Cache annotation = signature.getMethod().getAnnotation(Cache.class);
+        if (annotation == null) {
+            return;
+        }
+        CacheOperationType cacheOperationType = annotation.cacheOperationType();
+        // 获取缓存的key
+        String cacheKey = annotation.cacheKey();
+        log.info("缓存操作类型：{}，缓存的key：{}", cacheOperationType, cacheKey);
+
+        if (Objects.equals(cacheOperationType, CacheOperationType.INSERT)) {
+            log.info("缓存新增数据：{}", result.toString());
+            // 缓存数据
+            redisTemplate.opsForValue().set(cacheKey, result);
+        } else if (Objects.equals(cacheOperationType, CacheOperationType.DELETE)) {
+            log.info("缓存删除数据");
+            // 删除缓存
+            redisTemplate.delete(cacheKey);
+        }
+    }
+}
+```
+
+简单解释一下切面类，切入点设置为所有`Service`中带有`@Cache`注解的方法，这里不能切入`Mapper`，因为`Mapper`返回的数据可能在`Service`中还会进行一些处理。通知类型为后置通知，而且是增强的`@AfterReturning`，在成功方法返回后才更新缓存，保证`Service`中抛出异常时，缓存不会继续更新
+
+接着就是通知逻辑，首先获取缓存的操作类型，第一次查询操作时应当增加缓存，数据库变动时应当删除缓存。从`@Cache`注解中获取缓存`key`，然后调用`RedisTemplate`进行缓存操作
+
+### Spring Cache
+
+`Spring Cache`是`Spring`框架中提供的一套缓存框架，可以让开发者通过注解的方式来简化缓存操作，提高开发效率
+
+`Spring Cache`提供了一层抽象，底层可以切换不同的缓存实现，兼容主流缓存方案，如`EHCache`、`Caffeine`、`Redis`等
+
+### Spring Cache 快速入门
+
+1. 引入依赖
+
+`Spring Cache`会自动识别当前项目中使用的缓存方案，无需手动配置
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-cache</artifactId>
+</dependency>
+```
+
+2. 常用注解
+
+| 注解             | 说明                                                         |
+| ---------------- | ------------------------------------------------------------ |
+| `@EnableCaching` | 开启缓存注解功能，通常注解在启动类上                         |
+| `@Cacheable`     | 在方法执行前自动查询缓存中是否有数据，如果有，则直接返回缓存数据；如果没有，则调用方法，并将方法返回值添加到缓存中 |
+| `@CachePut`      | 将方法返回值增加到缓存中                                     |
+| `@CacheEvict`    | 将一条或多条数据从缓存中删除                                 |
+
+**@CachePut**
+
+`@CachePut`注解可以将方法的返回值添加到缓存中，通过`cacheNames`来设置缓存名称，`key`来设置键名。注意，存储在`Redis`中的键名并不是`key`，而是`cacheNames::key`，例如
+
+```java
+@CachePut(cacheNames = "userCache", key = "1")
+```
+
+`Redis`中保存的实际键名为`userCache::1`。`key`不仅可以是字符串，还可以是`SpEL`表达式，`Spring Expression Language`，简称`SpEL`，是`Spring`框架提供的一种表达式，支持属性访问、方法调用、运算符、条件判断等等，在这里可以用于获取方法返回值对象中的某些属性，用于构建`key`
+
+```java
+@CachePut(cacheNames = "userCache", key = "#user.id")
+```
+
+`SpEL`表达式以井号`#`开头，可以拼接一个参数名，如上，使用`.`来访问对象属性，同时支持`?`安全导航操作符来确保不会抛出空指针异常。`SpEL`还支持使用使用关键字来访问特定元素，如`#result`可以直接访问方法返回值，`#p0`、`#a0`访问参数列表，`#root`访问注解操作对象，例如在方法上则是指方法本身，使用`#root.args[0]`来访问第一个参数
+
+**@Cacheable**
+
+`@Cacheable`与`@CachePut`类似，但是在表达式中无法使用`#result`来获取返回值，因为`@Cacheable`会在缓存查询失败后自动将方法返回值存入缓存中
+
+```java
+@Override
+@Cacheable(cacheNames = "CATEGORY", key = "'LIST'")
+public List<Category> list(Integer type) {
+    return categoryMapper.list(type);
+}
+```
+
+上文的代码中，我们为`CategoryService`的`list`方法添加了`@Cacheable`注解，当用户请求分类列表时，就会优先在`Redis`中查找，然后再调用数据库。需要注意，如果缓存中存在对应的数据，`list`方法根本不会执行，因为`Spring Cache`底层使用了动态代理技术，创建一个代理类先执行`Redis`缓存查询操作，只有当结果为空时，才会调用`list`方法，否则代理类就会直接返回数据
 
