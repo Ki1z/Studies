@@ -1,6 +1,6 @@
 # Java Web Advance
 
-`更新时间：2026-5-28`
+`更新时间：2026-5-29`
 
 注释解释：
 
@@ -2932,3 +2932,563 @@ public List<Category> list(Integer type) {
 
 上文的代码中，我们为`CategoryService`的`list`方法添加了`@Cacheable`注解，当用户请求分类列表时，就会优先在`Redis`中查找，然后再调用数据库。需要注意，如果缓存中存在对应的数据，`list`方法根本不会执行，因为`Spring Cache`底层使用了动态代理技术，创建一个代理类先执行`Redis`缓存查询操作，只有当结果为空时，才会调用`list`方法，否则代理类就会直接返回数据
 
+### 菜品和套餐缓存
+
+现在我们来利用`Spring Cache`实现分类、套餐和菜品的缓存逻辑，但是需要注意并不是所有的方法都需要添加注解，我们只对用户端调用的查询方法新增缓存，仅管理端调用的方法无需缓存，因为需要确保管理端对数据的精确控制。在所有的数据库操作方法上添加删除缓存的注解，根据接收的参数类型来决定是否能够使用约束，当参数无法约束指定缓存数据时，直接删除整个缓存键
+
+因为代码量太多，这里仅展示哪些方法需要添加注解
+
+`CategoryServiceImpl`
+
+```java
+/**
+ * 修改分类
+ * @param categoryDTO
+ */
+@Override
+@CacheEvict(cacheNames = "categoryCache", key = "'list'")
+public void update(CategoryDTO categoryDTO) {}
+
+/**
+ * 修改分类状态
+ * @param status
+ * @param id
+ */
+@Override
+@CacheEvict(cacheNames = "categoryCache", key = "'list'")
+public void changeStatus(Integer status, Long id) {}
+    
+/**
+ * 新增分类
+ * @param categoryDTO
+ */
+@Override
+@CacheEvict(cacheNames = "categoryCache", key = "'list'")
+public void add(CategoryDTO categoryDTO) {}
+
+/**
+ * 删除分类
+ * @param id
+ */
+@Override
+@CacheEvict(cacheNames = "categoryCache", key = "'list'")
+public void delete(Long id) {}
+
+ /**
+ * 根据类型查询
+ * @param type
+ * @return
+ */
+@Override
+@Cacheable(cacheNames = "categoryCache", key = "'list'")
+public List<Category> list(Integer type) {}
+```
+
+`DishServiceImpl`
+
+```java
+/**
+ * 根据分类id查询菜品
+ * @param categoryId
+ * @return
+ */
+@Override
+@Cacheable(cacheNames = "dishCache", key = "'categoryId:' + #categoryId")
+public List<DishVO> list(Long categoryId) {}
+
+/**
+ * 菜品状态更改
+ * @param status
+ * @param id
+ * @return
+ */
+@Override
+@CacheEvict(cacheNames = "dishCache", allEntries = true)
+public void changeStatus(Integer status, Long id) {}
+
+/**
+ * 新增菜品
+ * @param dishDTO
+ */
+@Override
+@Transactional(rollbackFor = BaseException.class)
+@CacheEvict(cacheNames = "dishCache", key = "'categoryId:' + #dishDTO.categoryId")
+public void add(DishDTO dishDTO) {}
+
+/**
+ * 批量删除菜品
+ * @param ids
+ */
+@Override
+@Transactional(rollbackFor = BaseException.class)
+@CacheEvict(cacheNames = "dishCache", allEntries = true)
+public void delete(Long[] ids) {}
+
+ /**
+ * 修改菜品
+ * @param dishDTO
+ */
+@Override
+@Transactional(rollbackFor = BaseException.class)
+@CacheEvict(cacheNames = "dishCache", key = "'categoryId:' + #dishDTO.categoryId")
+public void update(DishDTO dishDTO) {}
+```
+
+`SetMealServiceImpl`
+
+```java
+/**
+ * 新增套餐，同时需要保存套餐和菜品的关联关系
+ * @param setmealDTO
+ */
+@Override
+@Transactional
+@CacheEvict(value = "setmealCache", allEntries = true)
+public void saveWithDish(SetmealDTO setmealDTO) {}
+
+/**
+ * 批量删除套餐
+ * @param ids
+ */
+@Override
+@Transactional
+@CacheEvict(value = "setmealCache", allEntries = true)
+public void deleteBatch(List<Long> ids) {}
+
+/**
+ * 修改套餐
+ *
+ * @param setmealDTO
+ */
+@Override
+@Transactional
+@CacheEvict(value = "setmealCache", allEntries = true)
+public void update(SetmealDTO setmealDTO) {}
+
+ /**
+ * 套餐起售、停售
+ * @param status
+ * @param id
+ */
+@Override
+@CacheEvict(value = "setmealCache", allEntries = true)
+public void startOrStop(Integer status, Long id) {}
+
+ /**
+ * 根据分类id查询套餐
+ * @param categoryId
+ * @return
+ */
+@Override
+@Cacheable(cacheNames = "setmealCache", key = "'categoryId:' + #categoryId")
+public List<SetmealVO> getByCategoryId(Long categoryId) {}
+
+/**
+ * 根据套餐id查询套餐菜品关系
+ * @param id
+ * @return
+ */
+@Override
+@Cacheable(cacheNames = "setmealCache", key = "'setMealId:' + #id")
+public List<SetmealDish> getSetmealDishList(Long id) {}
+```
+
+## 购物车
+
+购物车的实现逻辑不需要新的技术，最主要的难点是业务逻辑，安插在此处作为`Spring`基本功的练习
+
+`Controller`
+
+```java
+package com.sky.controller.user;
+
+import com.sky.dto.ShoppingCartDTO;
+import com.sky.entity.ShoppingCart;
+import com.sky.result.Result;
+import com.sky.service.ShoppingCartService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/user/shoppingCart")
+@Api(tags = "C端-购物车接口")
+@Slf4j
+public class ShoppingCartController {
+
+    @Autowired
+    private ShoppingCartService shoppingCartService;
+
+    /**
+     * 添加购物车
+     *
+     * @param shoppingCartDTO
+     * @return
+     */
+    @PostMapping("/add")
+    @ApiOperation("添加购物车")
+    public Result<String> add(@RequestBody ShoppingCartDTO shoppingCartDTO) {
+        log.info("添加购物车：{}", shoppingCartDTO);
+        shoppingCartService.add(shoppingCartDTO);
+        return Result.success();
+    }
+
+    /**
+     * 查看购物车
+     *
+     * @return 购物车数据
+     */
+    @GetMapping("/list")
+    @ApiOperation("查看购物车")
+    public Result<List<ShoppingCart>> list() {
+        log.info("查看购物车");
+        List<ShoppingCart> list = shoppingCartService.list();
+        return Result.success(list);
+    }
+
+    /**
+     * 删除一个购物车中的数据
+     *
+     * @param shoppingCartDTO
+     * @return
+     */
+    @PostMapping("/sub")
+    @ApiOperation("删除一个购物车中的数据")
+    public Result<String> sub(@RequestBody ShoppingCartDTO shoppingCartDTO) {
+        log.info("删除购物车数据：{}", shoppingCartDTO);
+        shoppingCartService.sub(shoppingCartDTO);
+        return Result.success();
+    }
+
+    @DeleteMapping("/clean")
+    @ApiOperation("清空购物车")
+    public Result<String> clean() {
+        log.info("清空购物车");
+        shoppingCartService.clean();
+        return Result.success();
+    }
+}
+```
+
+`Service`
+
+```java
+package com.sky.service.impl;
+
+import com.sky.context.BaseContext;
+import com.sky.dto.ShoppingCartDTO;
+import com.sky.entity.ShoppingCart;
+import com.sky.exception.*;
+import com.sky.mapper.ShoppingCartMapper;
+import com.sky.service.DishService;
+import com.sky.service.SetMealService;
+import com.sky.service.ShoppingCartService;
+import com.sky.vo.DishVO;
+import com.sky.vo.SetmealVO;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import com.sky.constant.MessageConstant;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
+
+@Service
+public class ShoppingCartServiceImpl implements ShoppingCartService {
+
+    @Autowired
+    private ShoppingCartMapper shoppingCartMapper;
+    @Autowired
+    private DishService dishService;
+    @Autowired
+    private SetMealService setMalService;
+
+    /**
+     * 添加购物车
+     * @param shoppingCartDTO
+     */
+    @Override
+    @Transactional(rollbackFor = BaseException.class)
+    public void add(ShoppingCartDTO shoppingCartDTO) {
+        Long dishId = shoppingCartDTO.getDishId();
+        Long setMealId = shoppingCartDTO.getSetmealId();
+        String dishFlavor = shoppingCartDTO.getDishFlavor();
+
+        if (dishId == null && setMealId == null && dishFlavor == null)
+            throw new FormValueIsNullException(MessageConstant.SHOPPING_CART_FORM_IS_NULL);
+        if (dishId != null && setMealId != null)
+            throw new ShoppingCartFormCollisionException(MessageConstant.SHOPPING_CART_FORM_IS_COLLISION);
+
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null)
+            throw new UserRecognitionFailedException(MessageConstant.CANNOT_RECOGNIZE_USER);
+
+        ShoppingCart cart = ShoppingCart
+                .builder()
+                .userId(userId)
+                .dishId(dishId)
+                .setmealId(setMealId)
+                .dishFlavor(dishFlavor)
+                .build();
+
+        // 判断该菜品是否在购物车中
+        cart = shoppingCartMapper.getByIdAndFlavor(cart);
+        if (cart != null) {
+            // 如果在当前购物车中，则添加数量
+            cart.setNumber(cart.getNumber() + 1);
+            Integer count = shoppingCartMapper.update(cart);
+            if (count == 0)
+                throw new ShoppingCartUpdateFailedException(MessageConstant.SHOPPING_CART_UPDATE_FAILED);
+        } else {
+            // 如果不在当前购物车中，则添加购物车
+            // 判断是否为菜品
+            if (dishId != null) {
+                // 如果为菜品
+                DishVO dish = dishService.getById(dishId);
+                cart = ShoppingCart.builder()
+                        .userId(userId)
+                        .name(dish.getName())
+                        .image(dish.getImage())
+                        .dishId(dishId)
+                        .dishFlavor(dishFlavor)
+                        .number(1)
+                        .amount(dish.getPrice())
+                        .createTime(LocalDateTime.now())
+                        .build();
+                Integer count = shoppingCartMapper.add(cart);
+                if (count == 0)
+                    throw new ShoppingCartAddFailedException(MessageConstant.SHOPPING_CART_ADD_FAILED);
+            } else {
+                // 如果为套餐
+                SetmealVO setMeal = setMalService.getByIdWithDish(setMealId);
+                cart = ShoppingCart.builder()
+                        .userId(userId)
+                        .name(setMeal.getName())
+                        .image(setMeal.getImage())
+                        .setmealId(setMealId)
+                        .number(1)
+                        .amount(setMeal.getPrice())
+                        .createTime(LocalDateTime.now())
+                        .build();
+                Integer count = shoppingCartMapper.add(cart);
+                if (count == 0)
+                    throw new ShoppingCartAddFailedException(MessageConstant.SHOPPING_CART_ADD_FAILED);
+            }
+        }
+    }
+
+    /**
+     * 查看购物车
+     * @return
+     */
+    @Override
+    public List<ShoppingCart> list() {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null)
+            throw new UserRecognitionFailedException(MessageConstant.CANNOT_RECOGNIZE_USER);
+
+        return shoppingCartMapper.getByUserId(userId);
+    }
+
+    /**
+     * 删除一个购物车中的数据
+     * @param shoppingCartDTO
+     */
+    @Override
+    @Transactional(rollbackFor = BaseException.class)
+    public void sub(ShoppingCartDTO shoppingCartDTO) {
+        Long dishId = shoppingCartDTO.getDishId();
+        Long setMealId = shoppingCartDTO.getSetmealId();
+        String dishFlavor = shoppingCartDTO.getDishFlavor();
+
+        if (dishId == null && setMealId == null && dishFlavor == null)
+            throw new FormValueIsNullException(MessageConstant.SHOPPING_CART_FORM_IS_NULL);
+        if (dishId != null && setMealId != null)
+            throw new ShoppingCartFormCollisionException(MessageConstant.SHOPPING_CART_FORM_IS_COLLISION);
+
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null)
+            throw new UserRecognitionFailedException(MessageConstant.CANNOT_RECOGNIZE_USER);
+
+        ShoppingCart cart = ShoppingCart
+                .builder()
+                .userId(userId)
+                .dishId(dishId)
+                .setmealId(setMealId)
+                .dishFlavor(dishFlavor)
+                .build();
+
+        cart = shoppingCartMapper.getByIdAndFlavor(cart);
+
+        if (cart == null || cart.getId() == null)
+            throw new ShoppingCartNotFoundException(MessageConstant.SHOPPING_CART_NOT_FOUND);
+
+        // 如果只有一个商品，则删除
+        if (cart.getNumber() == 1) {
+            Integer count = shoppingCartMapper.sub(cart);
+            if (count == 0)
+                throw new ShoppingCartUpdateFailedException(MessageConstant.SHOPPING_CART_UPDATE_FAILED);
+            return;
+        }
+        // 如果有多个商品，则减1
+        cart.setNumber(cart.getNumber() - 1);
+        Integer count = shoppingCartMapper.update(cart);
+        if (count == 0)
+            throw new ShoppingCartUpdateFailedException(MessageConstant.SHOPPING_CART_UPDATE_FAILED);
+    }
+
+    /**
+     * 清空购物车
+     */
+    @Override
+    @Transactional(rollbackFor = BaseException.class)
+    public void clean() {
+        Long userId = BaseContext.getCurrentId();
+        if (userId == null)
+            throw new UserRecognitionFailedException(MessageConstant.CANNOT_RECOGNIZE_USER);
+
+        Integer count = shoppingCartMapper.clean(userId);
+        if (count == 0)
+            throw new ShoppingCartCleanFailedException(MessageConstant.SHOPPING_CART_CLEAN_FAILED);
+    }
+}
+```
+
+`Mapper`
+
+```java
+package com.sky.mapper;
+
+import com.sky.entity.ShoppingCart;
+import org.apache.ibatis.annotations.Delete;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
+
+import java.util.List;
+
+@Mapper
+public interface ShoppingCartMapper {
+
+    /**
+     * 更新购物车数据
+     * @param cart
+     */
+    Integer update(ShoppingCart cart);
+
+    /**
+     * 根据菜品id、套餐id、口味、用户id查询购物车数据
+     * @param cart
+     * @return
+     */
+    ShoppingCart getByIdAndFlavor(ShoppingCart cart);
+
+    /**
+     * 添加购物车数据
+     * @param cart
+     * @return
+     */
+    Integer add(ShoppingCart cart);
+
+    /**
+     * 根据用户id查询购物车数据
+     * @param userId
+     * @return
+     */
+    List<ShoppingCart> getByUserId(Long userId);
+
+    /**
+     * 删除一个购物车数据
+     * @param cart
+     * @return
+     */
+    Integer sub(ShoppingCart cart);
+
+    /**
+     * 清空购物车
+     * @param userId
+     * @return
+     */
+    @Delete("delete from shopping_cart where user_id = #{userId}")
+    Integer clean(Long userId);
+}
+```
+
+`Mapper.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sky.mapper.ShoppingCartMapper">
+<!--   添加购物车-->
+    <insert id="add">
+        INSERT INTO
+            shopping_cart(name, image, user_id, dish_id, setmeal_id, dish_flavor, number, amount, create_time)
+        VALUES (#{name}, #{image}, #{userId}, #{dishId}, #{setmealId}, #{dishFlavor}, #{number}, #{amount}, #{createTime})
+    </insert>
+    <!--    更新购物车数据-->
+    <update id="update">
+        UPDATE shopping_cart
+        <set>
+            <if test="number != null">
+                number = #{number},
+            </if>
+            <if test="amount != null">
+                amount = #{amount},
+            </if>
+            <if test="name != null">
+                name = #{name},
+            </if>
+            <if test="image != null">
+                image = #{image},
+            </if>
+        </set>
+        WHERE id = #{id}
+    </update>
+<!--    删除一个购物车数据-->
+    <delete id="sub">
+        DELETE FROM
+            shopping_cart
+        WHERE
+            id = #{id}
+    </delete>
+    <!--    根据菜品id、套餐id、口味、用户id查询购物车数据-->
+    <select id="getByIdAndFlavor" resultType="com.sky.entity.ShoppingCart">
+        SELECT
+            *
+        FROM
+            shopping_cart
+        <where>
+            <if test="dishId != null">
+                AND dish_id = #{dishId}
+            </if>
+            <if test="setmealId != null">
+                AND setmeal_id = #{setmealId}
+            </if>
+            <if test="dishFlavor != null">
+                AND dish_flavor = #{dishFlavor}
+            </if>
+            <if test="userId != null">
+                AND user_id = #{userId}
+            </if>
+        </where>
+        LIMIT 1
+    </select>
+<!--    根据用户id查询购物车数据-->
+    <select id="getByUserId" resultType="com.sky.entity.ShoppingCart">
+        SELECT
+            *
+        FROM
+            shopping_cart
+        WHERE
+            user_id = #{userId}
+    </select>
+
+</mapper>
+```
