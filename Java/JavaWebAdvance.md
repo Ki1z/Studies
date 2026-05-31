@@ -1,6 +1,6 @@
 # Java Web Advance
 
-`更新时间：2026-5-29`
+`更新时间：2026-5-31`
 
 注释解释：
 
@@ -3490,5 +3490,616 @@ public interface ShoppingCartMapper {
             user_id = #{userId}
     </select>
 
+</mapper>
+```
+
+## 用户下单
+
+用户下单是一个比较复杂的逻辑，我们先来根据用户行为，模拟一次用户下单行为。
+
+首先，用户将选择好的商品添加到购物车中，这部分的代码在上文中已经实现，接着用户点击`去结算`按钮，跳转到提交订单页面，在提交订单页面，用户可以操作的行为有`选择地址`、`选择配送时间`、`添加备注`、`选择餐具数量`，这部分的代码我们暂未实现，然后用户点击`去支付`跳转到支付页面，这里实际上已经完成了下单操作，支付状态并不属于订单逻辑范围。
+
+`选择地址`接口已经编写完成，我们直接导入即可
+
+`AddressBookController`
+
+```java
+package com.sky.controller.user;
+
+import com.sky.context.BaseContext;
+import com.sky.entity.AddressBook;
+import com.sky.result.Result;
+import com.sky.service.AddressBookService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiOperation;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+
+@RestController
+@RequestMapping("/user/addressBook")
+@Api(tags = "C端地址簿接口")
+public class AddressBookController {
+
+    @Autowired
+    private AddressBookService addressBookService;
+
+    /**
+     * 查询当前登录用户的所有地址信息
+     *
+     * @return
+     */
+    @GetMapping("/list")
+    @ApiOperation("查询当前登录用户的所有地址信息")
+    public Result<List<AddressBook>> list() {
+        AddressBook addressBook = new AddressBook();
+        addressBook.setUserId(BaseContext.getCurrentId());
+        List<AddressBook> list = addressBookService.list(addressBook);
+        return Result.success(list);
+    }
+
+    /**
+     * 新增地址
+     *
+     * @param addressBook
+     * @return
+     */
+    @PostMapping
+    @ApiOperation("新增地址")
+    public Result save(@RequestBody AddressBook addressBook) {
+        addressBookService.save(addressBook);
+        return Result.success();
+    }
+
+    @GetMapping("/{id}")
+    @ApiOperation("根据id查询地址")
+    public Result<AddressBook> getById(@PathVariable Long id) {
+        AddressBook addressBook = addressBookService.getById(id);
+        return Result.success(addressBook);
+    }
+
+    /**
+     * 根据id修改地址
+     *
+     * @param addressBook
+     * @return
+     */
+    @PutMapping
+    @ApiOperation("根据id修改地址")
+    public Result update(@RequestBody AddressBook addressBook) {
+        addressBookService.update(addressBook);
+        return Result.success();
+    }
+
+    /**
+     * 设置默认地址
+     *
+     * @param addressBook
+     * @return
+     */
+    @PutMapping("/default")
+    @ApiOperation("设置默认地址")
+    public Result setDefault(@RequestBody AddressBook addressBook) {
+        addressBookService.setDefault(addressBook);
+        return Result.success();
+    }
+
+    /**
+     * 根据id删除地址
+     *
+     * @param id
+     * @return
+     */
+    @DeleteMapping
+    @ApiOperation("根据id删除地址")
+    public Result deleteById(Long id) {
+        addressBookService.deleteById(id);
+        return Result.success();
+    }
+
+    /**
+     * 查询默认地址
+     */
+    @GetMapping("default")
+    @ApiOperation("查询默认地址")
+    public Result<AddressBook> getDefault() {
+        //SQL:select * from address_book where user_id = ? and is_default = 1
+        AddressBook addressBook = new AddressBook();
+        addressBook.setIsDefault(1);
+        addressBook.setUserId(BaseContext.getCurrentId());
+        List<AddressBook> list = addressBookService.list(addressBook);
+
+        if (list != null && list.size() == 1) {
+            return Result.success(list.get(0));
+        }
+
+        return Result.error("没有查询到默认地址");
+    }
+
+}
+```
+
+`AddressBookService`
+
+```java
+package com.sky.service;
+
+import com.sky.entity.AddressBook;
+import java.util.List;
+
+public interface AddressBookService {
+
+    List<AddressBook> list(AddressBook addressBook);
+
+    void save(AddressBook addressBook);
+
+    AddressBook getById(Long id);
+
+    void update(AddressBook addressBook);
+
+    void setDefault(AddressBook addressBook);
+
+    void deleteById(Long id);
+
+}
+```
+
+`AddressBookServiceImpl`
+
+```java
+package com.sky.service.impl;
+
+import com.sky.context.BaseContext;
+import com.sky.entity.AddressBook;
+import com.sky.mapper.AddressBookMapper;
+import com.sky.service.AddressBookService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.util.List;
+
+@Service
+@Slf4j
+public class AddressBookServiceImpl implements AddressBookService {
+    @Autowired
+    private AddressBookMapper addressBookMapper;
+
+    /**
+     * 条件查询
+     *
+     * @param addressBook
+     * @return
+     */
+    public List<AddressBook> list(AddressBook addressBook) {
+        return addressBookMapper.list(addressBook);
+    }
+
+    /**
+     * 新增地址
+     *
+     * @param addressBook
+     */
+    public void save(AddressBook addressBook) {
+        addressBook.setUserId(BaseContext.getCurrentId());
+        addressBook.setIsDefault(0);
+        addressBookMapper.insert(addressBook);
+    }
+
+    /**
+     * 根据id查询
+     *
+     * @param id
+     * @return
+     */
+    public AddressBook getById(Long id) {
+        AddressBook addressBook = addressBookMapper.getById(id);
+        return addressBook;
+    }
+
+    /**
+     * 根据id修改地址
+     *
+     * @param addressBook
+     */
+    public void update(AddressBook addressBook) {
+        addressBookMapper.update(addressBook);
+    }
+
+    /**
+     * 设置默认地址
+     *
+     * @param addressBook
+     */
+    @Transactional
+    public void setDefault(AddressBook addressBook) {
+        //1、将当前用户的所有地址修改为非默认地址 update address_book set is_default = ? where user_id = ?
+        addressBook.setIsDefault(0);
+        addressBook.setUserId(BaseContext.getCurrentId());
+        addressBookMapper.updateIsDefaultByUserId(addressBook);
+
+        //2、将当前地址改为默认地址 update address_book set is_default = ? where id = ?
+        addressBook.setIsDefault(1);
+        addressBookMapper.update(addressBook);
+    }
+
+    /**
+     * 根据id删除地址
+     *
+     * @param id
+     */
+    public void deleteById(Long id) {
+        addressBookMapper.deleteById(id);
+    }
+
+}
+```
+
+`AddressBookMapper`
+
+```java
+package com.sky.mapper;
+
+import com.sky.entity.AddressBook;
+import org.apache.ibatis.annotations.*;
+import java.util.List;
+
+@Mapper
+public interface AddressBookMapper {
+
+    /**
+     * 条件查询
+     * @param addressBook
+     * @return
+     */
+    List<AddressBook> list(AddressBook addressBook);
+
+    /**
+     * 新增
+     * @param addressBook
+     */
+    @Insert("insert into address_book" +
+            "        (user_id, consignee, phone, sex, province_code, province_name, city_code, city_name, district_code," +
+            "         district_name, detail, label, is_default)" +
+            "        values (#{userId}, #{consignee}, #{phone}, #{sex}, #{provinceCode}, #{provinceName}, #{cityCode}, #{cityName}," +
+            "                #{districtCode}, #{districtName}, #{detail}, #{label}, #{isDefault})")
+    void insert(AddressBook addressBook);
+
+    /**
+     * 根据id查询
+     * @param id
+     * @return
+     */
+    @Select("select * from address_book where id = #{id}")
+    AddressBook getById(Long id);
+
+    /**
+     * 根据id修改
+     * @param addressBook
+     */
+    void update(AddressBook addressBook);
+
+    /**
+     * 根据 用户id修改 是否默认地址
+     * @param addressBook
+     */
+    @Update("update address_book set is_default = #{isDefault} where user_id = #{userId}")
+    void updateIsDefaultByUserId(AddressBook addressBook);
+
+    /**
+     * 根据id删除地址
+     * @param id
+     */
+    @Delete("delete from address_book where id = #{id}")
+    void deleteById(Long id);
+
+}
+```
+
+`AddressBookMapper.xml`
+
+```java
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sky.mapper.AddressBookMapper">
+
+    <select id="list" parameterType="AddressBook" resultType="AddressBook">
+        select * from address_book
+        <where>
+            <if test="userId != null">
+                and user_id = #{userId}
+            </if>
+            <if test="phone != null">
+                and phone = #{phone}
+            </if>
+            <if test="isDefault != null">
+                and is_default = #{isDefault}
+            </if>
+        </where>
+    </select>
+
+    <update id="update" parameterType="addressBook">
+        update address_book
+        <set>
+            <if test="consignee != null">
+                consignee = #{consignee},
+            </if>
+            <if test="sex != null">
+                sex = #{sex},
+            </if>
+            <if test="phone != null">
+                phone = #{phone},
+            </if>
+            <if test="detail != null">
+                detail = #{detail},
+            </if>
+            <if test="label != null">
+                label = #{label},
+            </if>
+            <if test="isDefault != null">
+                is_default = #{isDefault},
+            </if>
+        </set>
+        where id = #{id}
+    </update>
+
+</mapper>
+```
+
+### 实现
+
+`选择配送时间`、`添加备注`、`选择餐具数量`均由前端完成具体实现，后端负责接收这些数据。接着是最重要的下单逻辑，通过`Controller`接收来自前端的请求
+
+```java
+/**
+ * 用户下单
+ * @param ordersSubmitDTO
+ * @return
+ */
+@PostMapping("/submit")
+@ApiOperation("用户下单")
+public Result<OrderSubmitVO> submitOrder(@RequestBody OrdersSubmitDTO ordersSubmitDTO) {
+    log.info("用户下单：{}", ordersSubmitDTO);
+    OrderSubmitVO orderSubmitVO = orderService.submitOrder(ordersSubmitDTO);
+    return Result.success(orderSubmitVO);
+}
+```
+
+然后在`Service`中，首先完成表单各项参数的校验，校验通过后生成一个订单号，再从地址簿中获取用户地址进行拼接，最后插入到订单表。接着获取返回的订单表`id`，将购物车中的所有商品添加到订单明细表中，并清空购物车，返回前端订单`id`、订单号、订单金额以及下单时间
+
+```java
+/**
+ * 用户下单
+ * @param ordersSubmitDTO
+ * @return
+ */
+@Override
+@Transactional(rollbackFor = BaseException.class)
+public OrderSubmitVO submitOrder(OrdersSubmitDTO ordersSubmitDTO) {
+    Long addressBookId = ordersSubmitDTO.getAddressBookId();
+    Integer payMethod = ordersSubmitDTO.getPayMethod();
+    LocalDateTime estimatedDeliveryTime = ordersSubmitDTO.getEstimatedDeliveryTime();
+    Integer deliveryStatus = ordersSubmitDTO.getDeliveryStatus();
+    Integer tablewareNumber = ordersSubmitDTO.getTablewareNumber();
+    Integer tablewareStatus = ordersSubmitDTO.getTablewareStatus();
+    Integer packAmount = ordersSubmitDTO.getPackAmount();
+    BigDecimal amount = ordersSubmitDTO.getAmount();
+
+    // 参数校验
+    // 地址簿
+    AddressBook addressBook = addressBookService.getById(addressBookId);
+    if (addressBookId == null ||  addressBook == null)
+        throw new FormValueIsNullException(MessageConstant.UNKNOWN_ADDRESS);
+    // 支付方式
+    // 1为微信，2为支付宝
+    if (!Objects.equals(payMethod, 1) && !Objects.equals(payMethod, 2))
+        throw new FormValueIsNullException(MessageConstant.UNKNOWN_PAY_METHOD);
+    // 预计送达时间
+    if (estimatedDeliveryTime == null)
+        throw new FormValueIsNullException(MessageConstant.INCORRECT_ESTIMATED_DELIVERY_TIME);
+    // 配送状态
+    if (!Objects.equals(deliveryStatus, 1) && !Objects.equals(deliveryStatus, 0))
+        throw new FormValueIsNullException(MessageConstant.UNKNOWN_DELIVERY_STATUS);
+    // 餐具数量
+    if (tablewareNumber == null || tablewareNumber < 0)
+        throw new FormValueIsNullException(MessageConstant.INCORRECT_TABLEWARE_NUMBER);
+    // 餐具数量状态
+    if (!Objects.equals(tablewareStatus, 1) && !Objects.equals(tablewareStatus, 0))
+        throw new FormValueIsNullException(MessageConstant.UNKNOWN_TABLEWARE_STATUS);
+    // 打包费
+    if (packAmount == null || packAmount < 0)
+        throw new FormValueIsNullException(MessageConstant.INCORRECT_PACK_AMOUNT);
+    // 总金额
+    if (amount == null || amount.compareTo(BigDecimal.ZERO) <= 0)
+        throw new FormValueIsNullException(MessageConstant.INCORRECT_AMOUNT);
+    // 购物车
+    Long userId = BaseContext.getCurrentId();
+    if (userId == null)
+        throw new FormValueIsNullException(MessageConstant.CANNOT_RECOGNIZE_USER);
+    List<ShoppingCart> shoppingCartList = shoppingCartService.getByUserId(userId);
+    if (shoppingCartList == null || shoppingCartList.isEmpty())
+        throw new FormValueIsNullException(MessageConstant.SHOPPING_CART_IS_EMPTY);
+
+    // 插入数据到订单表和订单明细表
+    // 订单表
+    // 生成订单号 订单号生成规则：时间戳+用户id
+    String number = System.currentTimeMillis() + "" + userId;
+    // 获取用户数据
+    User user = userService.getById(userId);
+    // 获取地址
+    String address = addressBook.getProvinceName() + addressBook.getCityName() + addressBook.getDistrictName() + addressBook.getDetail();
+    if (user == null)
+        throw new FormValueIsNullException(MessageConstant.CANNOT_RECOGNIZE_USER);
+    Orders orders = Orders.builder()
+            .number(number)
+            .status(Orders.PENDING_PAYMENT)
+            .userId(userId)
+            .addressBookId(addressBookId)
+            .orderTime(LocalDateTime.now())
+            .payMethod(payMethod)
+            .payStatus(Orders.UN_PAID)
+            .amount(amount)
+            .remark(ordersSubmitDTO.getRemark())
+            .userName(user.getName())
+            .phone(user.getPhone())
+            .address(address)
+            .consignee(addressBook.getConsignee())
+            .estimatedDeliveryTime(estimatedDeliveryTime)
+            .deliveryStatus(deliveryStatus)
+            .packAmount(packAmount)
+            .tablewareNumber(tablewareNumber)
+            .tablewareStatus(tablewareStatus)
+            .build();
+    // 插入订单表
+    Integer count = orderMapper.insert(orders);
+    if (count <= 0)
+        throw new OrderBusinessException(MessageConstant.ORDER_SUBMIT_FAILED);
+
+    // 订单明细表
+    // 获取订单id
+    Long orderId = orders.getId();
+    if (orderId == null)
+        throw new OrderBusinessException(MessageConstant.ORDER_SUBMIT_FAILED);
+    // 将购物车数据转为订单明细数据
+    List<OrderDetail> orderDetails = new ArrayList<>();
+    for (ShoppingCart cart : shoppingCartList) {
+        OrderDetail orderDetail = new OrderDetail();
+        BeanUtils.copyProperties(cart, orderDetail);
+        orderDetail.setOrderId(orderId);
+        orderDetails.add(orderDetail);
+    }
+    // 批量插入订单明细表
+    count = orderMapper.insertDetails(orderDetails);
+    if (!Objects.equals(count, orderDetails.size()))
+        throw new OrderBusinessException(MessageConstant.ORDER_SUBMIT_FAILED);
+
+    // 清空购物车
+    shoppingCartService.clean();
+
+    return OrderSubmitVO.builder()
+            .id(orders.getId())
+            .orderNumber(orders.getNumber())
+            .orderAmount(orders.getAmount())
+            .orderTime(orders.getOrderTime())
+            .build();
+}
+```
+
+`OrderMapper`
+
+```java
+package com.sky.mapper;
+
+import com.sky.entity.OrderDetail;
+import com.sky.entity.Orders;
+import org.apache.ibatis.annotations.Mapper;
+
+import java.util.List;
+
+@Mapper
+public interface OrderMapper {
+    /**
+     * 插入订单数据
+     * @param orders
+     * @return
+     */
+    Integer insert(Orders orders);
+
+    /**
+     * 插入订单明细数据
+     * @param orderDetails
+     * @return
+     */
+    Integer insertDetails(List<OrderDetail> orderDetails);
+}
+```
+
+`OrderMapper.xml`
+
+```xml
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sky.mapper.OrderMapper">
+<!--    新建订单-->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO orders(
+               number,
+               status,
+               user_id,
+               address_book_id,
+               order_time,
+               checkout_time,
+               pay_method,
+               pay_status,
+               amount,
+               remark,
+               phone,
+               address,
+               user_name,
+               consignee,
+               cancel_reason,
+               rejection_reason,
+               cancel_time,
+               estimated_delivery_time,
+               delivery_status,
+               delivery_time,
+               pack_amount,
+               tableware_number,
+               tableware_status
+        )
+        VALUES (
+                #{number},
+                #{status},
+                #{userId},
+                #{addressBookId},
+                #{orderTime},
+                #{checkoutTime},
+                #{payMethod},
+                #{payStatus},
+                #{amount},
+                #{remark},
+                #{phone},
+                #{address},
+                #{userName},
+                #{consignee},
+                #{cancelReason},
+                #{rejectionReason},
+                #{cancelTime},
+                #{estimatedDeliveryTime},
+                #{deliveryStatus},
+                #{deliveryTime},
+                #{packAmount},
+                #{tablewareNumber},
+                #{tablewareStatus}
+        )
+    </insert>
+<!--    插入订单明细-->
+    <insert id="insertDetails">
+        INSERT INTO order_detail(
+            order_id,
+            dish_id,
+            setmeal_id,
+            name,
+            image,
+            dish_flavor,
+            number,
+            amount
+        )
+        VALUES
+        <foreach collection="orderDetails" item="orderDetail" separator=",">
+            (
+                #{orderDetail.orderId},
+                #{orderDetail.dishId},
+                #{orderDetail.setmealId},
+                #{orderDetail.name},
+                #{orderDetail.image},
+                #{orderDetail.dishFlavor},
+                #{orderDetail.number},
+                #{orderDetail.amount}
+            )
+        </foreach>
+    </insert>
 </mapper>
 ```
