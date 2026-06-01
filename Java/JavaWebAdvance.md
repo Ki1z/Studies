@@ -1,6 +1,6 @@
 # Java Web Advance
 
-`更新时间：2026-5-31`
+`更新时间：2026-6-1`
 
 注释解释：
 
@@ -4103,3 +4103,299 @@ public interface OrderMapper {
     </insert>
 </mapper>
 ```
+
+## 订单相关
+
+订单相关的逻辑也几乎都是简单的`CRUD`，因此这里直接跳过
+
+### 高德开放平台
+
+在用户下单逻辑中，我们需要添加一个距离限制，直线距离超过5千米则视为不在配送范围内，所以这里就需要使用第三方地图平台来计算店铺与用户下单地址之间的距离。
+
+这里我们使用高德开放平台，高德是国内最大的地图服务提供商，其`基础LBS服务`就提供了`地理编码`以及`距离测量`这两个我们需要的功能。
+
+首先我们注册高德开放平台，创建一个应用并获取`Key`，应用服务类型设置为`Web服务`
+
+> ![](javaweb2/52.png)
+
+高德所有的`API`均可在[概述-Web服务 API | 高德地图API](https://lbs.amap.com/api/webservice/summary)进行查看，这里我只对我们需要使用的两个`API`进行介绍
+
+不过在此之前，我们先对我们的外卖项目进行一些准备，在配置文件中定义对应的地址和高德`Key`配置
+
+```yml
+sky:  
+  shop:
+    location:
+      address: "青岛市崂山区沙子口街道九水东路605号-66号"
+      longitude: 120.506629
+      latitude: 36.161922
+      key: xxxxxxxxxxxxxxxxxxxxx
+```
+
+然后定义配置类
+
+```java
+package com.sky.properties;
+
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+@Component
+@ConfigurationProperties(prefix = "sky.shop.location")
+@Data
+public class ShopLocationProperties {
+    // 纬度
+    private String latitude;
+    // 经度
+    private String longitude;
+    // 精确地址
+    private String address;
+
+    // 高德api key
+    private String key;
+}
+```
+
+#### 地理编码
+
+因为高德开放平台中只能使用坐标来计算距离，因此我们需要首先将地址转换为坐标
+
+```URL
+https://restapi.amap.com/v3/geocode/geo
+```
+
+请求方式为`GET`，参数如下
+
+| **参数名** | **含义**       | **规则说明**                                                 | **是否必须** |
+| ---------- | -------------- | ------------------------------------------------------------ | ------------ |
+| `key`      | 高德`Key`      | 用户在高德地图官网申请的`Key`                                | 必填         |
+| `address`  | 结构化地址信息 | 规则遵循：国家、省份、城市、区县、城镇、乡村、街道、门牌号码、屋邨、大厦，如：北京市朝阳区阜通东大街6号。 | 必填         |
+| `city`     | 指定查询的城市 | 可选输入内容包括：指定城市的中文（如北京）、指定城市的中文全拼`beijing`、`citycode`: `010`、`adcode`: `110000`，不支持县级市。当指定城市查询内容为空时，会进行全国范围内的地址转换检索。 | 可选         |
+
+返回值如下
+
+| **名称**            | **含义**         | **规则说明**                                                 |
+| ------------------- | ---------------- | ------------------------------------------------------------ |
+| `status`            | 返回结果状态值   | 返回值为 `0` 或 `1`，`0` 表示请求失败；`1` 表示请求成功。    |
+| `count`             | 返回结果数目     | 返回结果的个数。                                             |
+| `info`              | 返回状态说明     | 当 `status` 为 `0` 时，`info` 会返回具体错误原因，否则返回“OK” |
+| `geocodes`          | 地理编码信息列表 | 结果对象列表，包括下述字段                                   |
+| `geocodes-country`  | 国家             | 国内地址默认返回中国                                         |
+| `geocodes-province` | 地址所在的省份名 | 例如：北京市。此处需要注意的是，中国的四大直辖市也算作省级单位。 |
+| `geocodes-city`     | 地址所在的城市名 | 例如：北京市                                                 |
+| `geocodes-citycode` | 城市编码         | 例如：`010`                                                  |
+| `geocodes-district` | 地址所在的区     | 例如：朝阳区                                                 |
+| `geocodes-street`   | 街道             | 例如：阜通东大街                                             |
+| `geocodes-number`   | 门牌             | 例如：`6`号                                                  |
+| `geocodes-adcode`   | 区域编码         | 例如：`110101`                                               |
+| `geocodes-location` | 坐标点           | 经度，纬度                                                   |
+| `geocodes-level`    | 匹配级别         | 参见下方的地理编码匹配级别列表                               |
+
+例如我们查询`中国海洋大学崂山校区`
+
+```url
+https://restapi.amap.com/v3/geocode/geo?key=<key>&address=中国海洋大学崂山校区
+```
+
+```json
+{
+    "status": "1",
+    "info": "OK",
+    "infocode": "10000",
+    "count": "1",
+    "geocodes": [
+        {
+            "formatted_address": "山东省青岛市崂山区中国海洋大学崂山校区",
+            "country": "中国",
+            "province": "山东省",
+            "citycode": "0532",
+            "city": "青岛市",
+            "district": "崂山区",
+            "township": [],
+            "neighborhood": {
+                "name": [],
+                "type": []
+            },
+            "building": {
+                "name": [],
+                "type": []
+            },
+            "adcode": "370212",
+            "street": [],
+            "number": [],
+            "location": "120.499037,36.161293",
+            "level": "兴趣点"
+        }
+    ]
+}
+```
+
+这里的`"location": "120.499037,36.161293"`就是我们需要的经纬度坐标
+
+#### 距离测量
+
+```https
+https://restapi.amap.com/v3/distance
+```
+
+请求方式为`GET`，请求参数如下
+
+| **参数名**    | **含义**             | **规则说明**                                                 | **是否必须** |
+| ------------- | -------------------- | ------------------------------------------------------------ | ------------ |
+| `key`         | 请求服务权限标识     | 用户在高德地图官网申请的`Key`                                | 必填         |
+| `origins`     | 出发点               | 格式为`经度,纬度`，支持100个坐标对，坐标对用`|`分割          | 必填         |
+| `destination` | 目的地               | 经纬度小数点不超过6位                                        | 必填         |
+| `type`        | 路径计算的方式和方法 | 0表示直线距离，1表示驾车距离，3表示步行距离，步行距离只支持5公里以内 | 可选         |
+
+返回值如下
+
+| **名称**           | **说明**                                                     |
+| ------------------ | ------------------------------------------------------------ |
+| `status`           | 返回结果状态值，值为0或1，0表示请求失败；1表示请求成功       |
+| `info`             | 返回状态说明，status 为0时，info 返回错误原因；否则返回“OK”  |
+| `results`          | 距离信息列表                                                 |
+| `results-result`   | 距离信息                                                     |
+| `result-origin_id` | 起点坐标，起点坐标序列号（从１开始）                         |
+| `result-dest_id`   | 终点坐标，终点坐标序列号（从１开始）                         |
+| `result-distance`  | 路径距离，单位：米                                           |
+| `result-duration`  | 预计行驶时间，单位：秒                                       |
+| `result-info`      | 仅在出错的时候显示该字段。大部分显示“未知错误”               |
+| `result-code`      | 仅在出错的时候显示此字段。在驾车模式下，1表示指定地点之间没有可以行车的道路，2表示起点/终点距离所有道路均距离过远，3表示起点/终点不在中国境内 |
+
+我们查询中国海洋大学崂山校区到电子科技大学清水河校区的直线距离
+
+```url
+{
+    "status": "1",
+    "info": "OK",
+    "infocode": "10000",
+    "count": "1",
+    "results": [
+        {
+            "origin_id": "1",
+            "dest_id": "1",
+            "distance": "1649749",
+            "duration": "0"
+        }
+    ]
+}
+```
+
+得到的`"distance": "1649749"`即是两地直线距离
+
+### 用户下单距离限制
+
+我们已经初步了解高德地图`API`的使用，现在来完善我们的项目
+
+在项目中定义一个工具类`LocationUtil`，用户获取用户坐标以及计算距离。两个`API`的调用都可以通过`HttpCilent`实现
+
+```java
+package com.sky.utils;
+
+import com.alibaba.fastjson.JSONObject;
+import com.sky.properties.ShopLocationProperties;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@Component
+@Slf4j
+@AllArgsConstructor
+public class LocationUtil {
+
+    private final ShopLocationProperties shopLocationProperties;
+
+    // 高德api
+    // 获取地址api
+    private static final String GET_COORDINATE_URL = "https://restapi.amap.com/v3/geocode/geo";
+    // 计算距离api
+    private static final String GET_DISTANCE_URL = "https://restapi.amap.com/v3/distance";
+
+    /**
+     * 根据地址获取经纬度
+     *
+     * @param address
+     * @return
+     */
+    public String getCoordinateByAddress(String address) {
+        String key = shopLocationProperties.getKey();
+        Map<String, String> urlMap = new HashMap<>();
+        urlMap.put("key", key);
+        urlMap.put("address", address);
+        // 发送请求
+        String json = HttpClientUtil.doGet(GET_COORDINATE_URL, urlMap);
+        // 解析结果
+        JSONObject jsonObject = JSONObject.parseObject(json);
+        if (jsonObject.getInteger("status") != 1) {
+            // 获取失败
+            return null;
+        }
+        // 获取地址名称
+        String formattedAddress = jsonObject.getJSONArray("geocodes").getJSONObject(0).getString("formatted_address");
+        log.info("获取到的地址名称：{}", formattedAddress);
+        // 获取经纬度
+        String coordinate = jsonObject.getJSONArray("geocodes").getJSONObject(0).getString("location");
+        log.info("获取到的经纬度：{}", coordinate);
+        return coordinate;
+    }
+
+    /**
+     * 计算两个经纬度之间的距离
+     *
+     * @param targetCoordinate
+     * @return
+     */
+    public Long getDistance(String targetCoordinate) {
+        String key = shopLocationProperties.getKey();
+        // 获取店铺经纬度
+        String coordinate = shopLocationProperties.getLongitude() + "," + shopLocationProperties.getLatitude();
+        Map<String, String> urlMap = new HashMap<>();
+        urlMap.put("key", key);
+        urlMap.put("origins", coordinate);
+        urlMap.put("destination", targetCoordinate);
+        urlMap.put("type", "0");
+        // 发送请求
+        String json = HttpClientUtil.doGet(GET_DISTANCE_URL, urlMap);
+        // 解析结果
+        JSONObject jsonObject = JSONObject.parseObject(json);
+        if (jsonObject.getInteger("status") != 1) {
+            // 获取失败
+            return null;
+        }
+        String distance = jsonObject.getJSONArray("results").getJSONObject(0).getString("distance");
+        log.info("获取的距离：{}米", distance);
+        return Long.valueOf(distance);
+    }
+}
+```
+
+然后在`Service`中使用
+
+```java
+// 距离校验
+String address = addressBook.getProvinceName() + addressBook.getCityName() + addressBook.getDistrictName() + addressBook.getDetail();
+String coordinate = locationUtil.getCoordinateByAddress(address);
+if (coordinate == null)
+    throw new FormValueIsNullException(MessageConstant.UNKNOWN_ADDRESS);
+Long distance = locationUtil.getDistance(coordinate);
+if (distance > 5000)
+    throw new OrderBusinessException(MessageConstant.ADDRESS_IS_TOO_FAR);
+```
+
+进行测试，我们将店铺地址设置为`OUC`附近，但是下单地址设置为`UESTC`
+
+> ![](javaweb2/53.png)
+
+点击下单，后端报错地址太远
+
+> ![](javaweb2/54.png)
+
+将地址更改为`OUC`下单，校验通过
+
+> ![](javaweb2/55.png)
+
+*注：高德地理编码返回的结果可能有多个，一般使用第一个即可*
