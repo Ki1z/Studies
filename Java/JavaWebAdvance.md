@@ -1,6 +1,6 @@
 # Java Web Advance
 
-`更新时间：2026-6-1`
+`更新时间：2026-6-3`
 
 注释解释：
 
@@ -4399,3 +4399,876 @@ if (distance > 5000)
 > ![](javaweb2/55.png)
 
 *注：高德地理编码返回的结果可能有多个，一般使用第一个即可*
+
+## Spring Task
+
+在我们开发的项目中，用户下达订单后长时间不支付导致订单超时，或者订单派送完成后长时间不点击完成，都没有做对应的解决策略
+
+`SpringTask`是`Spring`框架提供的一套定时任务框架，通过`SpringTask`，可以按照指定时间，自动执行某个代码逻辑
+
+### Cron表达式
+
+`Cron`表达式是`SpringTask`用于定义任务触发条件的表达式，本质是一个字符串
+
+`Cron`表达式使用七个域来表示时间，分别为`秒`、`分`、`时`、`日`、`月`、`周`、`年`，每个域之间用空格分隔，`日`与`周`无法共存，因为周可以对应多个日，每个月相同日对应的周数也不同，当存在一者时，另一者需要使用`?`作为占位符，年可以省略。例如需要描述`2026年6月2日下午14点55分28秒`
+
+```cron
+28 55 14 2 6 ? 2026
+```
+
+同时，`Cron`表达式也可以使用一些特殊符号来表达特殊含义
+
+| 符号 | 含义                                             | 示例                 | 示例说明                                    |
+| ---- | ------------------------------------------------ | -------------------- | ------------------------------------------- |
+| `*`  | 通配符，表示对应域的任意时间                     | `0 0 14 * * ?`       | 每天下午14点                                |
+| `-`  | 区间，表示连续时间段                             | `0 0 10-14 * * ?`    | 每天上午10点到下午14点                      |
+| `,`  | 列表，表示多个时间点                             | `0 0 10,14,18 * * ?` | 每天上午10点、下午14点、晚上18点            |
+| `/`  | 间隔，表示每隔指定时间                           | `0 0/30 10-14 * * ?` | 每天上午10点到下午14点，从0分开始每隔30分钟 |
+| `L`  | 最后一天，只能用在`日`和`周`，用于表示域最后一天 | `0 0 23 L 9 ?`       | 9月最后一天23点                             |
+| `W`  | 最近工作日，只能用在`日`                         | `0 0 14 5L * ?`      | 离每月5日最近的工作日的14点                 |
+| `#`  | 当月的第几个星期几，只能用在`周`                 | `0 0 14 ? * FRI#3`   | 每月第三个周五的14点                        |
+
+`Cron`表达式支持使用三字符简写来表达周和月份，包括`JAN`、`FEB`、`MAR`或者`SUN`、`MON`、`TUE`等等
+
+### 快速入门
+
+1. 在启动类上添加`@EnableScheduling`开启任务调度
+
+```java
+package com.sky;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.transaction.annotation.EnableTransactionManagement;
+
+@SpringBootApplication
+@EnableTransactionManagement //开启注解方式的事务管理
+@Slf4j
+@EnableCaching // 开启缓存功能
+@EnableScheduling // 开启定时任务功能
+public class SkyApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(SkyApplication.class, args);
+        log.info("server started");
+    }
+}
+```
+
+2. 自定义定时任务类，任务类需要添加`@Component`注解
+
+```java
+package com.sky.task;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+@Component
+@Slf4j
+public class OrderTask {
+}
+```
+
+3. 自定义定时任务，添加`@Scheduled`注解，并使用`Cron`表达式声明任务执行时间。定时任务方法返回值必须为`void`
+
+```java
+package com.sky.task;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
+
+@Component
+@Slf4j
+public class OrderTask {
+
+    @Scheduled(cron = "0/5 * * * * ? ")
+    public void testTask(){
+        log.info("开始执行定时任务，当前系统时间: {}", LocalDateTime.now());
+    }
+}
+```
+
+> ![](javaweb2/56.png)
+
+## WebSocket
+
+`WebSocket`是基于`TCP`的一种新的网络协议，它实现了浏览器与服务器之间的全双工通信，浏览器和服务器只需要完成一次握手，两者之间就可以创建持久性的连接，并进行双向数据传输
+
+基于`WebSocket`，可以实现服务器主动向客户端发送数据，例如视频弹幕、网页聊天、实况更新等不需要客户端进行请求操作的情况
+
+### 快速入门
+
+1. 引入依赖
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-websocket</artifactId>
+</dependency>
+```
+
+2. 创建`WebSocketServer`，`ws`服务端需要添加`@ServerEndpoint`来设置握手请求路径
+
+```java
+package com.sky.websocket;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
+import javax.websocket.Session;
+import javax.websocket.server.ServerEndpoint;
+import java.util.HashMap;
+import java.util.Map;
+
+@ServerEndpoint("/ws/{sid}")
+@Slf4j
+@Component
+public class WebSocketServer {
+}
+```
+
+3. 定义回调方法
+
+```java
+package com.sky.websocket;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.PathVariable;
+
+import javax.websocket.OnClose;
+import javax.websocket.OnMessage;
+import javax.websocket.OnOpen;
+import javax.websocket.Session;
+import javax.websocket.server.PathParam;
+import javax.websocket.server.ServerEndpoint;
+import java.util.HashMap;
+import java.util.Map;
+
+@ServerEndpoint("/ws/{sid}")
+@Slf4j
+@Component
+public class WebSocketServer {
+    // 存放所有会话
+    private static Map<String, Session> sessionMap = new HashMap<>();
+
+    /**
+     * 会话开启回调
+     * @param session
+     * @param sid
+     */
+    @OnOpen
+    public void onOpen(Session session, @PathParam("sid") String sid) {
+        log.info("WS: 客户端 {} 建立连接", sid);
+        sessionMap.put(sid, session);
+    }
+
+    /**
+     * 接收消息回调
+     * @param message
+     * @param sid
+     */
+    @OnMessage
+    public void onMessage(String message, @PathParam("sid") String sid) {
+        log.info("WS: 收到客户端 {} 的消息: {}", sid, message);
+    }
+
+    /**
+     * 会话关闭回调
+     * @param sid
+     */
+    @OnClose
+    public void onClose(@PathParam("sid") String sid) {
+        log.info("WS: 断开连接 {}", sid);
+        sessionMap.remove(sid);
+    }
+
+    /**
+     * 给所有会话发送消息
+     * @param message
+     */
+    public void sendToAll(String message) {
+        sessionMap.forEach((sid, session) -> {
+            try {
+                session.getBasicRemote().sendText(message);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+    }
+}
+```
+
+4. 定义`WebSocketConfiguration`，声明一个`ServerEndpointExporter`为`Bean`
+
+```java
+package com.sky.config;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.socket.server.standard.ServerEndpointExporter;
+
+@Configuration
+public class WebSocketConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean
+    public ServerEndpointExporter serverEndpointExporter() {
+        return new ServerEndpointExporter();
+    }
+}
+```
+
+5. 设置一个定时任务，每隔5秒向客户端发送消息
+
+```java
+package com.sky.task;
+
+import com.sky.websocket.WebSocketServer;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
+
+@Component
+@Slf4j
+public class WebSocketTask {
+
+    @Autowired
+    private WebSocketServer webSocketServer;
+
+    @Scheduled(cron = "0/5 * * * * ?")
+    public void sendMessageTask() {
+        webSocketServer.sendToAll("测试定时消息: " + LocalDateTime.now());
+    }
+}
+```
+
+6. 用`AI`编写一个简单客户端，测试`WebSocket`
+
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket 简易调试器 · 元宝</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+        }
+        body {
+            background: #f5f7fb;
+            margin: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: calc(100vh - 40px);
+        }
+        .card {
+            max-width: 780px;
+            width: 100%;
+            background: white;
+            border-radius: 28px;
+            padding: 30px 32px 38px;
+            box-shadow: 0 12px 35px rgba(0, 10, 25, 0.08);
+            transition: all 0.2s ease;
+        }
+        h1 {
+            font-size: 24px;
+            font-weight: 600;
+            margin-top: 4px;
+            margin-bottom: 16px;
+            color: #0b1a33;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        h1 small {
+            font-size: 14px;
+            font-weight: 400;
+            color: #3d5775;
+            background: #eef3fa;
+            padding: 2px 12px;
+            border-radius: 50px;
+            letter-spacing: 0.3px;
+        }
+        .connection-area {
+            background: #f0f4fe;
+            border-radius: 18px;
+            padding: 18px 22px;
+            margin-bottom: 28px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+        }
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            padding: 6px 16px 6px 12px;
+            border-radius: 60px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+            font-size: 14px;
+        }
+        .dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #9aaec5;
+            transition: 0.15s;
+        }
+        .dot.connected {
+            background: #19bc6c;
+            box-shadow: 0 0 0 3px rgba(25, 188, 108, 0.18);
+        }
+        .dot.disconnected {
+            background: #cdd9e9;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            background: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 48px;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.15s;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+            border: 1px solid #dce3ed;
+            color: #1f2b44;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        button.primary {
+            background: #146ef5;
+            border-color: #146ef5;
+            color: white;
+            box-shadow: 0 4px 10px rgba(20, 110, 245, 0.20);
+        }
+        button.primary:hover {
+            background: #0f5ad6;
+            transform: scale(1.01);
+        }
+        button.danger {
+            background: #f43f5e;
+            border-color: #f43f5e;
+            color: white;
+        }
+        button.danger:hover {
+            background: #da2f4c;
+        }
+        button:active {
+            transform: scale(0.96);
+        }
+        button:disabled {
+            opacity: 0.45;
+            pointer-events: none;
+            filter: grayscale(0.3);
+        }
+        .input-row {
+            display: flex;
+            gap: 12px;
+            margin: 18px 0 22px;
+            flex-wrap: wrap;
+        }
+        .input-row input {
+            flex: 1;
+            min-width: 180px;
+            padding: 12px 18px;
+            border-radius: 54px;
+            border: 1px solid #dde3ed;
+            background: #ffffff;
+            font-size: 15px;
+            outline: none;
+            transition: 0.15s;
+        }
+        .input-row input:focus {
+            border-color: #146ef5;
+            box-shadow: 0 0 0 3px rgba(20, 110, 245, 0.15);
+        }
+        .input-row button {
+            padding: 12px 34px;
+            white-space: nowrap;
+        }
+        .messages-box {
+            background: #fafcff;
+            border: 1px solid #eaeef5;
+            border-radius: 22px;
+            padding: 6px 0;
+            margin-top: 8px;
+            height: 320px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .message-item {
+            padding: 12px 22px;
+            border-bottom: 1px solid #eff2f9;
+            font-size: 14.5px;
+            line-height: 1.5;
+            color: #14273e;
+            word-break: break-word;
+        }
+        .message-item:last-child {
+            border-bottom: none;
+        }
+        .message-empty {
+            color: #889bb3;
+            text-align: center;
+            padding: 40px 20px;
+            font-style: italic;
+        }
+        .timestamp {
+            color: #667f9e;
+            font-size: 11.5px;
+            font-weight: 450;
+            margin-right: 12px;
+            letter-spacing: 0.2px;
+        }
+        .badge-sys {
+            background: #eaf0fa;
+            border-radius: 36px;
+            padding: 2px 12px;
+            font-size: 12px;
+            color: #28598b;
+            margin-left: 8px;
+        }
+        .footer-note {
+            margin-top: 18px;
+            font-size: 13px;
+            color: #657e9e;
+            text-align: right;
+            border-top: 1px solid #ebf0f7;
+            padding-top: 16px;
+        }
+        .sid-label {
+            background: white;
+            padding: 5px 14px;
+            border-radius: 80px;
+            font-size: 13px;
+            border: 1px solid #dce3ed;
+            color: #203a5a;
+        }
+        code {
+            background: #ecf2fc;
+            padding: 2px 8px;
+            border-radius: 26px;
+            font-size: 13px;
+            color: #16437e;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <h1>
+        ⚡ WebSocket 面板
+        <small>sid 随机拼接</small>
+    </h1>
+
+    <!-- 连接区域 -->
+    <div class="connection-area">
+        <div class="status-badge">
+            <span class="indicator">
+                <span class="dot disconnected" id="statusDot"></span>
+                <span id="statusText">未连接</span>
+            </span>
+            <span class="sid-label" id="currentSidDisplay">sid: —</span>
+        </div>
+        <div class="btn-group">
+            <button id="connectBtn" class="primary">🔗 连接</button>
+            <button id="disconnectBtn" class="danger">⛔ 断开</button>
+        </div>
+    </div>
+
+    <!-- 消息发送行 -->
+    <div class="input-row">
+        <input type="text" id="msgInput" placeholder="输入要发送的消息..." autocomplete="off">
+        <button id="sendBtn" disabled>📤 发送</button>
+    </div>
+
+    <!-- 服务端消息展示框 -->
+    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px;">
+        <span style="font-weight: 550; color: #13273f;">📋 服务端消息</span>
+        <span style="font-size: 13px; color: #617b9a;">共 <span id="msgCount">0</span> 条</span>
+    </div>
+    <div class="messages-box" id="messageBox">
+        <div class="message-empty" id="emptyPlaceholder">💬 暂无消息，连接后将显示服务端推送</div>
+    </div>
+    <div class="footer-note">
+        <code>ws://localhost:8080/ws/&lt;随机sid&gt;</code>  ·  每次连接生成新sid
+    </div>
+</div>
+
+<script>
+    (function() {
+        // DOM 元素
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const sendBtn = document.getElementById('sendBtn');
+        const msgInput = document.getElementById('msgInput');
+        const messageBox = document.getElementById('messageBox');
+        const emptyPlaceholder = document.getElementById('emptyPlaceholder');
+        const msgCountSpan = document.getElementById('msgCount');
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+        const currentSidDisplay = document.getElementById('currentSidDisplay');
+
+        // 状态变量
+        let ws = null;
+        let currentSid = '';          // 当前连接的sid (不含随机串)
+        let messageCounter = 0;
+
+        // ---- 辅助函数 ----
+        function generateRandomSid(length = 6) {
+            const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+            let result = '';
+            for (let i = 0; i < length; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        // 更新UI连接状态
+        function updateConnectionStatus(isConnected) {
+            if (isConnected) {
+                statusDot.className = 'dot connected';
+                statusText.textContent = '已连接';
+                sendBtn.disabled = false;
+                disconnectBtn.disabled = false;
+                connectBtn.disabled = true;
+                // 显示当前sid
+                currentSidDisplay.textContent = `sid: ${currentSid || '—'}`;
+            } else {
+                statusDot.className = 'dot disconnected';
+                statusText.textContent = '未连接';
+                sendBtn.disabled = true;
+                disconnectBtn.disabled = true;
+                connectBtn.disabled = false;
+                // 保留sid显示但不展示随机值 (可展示上次sid)
+                if (currentSid) {
+                    currentSidDisplay.textContent = `sid: ${currentSid} (已断)`;
+                } else {
+                    currentSidDisplay.textContent = `sid: —`;
+                }
+            }
+        }
+
+        // 添加一条消息到展示框 (服务端消息)
+        function addServerMessage(data) {
+            // 移除空占位
+            if (emptyPlaceholder && emptyPlaceholder.parentNode) {
+                emptyPlaceholder.remove();
+            }
+
+            const item = document.createElement('div');
+            item.className = 'message-item';
+
+            const timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+            const timeSpan = document.createElement('span');
+            timeSpan.className = 'timestamp';
+            timeSpan.textContent = `[${timestamp}]`;
+
+            const badge = document.createElement('span');
+            badge.className = 'badge-sys';
+            badge.textContent = 'server';
+
+            const contentSpan = document.createElement('span');
+            contentSpan.style.marginLeft = '6px';
+            // 尝试解析JSON或直接显示文本
+            try {
+                // 如果是json字符串就美化一下显示
+                if (typeof data === 'string' && (data.startsWith('{') || data.startsWith('['))) {
+                    const parsed = JSON.parse(data);
+                    contentSpan.textContent = JSON.stringify(parsed, null, 1);
+                } else {
+                    contentSpan.textContent = data;
+                }
+            } catch (e) {
+                contentSpan.textContent = data;
+            }
+
+            item.appendChild(timeSpan);
+            item.appendChild(badge);
+            item.appendChild(contentSpan);
+
+            messageBox.appendChild(item);
+            // 滚动到底部
+            messageBox.scrollTop = messageBox.scrollHeight;
+
+            // 更新计数
+            messageCounter++;
+            msgCountSpan.textContent = messageCounter;
+        }
+
+        // 清空消息列表 (重置计数器)
+        function clearMessages() {
+            messageBox.innerHTML = '';
+            // 重新放回占位符
+            const placeholder = document.createElement('div');
+            placeholder.className = 'message-empty';
+            placeholder.id = 'emptyPlaceholder';
+            placeholder.textContent = '💬 暂无消息，连接后将显示服务端推送';
+            messageBox.appendChild(placeholder);
+            messageCounter = 0;
+            msgCountSpan.textContent = '0';
+        }
+
+        // 建立WebSocket连接
+        function connectWebSocket() {
+            // 如果已有连接先关闭
+            if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+                ws.close();
+                ws = null;
+            }
+
+            // 生成随机sid (6位字母数字)
+            const randomPart = generateRandomSid(6);
+            currentSid = randomPart;
+            const url = `ws://localhost:8080/ws/${randomPart}`;
+
+            try {
+                ws = new WebSocket(url);
+            } catch (err) {
+                addServerMessage(`❌ 创建WebSocket失败: ${err.message}`);
+                updateConnectionStatus(false);
+                return;
+            }
+
+            // 更新显示 (连接中)
+            statusDot.className = 'dot disconnected';
+            statusText.textContent = '连接中...';
+            currentSidDisplay.textContent = `sid: ${randomPart}`;
+            connectBtn.disabled = true;
+            disconnectBtn.disabled = true;
+            sendBtn.disabled = true;
+
+            // --- 事件绑定 ---
+            ws.onopen = () => {
+                console.log('[WS] 连接打开');
+                updateConnectionStatus(true);
+                addServerMessage(`✅ 连接成功 | sid = ${randomPart}`);
+            };
+
+            ws.onmessage = (event) => {
+                const data = event.data;
+                addServerMessage(data);
+            };
+
+            ws.onerror = (err) => {
+                console.error('[WS] 错误:', err);
+                addServerMessage(`⚠️ WebSocket 错误 (请确认服务端已启动)`);
+                // 不立即关闭，让onclose处理
+            };
+
+            ws.onclose = (event) => {
+                console.log('[WS] 连接关闭', event.code, event.reason);
+                // 避免重复清理
+                if (ws && ws.readyState === WebSocket.CLOSED) {
+                    updateConnectionStatus(false);
+                    // 如果是有意关闭，code可能是1000
+                    let closeMsg = `🔌 连接已关闭 (code: ${event.code})`;
+                    if (event.reason) closeMsg += ` reason: ${event.reason}`;
+                    addServerMessage(closeMsg);
+                    ws = null;
+                } else {
+                    // 某些异常情况
+                    updateConnectionStatus(false);
+                    addServerMessage(`🔌 连接异常关闭`);
+                    ws = null;
+                }
+                // 确保按钮状态
+                updateConnectionStatus(false);
+            };
+        }
+
+        // 断开连接
+        function disconnectWebSocket() {
+            if (ws) {
+                // 移除onclose避免重复触发消息 (但保留onclose用于正常关闭提示)
+                // 我们只是手动关闭，会触发onclose
+                ws.close(1000, '用户主动断开');
+                // 但onclose里会置空ws，不必额外操作
+            } else {
+                addServerMessage(`⚡ 当前没有活跃连接`);
+            }
+        }
+
+        // 发送消息
+        function sendMessage() {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                addServerMessage(`⚠️ 无法发送：WebSocket 未连接`);
+                return;
+            }
+            const rawMsg = msgInput.value.trim();
+            if (rawMsg === '') {
+                addServerMessage(`📭 不能发送空消息`);
+                return;
+            }
+
+            try {
+                ws.send(rawMsg);
+                // 可选：在本地也显示发送日志（但题目只要求显示服务端消息，为了友好增加一条“已发送”记录）
+                // 但为了纯粹展示服务端消息，这里只做发送，不追加到服务端消息框。
+                // 不过为了交互反馈，可以在服务端消息框加一条本地提示？ 根据需求“显示所有服务端发来的消息”，
+                // 所以不把客户端发送的消息当作服务端消息。但为了易用，我在这里悄悄加一条灰底提示（非服务端消息）。
+                // 更严谨：完全不加。但是容易让用户以为没发送成功。加一条淡灰色本地提示，但标记为 [local]
+                const localIndicator = document.createElement('div');
+                localIndicator.className = 'message-item';
+                localIndicator.style.backgroundColor = '#f8faff';
+                localIndicator.style.color = '#386581';
+                localIndicator.style.fontSize = '13px';
+                const time = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+                localIndicator.innerHTML = `<span class="timestamp">[${time}]</span><span style="background:#e3ecf9;border-radius:30px;padding:0 12px;font-size:12px;">📨 已发送</span><span style="margin-left:10px;color:#204666;">${rawMsg}</span>`;
+                // 插入到消息框最后，但不清除占位
+                if (emptyPlaceholder && emptyPlaceholder.parentNode) {
+                    emptyPlaceholder.remove();
+                }
+                messageBox.appendChild(localIndicator);
+                messageBox.scrollTop = messageBox.scrollHeight;
+                // 不增加服务端计数
+                msgInput.value = '';
+            } catch (e) {
+                addServerMessage(`❌ 发送失败: ${e.message}`);
+            }
+        }
+
+        // ---- 初始化与事件绑定 ----
+        function init() {
+            // 默认状态
+            updateConnectionStatus(false);
+            clearMessages();
+
+            // 连接按钮
+            connectBtn.addEventListener('click', connectWebSocket);
+
+            // 断开按钮
+            disconnectBtn.addEventListener('click', disconnectWebSocket);
+
+            // 发送按钮
+            sendBtn.addEventListener('click', sendMessage);
+
+            // 回车发送
+            msgInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter' && !sendBtn.disabled) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            // 页面卸载时关闭连接
+            window.addEventListener('beforeunload', () => {
+                if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+                    ws.close(1000, '页面关闭');
+                }
+            });
+        }
+
+        // 启动
+        init();
+    })();
+</script>
+</body>
+</html>
+```
+
+> ![](javaweb2/57.png)
+
+> ![](javaweb2/58.png)
+
+### 来单提醒
+
+在实现逻辑之前，我们首先来概述一下来单提醒的设计思路。首先需要管理端与后端使用`WebSocket`建立一个长连接，保证后端能够随时向管理端发送消息，接着后端在用户支付完成后，调用`WebSocket`向管理端发送消息，这里我们需要定义一个消息规范，消息格式为`JSON`，设置三个字段`type`、`orderId`和`content`，分别代表消息类型、订单号以及消息内容。消息类型中1表示来单提醒，2表示客户催单
+
+根据上文已经定义好的`WebSocketServer`类，我们可以直接注入到`Service`中，然后改造方法。改造的方法应该是支付方法`public LocalDateTime payment(OrdersPaymentDTO ordersPaymentDTO)`，在清除购物车后构造一个`HashMap`，插入`type`、`orderId`以及`content`，使用`JSON.toJSONString()`转换为`JSON`，最后将消息发送到管理端
+
+```java
+// 向管理端发送来单提醒
+// 构造消息
+Map<String, Object> message = new HashMap<>();
+message.put("type", 1);
+message.put("orderId", orders.getId());
+message.put("content", "订单号: " + orders.getNumber());
+// 发送消息
+webSocketServer.sendToAll(JSON.toJSONString(message));
+```
+
+> ![](javaweb2/59.png)
+
+### 客户催单
+
+用户在商家长时间未接单时可以选择催单，催单的逻辑与来单提醒基本相同，由后端向管理端发送通知消息。
+
+`Controller`
+
+```java
+/**
+ * 催单
+ * @param id
+ * @return
+ */
+@GetMapping("/reminder/{id}")
+@ApiOperation("催单")
+public Result<String> reminder(@PathVariable Long id) {
+    log.info("催单：{}", id);
+    orderService.reminder(id);
+    return Result.success();
+}
+```
+
+`Service`
+
+```java
+/**
+ * 催单
+ * @param id
+ */
+@Override
+public void reminder(Long id) {
+    if (id == null)
+        throw new FormValueIsNullException(MessageConstant.ORDER_NOT_FOUND);
+    // 获取订单信息
+    Orders orders = orderMapper.getById(id);
+    if (orders == null)
+        throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+    // 判断订单状态是否为待接单和待派单
+    if (!Objects.equals(orders.getStatus(), Orders.TO_BE_CONFIRMED) && !Objects.equals(orders.getStatus(), Orders.CONFIRMED))
+        throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
+    // 构造消息
+    Map<String, Object> msg = new HashMap<>();
+    msg.put("type", 2);
+    msg.put("orderId", id);
+    msg.put("content", "订单号：" + orders.getNumber());
+    // 发送消息
+    webSocketServer.sendToAll(JSON.toJSONString(msg));
+}
+```
+
+> ![](javaweb2/60.png)
+
+## 数据统计
+
