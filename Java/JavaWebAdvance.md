@@ -1,6 +1,6 @@
 # Java Web Advance
 
-`更新时间：2026-6-3`
+`更新时间：2026-6-4`
 
 注释解释：
 
@@ -5272,3 +5272,495 @@ public void reminder(Long id) {
 
 ## 数据统计
 
+数据统计方面，我们使用`Apache ECharts`来快捷生成报表，有关`Apache ECharts`的使用，已经在艾欧希后台管理系统中介绍过了，我们需要完成的只是向前端提交指定格式的数据而已。
+
+### 销量Top10
+
+前端请求的数据格式如下
+
+| 参数名称 | 是否必须 | 示例       | 备注     |
+| -------- | -------- | ---------- | -------- |
+| begin    | 是       | 2022-05-01 | 开始日期 |
+| end      | 是       | 2022-05-31 | 结束日期 |
+
+响应格式
+
+| 名称          | 类型    | 是否必须 | 默认值 | 备注                     | 其他信息      |
+| ------------- | ------- | -------- | ------ | ------------------------ | ------------- |
+| code          | integer | 必须     |        |                          | format: int32 |
+| data          | object  | 必须     |        |                          |               |
+| ├─ nameList   | string  | 必须     |        | 商品名称列表，以逗号分隔 |               |
+| ├─ numberList | string  | 必须     |        | 销量列表，以逗号分隔     |               |
+| msg           | string  | 非必须   |        |                          |               |
+
+简单分析一下，我们需要通过`begin`和`end`的约束来获取指定日期内的菜品销量数据，同时返回的两个字段都必须为`String`，这完全可以利用`SQL`语句来实现
+
+首先查询所有的指定时间段内的销量数据，按照销量降序排序。主表为`order_detail`表，因为菜品的销量数据和菜品名称存储在`order_detail`表中；联合一张`orders`子表，因为`order_detail`表中并没有存储订单时间，需要`orders`表中的`order_time`作为约束条件；使用`GROUP BY`子句将所有分开的同一菜品聚合在一条记录中，并使用`SUM(number)`来统计销量数据，最后按照销量降序排序，并限制最多10条查询记录
+
+```mysql
+SELECT
+    od.name,
+    SUM(od.number) AS total
+FROM order_detail od
+    JOIN orders o ON od.order_id = o.id
+WHERE o.order_time BETWEEN '2026-05-05' AND '2026-06-05'
+GROUP BY od.name
+ORDER BY total DESC
+LIMIT 10
+```
+
+> ![](javaweb2/61.png)
+
+接着我们将多条查询语句拼接为一条，在`MySQL`中使用`GROUP_CONCAT()`函数；将上文整条查询语句作为子表，`name`和`total`作为两个字段进行拼接，为了提升查询性能，我们将`ORDER BY`移动到`GROUP_CONCAT()`内部，最后为两个新的字段设置别名。
+
+```mysql
+SELECT
+    GROUP_CONCAT(t.name ORDER BY t.total DESC) AS nameList,
+    GROUP_CONCAT(t.total ORDER BY t.total DESC) AS numberList
+FROM (
+         SELECT
+             od.name,
+             SUM(od.number) AS total
+         FROM order_detail od
+                  JOIN orders o ON od.order_id = o.id
+         WHERE o.order_time BETWEEN '2026-05-05' AND '2026-06-05'
+         GROUP BY od.name
+         LIMIT 10
+     ) AS t;
+```
+
+> ![](javaweb2/62.png)
+
+最后将`Controller`、`Service`和`Mapper`补充完整
+
+`Controller`
+
+```java
+/**
+ * 统计销量Top10
+ * @return 销量Top10
+ */
+@GetMapping("/top10")
+@ApiOperation("销量前十")
+public Result<SalesTop10ReportVO> getSalesTop10(String begin, String end) {
+    SalesTop10ReportVO report = reportService.getSalesTop10(LocalDate.parse(begin), LocalDate.parse(end));
+    log.info("查询销量前十数据：{}", report);
+    return Result.success(report);
+}
+```
+
+`Service`
+
+```java
+/**
+ * 统计销量Top10
+ * @return 销量Top10
+ */
+@Override
+public SalesTop10ReportVO getSalesTop10(LocalDate begin, LocalDate end) {
+    if (begin == null || end == null)
+        throw new FormValueIsNullException(MessageConstant.DATE_ARE_REQUIRED);
+    return reportMapper.getSalesTop10(begin, end);
+}
+```
+
+`Mapper`
+
+```java
+/**
+ * 统计销量Top10
+ * @return 销量Top10
+ */
+SalesTop10ReportVO getSalesTop10(LocalDate begin, LocalDate end);
+```
+
+`Mapper.xml`
+
+```xml
+<!--    统计销量Top10-->
+<select id="getSalesTop10" resultType="com.sky.vo.SalesTop10ReportVO">
+    SELECT
+        GROUP_CONCAT(t.name ORDER BY t.total DESC) AS nameList,
+        GROUP_CONCAT(t.total ORDER BY t.total DESC) AS numberList
+    FROM (
+             SELECT
+                 od.name,
+                 SUM(od.number) AS total
+             FROM order_detail od
+                      JOIN orders o ON od.order_id = o.id
+             WHERE o.order_time BETWEEN #{begin} AND #{end}
+             GROUP BY od.name
+             LIMIT 10
+         ) AS t;
+</select>
+```
+
+> ![](javaweb2/63.png)
+
+### 用户统计
+
+根据接口文档，我们先来分析一下用户统计的逻辑。接口文档要求三个字段，`dateList`日期列表，`newUserList`新增用户列表以及`totalUserList`总用户列表。很显然仅用`MySQL`无法完成整个逻辑，我们的思路是，在数据库中查询所有指定日期的用户数据，再获取`begin`之前的用户总量，然后在后端生成指定日期之间的所有日期，形成一个日期列表`dateList`。接着将所有用户信息按照创建日期分组，即`Map<LocalDate, List<User>>`，遍历整个`dateList`，判断`Map`中是否包含对应的时间键，包含则表示当天存在新增用户，再获取`Map`中对应日期的值，也就是`List<User>`的长度，即代表当天新增用户数量
+
+涉及的`SQL`语句都是简单查询语句
+
+`Mapper`
+
+```java
+/**
+ * 获取指定日期内的所有用户
+ * @param begin
+ * @param end
+ * @return 用户统计数据
+ */
+@Select("select * from user where create_time between #{begin} and #{end}")
+List<User> getUsersByCreateTime(LocalDate begin, LocalDate end);
+
+/**
+ * 根据日期统计用户总量
+ * @param begin
+ * @return
+ */
+@Select("select count(*) from user where create_time < #{begin}")
+Integer getTotalBeforeBeginDate(LocalDate begin);
+```
+
+`Controller`
+
+```java
+/**
+ * 用户统计
+ * @param begin
+ * @param end
+ * @return 用户统计数据
+ */
+@GetMapping("/userStatistics")
+@ApiOperation("用户统计")
+public Result<UserReportVO> userStatistics(String begin, String end) {
+    UserReportVO report = reportService.getUserStatistics(LocalDate.parse(begin), LocalDate.parse(end));
+    log.info("查询用户统计数据：{}", report);
+    return Result.success(report);
+}
+```
+
+最后的`Service`仔细讲解一下
+
+在通过`getUsersByCreateTime()`获取用户数据后，封装为了一个`List<User>`，我们利用`Stream`流并结合`Collectors.groupingBy()`方法，`Collectors.groupingBy()`方法可以将`Stream`流按照指定的键自动组合为一个`Map<Key, List<OriginalObject>>`，此处设置的键就是用户的创建时间`LocalDate`，由于数据库中存储的是`LocalDateTime`，需要利用`.toLocalDate()`转换一下。然后调用一个日期生成方法`getBetweenDates()`，这个方法的逻辑很简单，利用`LocalDate`的`plusDays()`方法，使用`while`循环一直添加，直到`end`为止。然后再使用`foreach`遍历`dateList`，每次遍历时判断`userMap`中是否包含对应的`date`，如果包含，则表示当天存在新增的用户，于是将`Map`中对应的值的长度添加到`newUser`和`total`中，并更新`newUserList`和`totalUserList`。在返回前端之前我们还需要进行一次转换，将`List`转换为逗号分隔的`String`，这里不能直接调用`List`的`toString`方法，`toString`方法返回的结果中会包含`[`和`]`符号，最简单的处理办法是直接使用`String`的`substring`方法，如`substring(1, Object.length() - 1)`，但是这里我们使用`Stream`流来保证数据可以正确转换为指定格式
+
+```java
+/**
+ * 用户统计
+ * @param begin
+ * @param end
+ * @return
+ */
+@Override
+public UserReportVO getUserStatistics(LocalDate begin, LocalDate end) {
+    if (begin == null || end == null)
+        throw new FormValueIsNullException(MessageConstant.DATE_ARE_REQUIRED);
+    // 获取指定日期之间的用户数据
+    List<User> users = reportMapper.getUsersByCreateTime(begin, end);
+    // 将用户数据按照日期为键，生成一个Map<LocalDate, List<User>>
+    Map<LocalDate, List<User>> userMap = users.stream()
+            .collect(Collectors.groupingBy(
+                    user -> user.getCreateTime().toLocalDate()
+            ));
+    // 获取begin之前的用户总量
+    Integer total = reportMapper.getTotalBeforeBeginDate(begin);
+    // 获取所有日期
+    List<LocalDate> dateList = getBetweenDates(begin, end);
+    List<Integer> newUserList = new ArrayList<>();
+    List<Integer> totalUserList = new ArrayList<>();
+    // 遍历日期
+    for (LocalDate date : dateList) {
+        Integer newUser = 0;
+        // 判断当前日期是否包含用户数据
+        if (userMap.containsKey(date)) {
+            // 包含，则表示是新增用户，对应List<User>的长度即代表新增用户数量
+            newUser = userMap.get(date).size();
+            total += newUser;
+        }
+        // 将数据添加到对应的列表中
+        newUserList.add(newUser);
+        totalUserList.add(total);
+    }
+    // 转换为VO对象并返回
+    return UserReportVO.builder()
+            .dateList(
+                    dateList.stream()
+                            .map(LocalDate::toString)
+                            .collect(Collectors.joining(","))
+            )
+            .newUserList(
+                    newUserList.stream()
+                            .map(String::valueOf)
+                            .collect(Collectors.joining(","))
+            )
+            .totalUserList(
+                    totalUserList.stream()
+                            .map(String::valueOf)
+                            .collect(Collectors.joining(","))
+            )
+            .build();
+}
+
+/**
+ * 获取两个日期之间的所有日期，包括begin和end
+ * @param begin
+ * @param end
+ * @return
+ */
+private List<LocalDate> getBetweenDates(LocalDate begin, LocalDate end) {
+    List<LocalDate> result = new ArrayList<>();
+    result.add(begin);
+    LocalDate temp = begin;
+    while (!temp.equals(end)) {
+        temp = temp.plusDays(1);
+        result.add(temp);
+    }
+    return result;
+}
+```
+
+> ![](javaweb2/64.png)
+
+### 营业额统计
+
+营业额统计相对比较简单，营业数据直接对应`orders`表中的`amount`，而且每个订单只对应一个`amount`，查询每天的营业数据只需要按日期分组，然后利用`SUM`聚合函数计算金额即可
+
+```mysql
+SELECT
+    DATE(order_time) AS date,
+    SUM(amount) AS turnover
+FROM
+    orders
+<where>
+    <if test="begin != null and end != null">
+        <if test="begin != end">
+            DATE(order_time) BETWEEN #{begin} AND #{end}
+        </if>
+        <if test="begin == end">
+            DATE(order_time) = #{begin}
+        </if>
+    </if>
+</where>
+GROUP BY
+    DATE(order_time)
+```
+
+这里不需要使用`GROUP_CONCAT()`聚合，因为营业额可以为0，但不会体现在数据库中。所以我们使用一个`List<TurnoverDTO>`接收这些记录，每条记录对应一个`TurnoverDTO`，然后遍历所有日期，将有数据的插入即可
+
+`Controller`
+
+```java
+/**
+ * 营业额统计
+ * @param begin
+ * @param end
+ * @return
+ */
+@GetMapping("/turnoverStatistics")
+@ApiOperation("营业额统计")
+public Result<TurnoverReportVO> turnoverStatistics(String begin, String end) {
+    TurnoverReportVO report = reportService.getTurnoverStatistics(LocalDate.parse(begin), LocalDate.parse(end));
+    log.info("营业额数据：{}", report);
+    return Result.success(report);
+}
+```
+
+`Mapper`
+
+```java
+/**
+ * 营业额统计
+ * @param begin
+ * @param end
+ * @return
+ */
+List<TurnoverDTO> getTurnoverStatistics(LocalDate begin, LocalDate end);
+```
+
+同样讲解一下`Service`
+
+这里的遍历与上文略有不同，日期与营业额是一对一关系，`date`与`turnoverDTOS.get(0).getDate()`最多只有一条匹配记录，因此在`turnoverDTOS.get(0).getDate().equals(date)`匹配成功后，可以唯一确定当日的营业额数据，然后执行`turnoverDTOS.remove(0)`以便匹配后续的日期。在执行`turnoverDTOS.get(0).getDate().equals(date)`比较前需要先判断`turnoverDTOS`是否为空，否则会导致空指针异常
+
+```java
+/**
+ * 营业额统计
+ * @param begin
+ * @param end
+ * @return
+ */
+@Override
+public TurnoverReportVO getTurnoverStatistics(LocalDate begin, LocalDate end) {
+    // 获取指定日期的营业额数据
+    List<TurnoverDTO> turnoverDTOS = reportMapper.getTurnoverStatistics(begin, end);
+    // 获取所有日期
+    List<LocalDate> dateList = getBetweenDates(begin, end);
+    List<BigDecimal> turnoverList = new ArrayList<>();
+    for (LocalDate date : dateList) {
+        if (!turnoverDTOS.isEmpty() && turnoverDTOS.get(0).getDate().equals(date)) {
+            turnoverList.add(turnoverDTOS.get(0).getTurnover());
+            turnoverDTOS.remove(0);
+        } else {
+            turnoverList.add(BigDecimal.ZERO);
+        }
+    }
+    // 封装VO对象并返回
+    return TurnoverReportVO.builder()
+            .dateList(
+                    dateList.stream()
+                            .map(LocalDate::toString)
+                            .collect(Collectors.joining(","))
+            )
+            .turnoverList(
+                    turnoverList.stream()
+                            .map(String::valueOf)
+                            .collect(Collectors.joining(","))
+            )
+            .build();
+}
+```
+
+> ![](javaweb2/65.png)
+
+### 订单统计
+
+最后，也是最复杂的订单统计。接口文档中要求，每天的订单统计数据必须同时拥有`订单总数`和`有效订单数`，有效订单是指所有已完成的订单，处于其他状态的订单都视为无效订单。
+
+先来构造`SQL`语句，这里介绍两种查询方式
+
+1. 查询所有状态以及对应的数量
+
+```mysql
+SELECT
+    DATE(order_time) AS date,
+    status,
+    COUNT(status) AS count
+FROM
+    orders
+GROUP BY
+    date , status;
+```
+
+2. 直接查询当天订单总数以及有效订单数量
+
+```java
+SELECT
+    DATE(order_time) AS order_date,
+    COUNT(*) AS total_orders,
+    SUM(CASE WHEN status = 5 THEN 1 ELSE 0 END) AS valid_orders
+FROM
+    orders
+GROUP BY
+    DATE(order_time)
+ORDER BY
+    order_date;
+```
+
+第二种方式可以后续逻辑与营业额统计相似，这里用第一种方式来举例
+
+`Controller`
+
+```java
+/**
+ * 订单统计
+ * @param begin
+ * @param end
+ * @return
+ */
+@GetMapping("/ordersStatistics")
+@ApiOperation("订单统计")
+public Result<OrderReportVO> orderStatistics(String begin, String end) {
+    OrderReportVO report = reportService.getOrderStatistics(LocalDate.parse(begin), LocalDate.parse(end));
+    log.info("订单数据：{}", report);
+    return Result.success(report);
+}
+```
+
+`Mapper`
+
+```java
+/**
+ * 获取指定日期的订单
+ * @param begin
+ * @param end
+ * @return
+ */
+List<OrderReportDTO> getOrdersByDate(LocalDate begin, LocalDate end);
+```
+
+`Service`
+
+在接收到来自数据库的订单数据后，照例生成所有日期，然后将订单数据同用户数据一样按照日期进行分组，构建为一个`Map`，再遍历`dateList`，判断是`Map`中是否包含对应的`Key`，包含则表示当天存在订单，获取`Map`中`date`对应的`List<OrderReportDTO>`，利用`Stream`计算总订单数以及有效订单数，有效的判断条件为`Objects.equals(order.getStatus(), Orders.COMPLETED)`，再更新`orderCountList`、`validOrderCountList`、`totalOrderCount`以及`totalValidOrderCount`。最后计算订单完成率，并封装为`OrderReportVO`
+
+```java
+/**
+ * 订单统计
+ * @param begin
+ * @param end
+ * @return
+ */
+@Override
+public OrderReportVO getOrderStatistics(LocalDate begin, LocalDate end) {
+    // 获取指定日期的订单数据
+    List<OrderReportDTO> orderList = reportMapper.getOrdersByDate(begin, end);
+    // 生成所有日期
+    List<LocalDate> dateList = getBetweenDates(begin, end);
+    // 将订单数据按日期分组
+    Map<LocalDate, List<OrderReportDTO>> orderMap = orderList.stream()
+            .collect(Collectors.groupingBy(OrderReportDTO::getDate));
+    // 初始化结果列表和总计变量
+    List<Integer> orderCountList = new ArrayList<>();
+    List<Integer> validOrderCountList = new ArrayList<>();
+    Integer totalOrderCount = 0;
+    Integer totalValidOrderCount = 0;
+    // 遍历日期，直接从 Map 中获取当天的订单数据
+    for (LocalDate date : dateList) {
+       Integer dailyOrderCount = 0;
+        Integer dailyValidOrderCount = 0;
+
+        if (orderMap.containsKey(date) && !orderMap.get(date).isEmpty()) {
+            List<OrderReportDTO> dailyOrders = orderMap.get(date);
+            // 计算当天的总订单数
+            dailyOrderCount = dailyOrders.stream()
+                    .mapToInt(OrderReportDTO::getCount)
+                    .sum();
+            // 计算当天的有效订单数（状态为 COMPLETED）
+            dailyValidOrderCount = dailyOrders.stream()
+                    .filter(order -> Objects.equals(order.getStatus(), Orders.COMPLETED))
+                    .mapToInt(OrderReportDTO::getCount)
+                    .sum();
+        }
+        orderCountList.add(dailyOrderCount);
+        validOrderCountList.add(dailyValidOrderCount);
+        // 累加总计
+        totalOrderCount += dailyOrderCount;
+        totalValidOrderCount += dailyValidOrderCount;
+    }
+    // 计算订单完成率
+    Double orderCompletionRate = totalValidOrderCount.doubleValue() / totalOrderCount;
+    // 封装VO对象并返回
+    return OrderReportVO.builder()
+            .dateList(
+                    dateList.stream()
+                            .map(LocalDate::toString)
+                            .collect(Collectors.joining(","))
+            )
+            .orderCountList(
+                    orderCountList.stream()
+                            .map(String::valueOf)
+                            .collect(Collectors.joining(","))
+            )
+            .validOrderCountList(
+                    validOrderCountList.stream()
+                            .map(String::valueOf)
+                            .collect(Collectors.joining(","))
+            )
+            .totalOrderCount(totalOrderCount)
+            .validOrderCount(totalValidOrderCount)
+            .orderCompletionRate(orderCompletionRate)
+            .build();
+}
+```
+
+> ![](javaweb2/66.png)
