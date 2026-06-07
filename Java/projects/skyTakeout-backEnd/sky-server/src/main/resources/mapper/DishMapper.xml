@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sky.mapper.DishMapper">
+<!--  菜品VO -->
+    <resultMap id="DishVOMap" type="com.sky.vo.DishVO">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="categoryId" column="category_id"/>
+        <result property="price" column="price"/>
+        <result property="image" column="image"/>
+        <result property="description" column="description"/>
+        <result property="status" column="status"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="categoryName" column="category_name"/>
+        <collection property="flavors" ofType="com.sky.entity.DishFlavor">
+            <id property="id" column="flavor_id"/>
+            <result property="name" column="flavor_name"/>
+            <result property="value" column="flavor_value"/>
+            <result property="dishId" column="dish_id"/>
+        </collection>
+    </resultMap>
+<!--    更新菜品 -->
+    <update id="update" parameterType="com.sky.entity.Dish">
+        UPDATE dish SET
+        <if test="name != null">
+            name = #{name},
+        </if>
+        <if test="categoryId != null">
+            category_id = #{categoryId},
+        </if>
+        <if test="price != null">
+            price = #{price},
+        </if>
+        <if test="image != null">
+            image = #{image},
+        </if>
+        <if test="description != null">
+            description = #{description},
+        </if>
+        <if test="updateTime != null">
+            update_time = #{updateTime},
+        </if>
+        <if test="updateUser != null">
+            update_user = #{updateUser}
+        </if>
+        WHERE id = #{id}
+    </update>
+    <!--    删除菜品-->
+    <delete id="delete">
+        DELETE FROM dish WHERE id IN
+        <foreach collection="ids" item="id" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </delete>
+<!--    删除菜品对应口味-->
+    <delete id="deleteFlavors">
+        DELETE FROM dish_flavor WHERE dish_id IN
+        <foreach collection="ids" item="id" separator="," open="(" close=")">
+            #{id}
+        </foreach>
+    </delete>
+    <!--    菜品分页查询-->
+    <select id="pageQuery" resultMap="DishVOMap" parameterType="com.sky.dto.DishPageQueryDTO">
+        SELECT
+            d.id AS id,
+            d.name AS name,
+            d.category_id AS category_id,
+            (SELECT name FROM category WHERE id = d.category_id) AS category_name,
+            price, image, description, status, create_time, update_time, create_time, update_user
+        FROM dish AS d
+        <where>
+            <if test="name != null and name != ''">
+                AND d.name LIKE '%${name}%'
+            </if>
+            <if test="categoryId != null">
+                AND d.category_id = #{categoryId}
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+        </where>
+    </select>
+<!--    根据id或者菜品id查询菜品-->
+    <select id="getById" resultMap="DishVOMap">
+        SELECT
+            d.id AS id,
+            d.name AS name,
+            d.category_id AS category_id,
+            (SELECT name FROM category WHERE id = d.category_id) AS category_name,
+            price, image, description, status, create_time, update_time, create_time, update_user,
+            df.id AS flavor_id,
+            dish_id,
+            df.name AS flavor_name,
+            value AS flavor_value
+        FROM dish AS d
+                 LEFT JOIN dish_flavor AS df ON d.id = df.dish_id
+        WHERE d.id = #{id}
+    </select>
+<!--    根据分类id查询-->
+    <select id="getByCategoryId" resultMap="DishVOMap">
+        SELECT
+            d.id AS id,
+            d.name AS name,
+            d.category_id AS category_id,
+            (SELECT name FROM category WHERE id = d.category_id) AS category_name,
+            price, image, description, status, create_time, update_time, create_time, update_user,
+            df.id AS flavor_id,
+            dish_id,
+            df.name AS flavor_name,
+            value AS flavor_value
+        FROM dish AS d
+                 LEFT JOIN dish_flavor AS df ON d.id = df.dish_id
+        WHERE d.category_id = #{categoryId}
+    </select>
+<!-- 新增菜品-->
+    <insert id="add" parameterType="com.sky.entity.Dish" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO
+            dish(name, category_id, price, image, description, status, create_time, update_time, create_user, update_user)
+        VALUES (
+                #{name},
+                #{categoryId},
+                #{price},
+                #{image},
+                #{description},
+                #{status},
+                #{createTime},
+                #{updateTime},
+                #{createUser},
+                #{updateUser}
+            )
+    </insert>
+<!--    插入菜品口味-->
+    <insert id="addFlavors">
+        INSERT INTO
+            dish_flavor(name, value, dish_id)
+        VALUES
+        <foreach collection="flavors" item="flavor" separator=",">
+            (#{flavor.name}, #{flavor.value}, #{flavor.dishId})
+        </foreach>
+    </insert>
+</mapper>

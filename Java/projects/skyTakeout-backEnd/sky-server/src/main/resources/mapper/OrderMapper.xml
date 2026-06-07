@@ -1,0 +1,247 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sky.mapper.OrderMapper">
+<!--    新建订单-->
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO orders(
+               number,
+               status,
+               user_id,
+               address_book_id,
+               order_time,
+               checkout_time,
+               pay_method,
+               pay_status,
+               amount,
+               remark,
+               phone,
+               address,
+               user_name,
+               consignee,
+               cancel_reason,
+               rejection_reason,
+               cancel_time,
+               estimated_delivery_time,
+               delivery_status,
+               delivery_time,
+               pack_amount,
+               tableware_number,
+               tableware_status
+        )
+        VALUES (
+                #{number},
+                #{status},
+                #{userId},
+                #{addressBookId},
+                #{orderTime},
+                #{checkoutTime},
+                #{payMethod},
+                #{payStatus},
+                #{amount},
+                #{remark},
+                #{phone},
+                #{address},
+                #{userName},
+                #{consignee},
+                #{cancelReason},
+                #{rejectionReason},
+                #{cancelTime},
+                #{estimatedDeliveryTime},
+                #{deliveryStatus},
+                #{deliveryTime},
+                #{packAmount},
+                #{tablewareNumber},
+                #{tablewareStatus}
+        )
+    </insert>
+<!--    插入订单明细-->
+    <insert id="insertDetails">
+        INSERT INTO order_detail(
+            order_id,
+            dish_id,
+            setmeal_id,
+            name,
+            image,
+            dish_flavor,
+            number,
+            amount
+        )
+        VALUES
+        <foreach collection="orderDetails" item="orderDetail" separator=",">
+            (
+                #{orderDetail.orderId},
+                #{orderDetail.dishId},
+                #{orderDetail.setmealId},
+                #{orderDetail.name},
+                #{orderDetail.image},
+                #{orderDetail.dishFlavor},
+                #{orderDetail.number},
+                #{orderDetail.amount}
+            )
+        </foreach>
+    </insert>
+    <!--    历史订单分页查询-->
+    <select id="pageQuery" resultType="com.sky.vo.OrderVO">
+        SELECT * FROM orders
+        <where>
+            <if test="phone != null">
+                AND phone LIKE '%${phone}%'
+            </if>
+             <if test="status != null">
+                AND status = #{status}
+            </if>
+             <if test="beginTime != null">
+                AND order_time &gt;= #{beginTime}
+            </if>
+             <if test="endTime != null">
+                AND order_time &lt;= #{endTime}
+            </if>
+            <if test="userId != null">
+                AND user_id = #{userId}
+            </if>
+            <if test="number != null">
+                 AND number LIKE '%${number}%'
+            </if>
+        </where>
+        ORDER BY order_time DESC
+    </select>
+<!--    根据订单id查询订单对应菜品详情-->
+    <select id="getOrderDetailByOrderId" resultType="com.sky.entity.OrderDetail">
+        SELECT * FROM order_detail
+        WHERE order_id = #{id}
+    </select>
+<!--   订单状态统计-->
+    <select id="statistics" resultType="com.sky.vo.OrderStatisticsVO">
+        SELECT
+            SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) AS toBeConfirmed,
+            SUM(CASE WHEN status = 3 THEN 1 ELSE 0 END) AS confirmed,
+            SUM(CASE WHEN status = 4 THEN 1 ELSE 0 END) AS deliveryInProgress
+        FROM orders;
+    </select>
+<!--    条件查询订单-->
+    <select id="getOrdersByConditions" resultType="com.sky.entity.Orders">
+        SELECT * FROM orders
+        <where>
+            <!-- 基本字段条件 -->
+            <if test="id != null">
+                AND id = #{id}
+            </if>
+            <if test="number != null and number != ''">
+                AND number LIKE CONCAT('%', #{number}, '%')
+            </if>
+            <if test="status != null">
+                AND status = #{status}
+            </if>
+            <if test="userId != null">
+                AND user_id = #{userId}
+            </if>
+            <if test="addressBookId != null">
+                AND address_book_id = #{addressBookId}
+            </if>
+            <!-- 时间范围条件 -->
+            <if test="orderTime != null">
+                AND order_time &lt;= #{orderTime}
+            </if>
+            <if test="checkoutTime != null">
+                AND checkout_time &lt;= #{checkoutTime}
+            </if>
+            <!-- 支付相关 -->
+            <if test="payMethod != null">
+                AND pay_method = #{payMethod}
+            </if>
+            <if test="payStatus != null">
+                AND pay_status = #{payStatus}
+            </if>
+            <!-- 金额条件 -->
+            <if test="amount != null">
+                AND amount = #{amount}
+            </if>
+            <!-- 文本模糊查询 -->
+            <if test="remark != null and remark != ''">
+                AND remark LIKE CONCAT('%', #{remark}, '%')
+            </if>
+            <if test="userName != null and userName != ''">
+                AND user_name LIKE CONCAT('%', #{userName}, '%')
+            </if>
+            <if test="phone != null and phone != ''">
+                AND phone LIKE CONCAT('%', #{phone}, '%')
+            </if>
+            <if test="address != null and address != ''">
+                AND address LIKE CONCAT('%', #{address}, '%')
+            </if>
+            <if test="consignee != null and consignee != ''">
+                AND consignee LIKE CONCAT('%', #{consignee}, '%')
+            </if>
+            <if test="cancelReason != null and cancelReason != ''">
+                AND cancel_reason LIKE CONCAT('%', #{cancelReason}, '%')
+            </if>
+            <if test="rejectionReason != null and rejectionReason != ''">
+                AND rejection_reason LIKE CONCAT('%', #{rejectionReason}, '%')
+            </if>
+            <!-- 其他时间条件 -->
+            <if test="cancelTime != null">
+                AND cancel_time >= #{cancelTime}
+            </if>
+            <if test="estimatedDeliveryTime != null">
+                AND estimated_delivery_time >= #{estimatedDeliveryTime}
+            </if>
+            <if test="deliveryTime != null">
+                AND delivery_time >= #{deliveryTime}
+            </if>
+            <!-- 配送相关 -->
+            <if test="deliveryStatus != null">
+                AND delivery_status = #{deliveryStatus}
+            </if>
+            <!-- 数值条件 -->
+            <if test="packAmount > 0">
+                AND pack_amount = #{packAmount}
+            </if>
+            <if test="tablewareNumber > 0">
+                AND tableware_number = #{tablewareNumber}
+            </if>
+            <if test="tablewareStatus != null">
+                AND tableware_status = #{tablewareStatus}
+            </if>
+        </where>
+        <!-- 默认排序 -->
+        ORDER BY order_time DESC
+    </select>
+    <!--    修改订单信息-->
+    <update id="update">
+        UPDATE orders
+        <set>
+            <if test="status != null">status = #{status},</if>
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="addressBookId != null">address_book_id = #{addressBookId},</if>
+            <if test="orderTime != null">order_time = #{orderTime},</if>
+            <if test="checkoutTime != null">checkout_time = #{checkoutTime},</if>
+            <if test="payMethod != null">pay_method = #{payMethod},</if>
+            <if test="payStatus != null">pay_status = #{payStatus},</if>
+            <if test="amount != null">amount = #{amount},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="phone != null and phone != ''">phone = #{phone},</if>
+            <if test="address != null and address != ''">address = #{address},</if>
+            <if test="userName != null and userName != ''">user_name = #{userName},</if>
+            <if test="consignee != null and consignee != ''">consignee = #{consignee},</if>
+            <if test="cancelReason != null and cancelReason != ''">cancel_reason = #{cancelReason},</if>
+            <if test="rejectionReason != null and rejectionReason != ''">rejection_reason = #{rejectionReason},</if>
+            <if test="cancelTime != null">cancel_time = #{cancelTime},</if>
+            <if test="estimatedDeliveryTime != null">estimated_delivery_time = #{estimatedDeliveryTime},</if>
+            <if test="deliveryStatus != null">delivery_status = #{deliveryStatus},</if>
+            <if test="deliveryTime != null">delivery_time = #{deliveryTime},</if>
+            <if test="packAmount != null">pack_amount = #{packAmount},</if>
+            <if test="tablewareNumber != null">tableware_number = #{tablewareNumber},</if>
+            <if test="tablewareStatus != null">tableware_status = #{tablewareStatus},</if>
+        </set>
+        <where>
+            <if test="id != null">
+                AND id = #{id}
+            </if>
+            <if test="number != null">
+                AND number = #{number}
+            </if>
+        </where>
+    </update>
+</mapper>

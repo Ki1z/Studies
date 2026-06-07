@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sky.mapper.ShoppingCartMapper">
+<!--   添加购物车-->
+    <insert id="add">
+        INSERT INTO
+            shopping_cart(name, image, user_id, dish_id, setmeal_id, dish_flavor, number, amount, create_time)
+        VALUES (#{name}, #{image}, #{userId}, #{dishId}, #{setmealId}, #{dishFlavor}, #{number}, #{amount}, #{createTime})
+    </insert>
+    <!--    更新购物车数据-->
+    <update id="update">
+        UPDATE shopping_cart
+        <set>
+            <if test="number != null">
+                number = #{number},
+            </if>
+            <if test="amount != null">
+                amount = #{amount},
+            </if>
+            <if test="name != null">
+                name = #{name},
+            </if>
+            <if test="image != null">
+                image = #{image},
+            </if>
+        </set>
+        WHERE id = #{id}
+    </update>
+<!--    删除一个购物车数据-->
+    <delete id="sub">
+        DELETE FROM
+            shopping_cart
+        WHERE
+            id = #{id}
+    </delete>
+    <!--    根据菜品id、套餐id、口味、用户id查询购物车数据-->
+    <select id="getByIdAndFlavor" resultType="com.sky.entity.ShoppingCart">
+        SELECT
+            *
+        FROM
+            shopping_cart
+        <where>
+            <if test="dishId != null">
+                AND dish_id = #{dishId}
+            </if>
+            <if test="setmealId != null">
+                AND setmeal_id = #{setmealId}
+            </if>
+            <if test="dishFlavor != null">
+                AND dish_flavor = #{dishFlavor}
+            </if>
+            <if test="userId != null">
+                AND user_id = #{userId}
+            </if>
+        </where>
+        LIMIT 1
+    </select>
+<!--    根据用户id查询购物车数据-->
+    <select id="getByUserId" resultType="com.sky.entity.ShoppingCart">
+        SELECT
+            *
+        FROM
+            shopping_cart
+        WHERE
+            user_id = #{userId}
+    </select>
+
+</mapper>

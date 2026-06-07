@@ -1,6 +1,6 @@
-# Java Web Advance
+# Java Web Advanced
 
-`更新时间：2026-6-4`
+`更新时间：2026-6-7`
 
 注释解释：
 
@@ -5764,3 +5764,271 @@ public OrderReportVO getOrderStatistics(LocalDate begin, LocalDate end) {
 ```
 
 > ![](javaweb2/66.png)
+
+## Apcache POI
+
+`Apache POI`是一个专门用于处理`Microsoft Office`相关文件格式的开源项目，简单来说，我们可以利用`POI`在`Java`程序中对`Microsoft Office`的文件进行读写操作。一般情况下，`POI`都用于操作`Excel`文件
+
+### 快速入门
+
+1. 引入依赖
+
+```xml
+<!-- poi -->
+<dependency>
+    <groupId>org.apache.poi</groupId>
+    <artifactId>poi</artifactId>
+</dependency>
+<dependency>
+    <groupId>org.apache.poi</groupId>
+    <artifactId>poi-ooxml</artifactId>
+</dependency>
+```
+
+2. `POI`代码的的可读性非常高，使用方式与我们正常使用`Excel`的方式相同，首先创建一个文件
+
+```java
+// 创建一个Excel工作簿
+XSSFWorkbook workbook = new XSSFWorkbook();
+```
+
+3. 创建一个工作表
+
+```java
+// 创建一个工作表
+Sheet sheet = workbook.createSheet("TestSheet");
+```
+
+4. 在工作表中创建行，在`POI`中，行与列的下标从0开始
+
+```java
+// 创建一个行
+Row row = sheet.createRow(0);
+```
+
+5. 创建一个单元格
+
+```java
+// 创建一个单元格
+Cell cell = row.createCell(0);
+```
+
+6. 为单元格设置字段值
+
+```java
+// 设置单元格的值
+cell.setCellValue("Hello, World!");
+```
+
+7. 保存`Excel`文件
+
+```java
+// 保存Excel文件
+try {
+    workbook.write(Files.newOutputStream(Paths.get("D:\\test.xlsx")));
+} catch (Exception e) {
+    e.printStackTrace();
+}
+```
+
+> ![](javaweb2/67.png)
+
+然后是文件读取操作
+
+1. 读取文件
+
+```java
+// 读取文件
+FileInputStream excel = new FileInputStream("D:\\test.xlsx");
+XSSFWorkbook workbook = new XSSFWorkbook(excel);
+```
+
+2. 获取第一张工作表
+
+```java
+// 获取第一张工作表
+Sheet sheet = workbook.getSheetAt(0);
+```
+
+3. 读取最后一行的行号，然后遍历行，获取每行数据
+
+```java
+// 获取最后一行行号
+Integer lastRowNum = sheet.getLastRowNum();
+// 遍历每一行
+for (int i = 0; i <= lastRowNum; i++) {
+    Row row = sheet.getRow(i);
+}
+```
+
+4. 获取最后一个单元格列号，遍历所有单元格，获取单元格数据。需要注意，`poi`并没有提供统一接收单元格数据的方法，而是为不同数据类型的单元格设置了不同的接收方法，`STRING`类型使用`getStringCellValue()`，`NUMERIC`使用`getNumericCellValue()`，类型不匹配会报错，因此需要在接收之前先判断单元格数据类型
+
+```java
+// 获取最后一列列号
+Short lastCellNum = row.getLastCellNum();
+// 遍历每一列
+for (int j = 0; j < lastCellNum; j++) {
+    Cell cell = row.getCell(j);
+    // 获取单元格的值
+    String type = cell.getCellType().toString();
+    System.out.print(type + "\t");
+    switch (type) {
+        case "NUMERIC":
+            System.out.print(cell.getNumericCellValue() + "\t");
+            break;
+        case "STRING":
+            System.out.print(cell.getStringCellValue() + "\t");
+    }
+}
+```
+
+> ![](javaweb2/68.png)
+
+### 营业数据导出
+
+`Controller`
+
+数据下载功能可以直接利用`HttpServletResponse`的输出流，所以这里添加参数`HttpServletResponse response`
+
+```java
+/**
+ * 数据导出
+ * @param response
+ */
+@GetMapping("/export")
+@ApiOperation("导出数据")
+public void export(HttpServletResponse response) {
+    reportService.export(response);
+}
+```
+
+`Service`
+
+逻辑相对有些复杂，我们来详细解析一下。首先从类目录下加载模板文件，因为报表文件的格式相对比较复杂，纯`POI`无法实现单元格合并，单元格样式调整等共功能，所以一般的解决方案是提供一个模板文件，每次导出时填充数据即可。然后设置导出数据的时间段，目前只设置一个月前的数据。接着使用`Mapper`中现有的各个接口调取数据库中的数据，使用`StreamAPI`进行统计，并插入`Excel`文件中。再调用先前提供的`getBetweenDates()`方法生成日期列表，转换为`Map<date, BusinessDataVO>`，这一步是因为`BusinessDataVO`并没有日期字段。然后遍历`map`，利用`StreamAPI`将对应日期的数据填充到`BusinessDataVO`中，最后将数据写入`Excel`文件。
+
+```java
+/**
+ * 导出数据
+ * @param response
+ */
+@Override
+public void export(HttpServletResponse response) {
+    // 加载模板
+    ClassPathResource template = new ClassPathResource("/template/运营数据报表模板.xlsx");
+    try {
+        Workbook workbook = new XSSFWorkbook(template.getInputStream());
+        Sheet sheet = workbook.getSheet("Sheet1");
+        // 设置时间段
+        LocalDate begin = LocalDate.now().minusDays(30);
+        LocalDate end = LocalDate.now().minusDays(1);
+        sheet.getRow(1).getCell(1).setCellValue(begin + "至" + end);
+        // 设置概览数据
+        List<TurnoverDTO> turnoverDTOS = reportMapper.getTurnoverStatistics(begin, end);
+        // 营业额
+        Double totalTurnover = turnoverDTOS.stream()
+                // 获取营业额
+                .map(TurnoverDTO::getTurnover)
+                // BigDecimal转换为Double
+                .mapToDouble(BigDecimal::doubleValue)
+                .sum();
+        sheet.getRow(3).getCell(2).setCellValue(totalTurnover);
+        // 订单完成率
+        // 获取指定日期的订单数据
+        List<OrderReportDTO> orderList = reportMapper.getOrdersByDate(begin, end);
+        // 统计总订单数量
+        Integer totalOrderCount = orderList.stream()
+                .mapToInt(OrderReportDTO::getCount)
+                .sum();
+        // 统计有效订单数量
+        Integer validOrderCount = orderList.stream()
+                .filter(order -> Objects.equals(order.getStatus(), Orders.COMPLETED))
+                .mapToInt(OrderReportDTO::getCount)
+                .sum();
+        Double orderCompletionRate = validOrderCount.doubleValue() / totalOrderCount;
+        // 保留2位小数
+        String orderCompletionRateStr = String.format("%.2f", orderCompletionRate * 100);
+        sheet.getRow(3).getCell(4).setCellValue(orderCompletionRateStr + "%");
+        // 新增用户数量
+        List<User> userList = reportMapper.getUsersByCreateTime(begin, end);
+        Integer newUserCount = userList.size();
+        sheet.getRow(3).getCell(6).setCellValue(newUserCount);
+        // 有效订单数量
+        sheet.getRow(4).getCell(2).setCellValue(validOrderCount);
+        // 平均客单价
+        Double avgOrderPrice = totalTurnover / validOrderCount;
+        String avgOrderPriceStr = String.format("%.2f", avgOrderPrice);
+        sheet.getRow(4).getCell(4).setCellValue(avgOrderPriceStr);
+
+        // 明细数据
+        // 日期列表
+        List<LocalDate> dateList = getBetweenDates(begin, end);
+        // 生成一个Map<date, BusinessDataVO>
+        Map<LocalDate, BusinessDataVO> map = dateList.stream()
+                .collect(Collectors.toMap(
+                        key -> key,
+                        value -> new BusinessDataVO()
+                ));
+        // 遍历map，将对应日期的数据填充到BusinessDataVO中
+        for (Map.Entry<LocalDate, BusinessDataVO> entry : map.entrySet()) {
+            LocalDate date = entry.getKey();
+            BusinessDataVO businessDataVO = entry.getValue();
+            // 获取指定日期的营业额
+            Double turnover = turnoverDTOS.stream()
+                    .filter(turnoverDTO -> Objects.equals(turnoverDTO.getDate(), date))
+                    .map(TurnoverDTO::getTurnover)
+                    .findFirst()
+                    .orElse(BigDecimal.ZERO)
+                    .doubleValue();
+            businessDataVO.setTurnover(turnover);
+            // 获取指定日期的订单数据
+            totalOrderCount = orderList.stream()
+                    .filter(order -> Objects.equals(order.getDate(), date))
+                    .mapToInt(OrderReportDTO::getCount)
+                    .sum();
+            validOrderCount = orderList.stream()
+                    .filter(order -> Objects.equals(order.getDate(), date) && Objects.equals(order.getStatus(), Orders.COMPLETED))
+                    .mapToInt(OrderReportDTO::getCount)
+                    .sum();
+            orderCompletionRate = validOrderCount.doubleValue() / totalOrderCount;
+            businessDataVO.setOrderCompletionRate(orderCompletionRate.isNaN() ? 0.0 : orderCompletionRate);
+            businessDataVO.setValidOrderCount(validOrderCount);
+            // 获取指定日期的新增用户数量
+            newUserCount = (int) userList.stream()
+                    .filter(user -> user.getCreateTime().toLocalDate().equals(date))
+                    .count();
+            businessDataVO.setNewUsers(newUserCount);
+            // 平均客单价
+            avgOrderPrice = turnover / validOrderCount;
+            businessDataVO.setUnitPrice(avgOrderPrice.isNaN() ? 0.0 : avgOrderPrice);
+        }
+        // 填充数据到sheet中，工作区域是B8到G37
+        for (int i = 0; i < 30; i++) {
+            // 日期
+            sheet.getRow(i + 7).getCell(1).setCellValue(dateList.get(i).toString());
+            // 营业额
+            sheet.getRow(i + 7).getCell(2).setCellValue(map.get(dateList.get(i)).getTurnover());
+            // 有效订单数量
+            sheet.getRow(i + 7).getCell(3).setCellValue(map.get(dateList.get(i)).getValidOrderCount());
+            // 订单完成率
+            sheet.getRow(i + 7).getCell(4).setCellValue(map.get(dateList.get(i)).getOrderCompletionRate());
+            // 平均客单价
+            sheet.getRow(i + 7).getCell(5).setCellValue(map.get(dateList.get(i)).getUnitPrice());
+            // 新增用户数量
+            sheet.getRow(i + 7).getCell(6).setCellValue(map.get(dateList.get(i)).getNewUsers());
+        }
+
+        // 输出流
+        OutputStream outputStream = response.getOutputStream();
+        workbook.write(outputStream);
+        // 关闭流
+        outputStream.close();
+        workbook.close();
+    } catch (IOException e) {
+        throw new ExportFailedException(MessageConstant.EXPORT_EXCEL_FAILED);
+    }
+}
+```
+
+> ![](javaweb2/69.png)
+
+到此，苍穹外卖项目完结

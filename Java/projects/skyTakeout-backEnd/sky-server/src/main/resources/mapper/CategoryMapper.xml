@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.sky.mapper.CategoryMapper">
+<!--    新增分类-->
+    <insert id="add" parameterType="com.sky.entity.Category">
+        INSERT INTO
+        category(type, name, sort, status, create_time, update_time, create_user, update_user)
+        VALUES
+        (#{type}, #{name}, #{sort}, #{status}, #{createTime}, #{updateTime}, #{createUser}, #{updateUser})
+    </insert>
+    <!--    修改分类-->
+    <update id="update" parameterType="com.sky.entity.Category">
+        UPDATE category
+        <set>
+            <if test="name != null">
+                name = #{name},
+            </if>
+            <if test="sort != null">
+                sort = #{sort},
+            </if>
+            <if test="status != null">
+                status = #{status},
+            </if>
+            <if test="updateTime != null">
+                update_time = #{updateTime},
+            </if>
+            <if test="updateUser != null">
+                update_user = #{updateUser},
+            </if>
+        </set>
+        WHERE id = #{id}
+    </update>
+    <!-- 分页查询-->
+    <select id="pageQuery" resultType="com.sky.entity.Category">
+        SELECT
+            id, type, name, sort, status, create_time, update_time, create_user, update_user
+        FROM
+            category
+        <where>
+            <if test="type != null">
+                type = #{type}
+            </if>
+            <if test="name != null and name != ''">
+                AND name LIKE '%${name}%'
+            </if>
+        </where>
+        ORDER BY sort
+    </select>
+    <select id="list" resultType="com.sky.entity.Category">
+        SELECT
+            id, type, name, sort, status, create_time, update_time, create_user, update_user
+        FROM
+            category
+        <where>
+            <if test="type != null">
+                type = #{type}
+            </if>
+        </where>
+        ORDER BY
+            sort
+    </select>
+</mapper>

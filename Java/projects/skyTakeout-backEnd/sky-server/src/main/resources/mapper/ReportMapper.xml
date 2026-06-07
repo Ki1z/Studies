@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.sky.mapper.ReportMapper">
+<!--    统计销量Top10-->
+    <select id="getSalesTop10" resultType="com.sky.vo.SalesTop10ReportVO">
+        SELECT
+            GROUP_CONCAT(t.name ORDER BY t.total DESC) AS nameList,
+            GROUP_CONCAT(t.total ORDER BY t.total DESC) AS numberList
+        FROM (
+                 SELECT
+                     od.name,
+                     SUM(od.number) AS total
+                 FROM order_detail od
+                          JOIN orders o ON od.order_id = o.id
+                 WHERE o.order_time BETWEEN #{begin} AND #{end}
+                 GROUP BY od.name
+                 LIMIT 10
+             ) AS t;
+    </select>
+<!--    获取营业额-->
+    <select id="getTurnoverStatistics" resultType="com.sky.dto.TurnoverDTO">
+        SELECT
+            DATE(order_time) AS date,
+            SUM(amount) AS turnover
+        FROM
+            orders
+        <where>
+            status = 5
+            <if test="begin != null and end != null">
+                <if test="begin != end">
+                    AND DATE(order_time) BETWEEN #{begin} AND #{end}
+                </if>
+                <if test="begin == end">
+                    AND DATE(order_time) = #{begin}
+                </if>
+            </if>
+        </where>
+        GROUP BY
+            DATE(order_time)
+    </select>
+    <!--    获取指定日期的订单-->
+    <select id="getOrdersByDate" resultType="com.sky.dto.OrderReportDTO">
+        SELECT
+            DATE(order_time) AS date,
+            status,
+            COUNT(status) AS count
+        FROM
+            orders
+        <where>
+            <if test="begin != null and end != null">
+                <if test="begin != end">
+                    DATE(order_time) BETWEEN #{begin} AND #{end}
+                </if>
+                <if test="begin == end">
+                    DATE(order_time) = #{begin}
+                </if>
+            </if>
+        </where>
+        GROUP BY
+            DATE(order_time) , status;
+    </select>
+</mapper>
