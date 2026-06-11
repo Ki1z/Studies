@@ -1,6 +1,6 @@
 # Java Web Medium
 
-`更新时间：2026-6-10`
+`更新时间：2026-6-11`
 
 注释解释：
 
@@ -745,9 +745,376 @@ spring:
 
 > ![](javaweb2/76.png)
 
+### DB静态工具
 
+MyBatis-Plus提供了一些静态工具类，这些静态工具类通过传入实体类的class对象，通过反射获取实体类信息，然后构建对应的IService，就不需要我们再重复构建，或者注入对应的IService类。举个例子，假设存在两个Service，分别是用户Service和地址Service，用户Service中需要注入地址Service来查询用户对应的地址，地址Service也需要注入用户Service查询地址对应的用户，这就会出现循环依赖的问题，以往我们是通过@Lazy注解，通过动态代理来解决这个问题，在MyBatis-Plus中则可以通过DB静态工具，直接调用静态方法，而非注入Service，从根本上解决问题。但是需要注意，DB静态工具的实质是将已有的Mapper生成表信息缓存，所以在使用时必须保证对应实体类拥有自己的Mapper
 
+**示例**
 
+1. 改造根据id查询用户的接口，查询用户的同时，查询出用户对应的所有地址
+
+`Controller`
+
+```java
+@GetMapping("/{id}")
+@ApiOperation("根据id查询用户接口")
+public UserVO getById(@PathVariable Long id) {
+    log.info("查询用户信息：{}", id);;
+    return userService.getWithAddressesById(id);
+}
+```
+
+`Service`
+
+```java
+@Override
+public UserVO getWithAddressesById(Long id) {
+    // 获取用户信息
+    User user = this.getById(id);
+    // 获取用户地址信息
+    List<Address> addresses = Db.lambdaQuery(Address.class)
+            .eq(Address::getUserId, id)
+            .list();
+    // 封装用户信息
+    UserVO userVO = new UserVO();
+    BeanUtils.copyProperties(user, userVO);
+    userVO.setAddresses(addresses.stream().map(address -> {
+        AddressVO addressVO = new AddressVO();
+        BeanUtils.copyProperties(address, addressVO);
+        return addressVO;
+    }).toList());
+    return userVO;
+}
+```
+
+2. 改造根据id批量查询用户接口，查询用户的同时，查询出用户对应的所有地址
+
+`Controller`
+
+```java
+@GetMapping
+@ApiOperation("查询id批量查询用户接口")
+public List<UserVO> listByIds(@RequestParam List<Long> ids) {
+    log.info("查询id批量查询用户信息：{}", ids);
+    return userService.getWithAddressesByIds(ids);
+}
+```
+
+`Service`
+
+```java
+@Override
+public List<UserVO> getWithAddressesByIds(List<Long> ids) {
+    // 查询所有用户
+    List<User> users = this.listByIds(ids);
+    // 转换为UserVO
+    List<UserVO> userVOS = users.stream()
+            .map(user -> {
+                UserVO userVO = new UserVO();
+                BeanUtils.copyProperties(user, userVO);
+                return userVO;
+            })
+            .toList();
+    // 获取用户地址信息
+    List<Address> addresses = Db.lambdaQuery(Address.class)
+            .in(Address::getUserId, ids)
+            .list();
+    // 转换为AddressVO
+    List<AddressVO> addressVOS = addresses.stream()
+            .map(address -> {
+                AddressVO addressVO = new AddressVO();
+                BeanUtils.copyProperties(address, addressVO);
+                return addressVO;
+            })
+            .toList();
+    // 将addressVOS分组为Map<Long, List<AddressVO>>
+    Map<Long, List<AddressVO>> addressMap = addressVOS.stream().collect(Collectors.groupingBy(AddressVO::getUserId));
+    // 封装用户信息
+    userVOS.forEach(userVO -> userVO.setAddresses(addressMap.get(userVO.getId())));
+    return userVOS;
+}
+```
+
+第二小题会涉及一些程序优化问题，比如需要尽量减少数据库的连接调用，数据库连接需要耗费大量的系统资源，如果是遍历每个用户，然后获取每个用户的id，再对每个id分别查询其地址信息，性能表现相比两次查询，然后再单独分组就要差得多
+
+### 逻辑删除
+
+逻辑删除是指基于代码逻辑模拟删除效果，但并不会真正删除数据，一般的思路是在表中添加一个是否被逻辑删除的字段，当字段值为1时表示被逻辑删除，而查询时只查询逻辑删除字段值为0的数据
+
+MyBatis-Plus提供了全局逻辑删除的配置，只要设置了逻辑字段和默认值，就能够自动在所有需要的SQL语句中自动添加逻辑删除的约束
+
+```yml
+mybatis-plus:
+  global-config:
+    db-config:
+      logic-delete-field: flag
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+```
+
+显而易见的，逻辑删除的缺陷也很明显，开启逻辑删除会导致数据库中的垃圾数据越来越多，影响查询效率，SQL中也全部都需要进行一次逻辑删除约束判断，所以一般不会启动逻辑删除，而是可以将删除的数据转移到其他表中
+
+### 数据处理器
+
+#### 枚举处理器
+
+在定义实体类的时候，我们可能会定义一些表示状态的字段，如支付状态，订单状态，用户状态等等，这些状态在数据库中可能会用数字来表示。但如果在实体类中同样使用数字表示，可能会导致可读性比较差，例如`private Integer status`，在没有备注的情况下，开发人员并不知道每个数字所对应的意义。有的会使用枚举类来表示这些常量，比如定义一个用户状态枚举类UserStatus，在枚举类中定义用户状态常量NORMAL、FREEZE。可是此时由会出现实体类数据类型与数据库字段类型不一致的问题。
+
+为了应对这种情况，我们可以定义一个特殊的用户状态枚举类，在枚举类中定义特殊枚举值，每个枚举值包含两个值，一个值代表数据库中对应的数字，另一个值代表对应含义，而在Java程序中，我们直接使用枚举值本身即可
+
+**示例**
+
+更改User实体的status类型为枚举类型，并使用MyBatis-Plus提供的枚举处理器来处理数据库操作逻辑
+
+1. 设置默认枚举处理器
+
+```yml
+mybatis-plus:
+  configuration:
+    # 默认枚举处理器
+    default-enum-type-handler: com.baomidou.mybatisplus.core.handlers.MybatisEnumTypeHandler
+```
+
+2. 定义枚举类，注意需要提供Getter供其他类调用
+
+```java
+package com.itheima.mp.enums;
+
+import lombok.Getter;
+
+@Getter
+public enum UserStatus {
+    NORMAL(1, "正常"),
+    FREEZE(2, "冻结");
+
+    private final Integer code;
+    private final String message;
+
+    UserStatus(Integer code, String message) {
+        this.code = code;
+        this.message = message;
+    }
+}
+```
+
+3. 更改实体类与VO的数据类型，并为数据库中存储的字段添加@EnumValue注解，告知MyBatis-Plus对应字段类型与数据库字段类型相同
+
+```java
+package com.itheima.mp.enums;
+
+import lombok.Getter;
+
+@Getter
+public enum UserStatus {
+    NORMAL(1, "正常"),
+    FREEZE(2, "冻结");
+	
+    @EnumValue
+    private final Integer code;
+    private final String message;
+
+    UserStatus(Integer code, String message) {
+        this.code = code;
+        this.message = message;
+    }
+}
+```
+
+4. 为了让前端显示message的内容，我们也需要告知SpringMVC前端需要的值，所以添加@JsonValue注解
+
+```java
+package com.itheima.mp.enums;
+
+import lombok.Getter;
+
+@Getter
+public enum UserStatus {
+    NORMAL(1, "正常"),
+    FREEZE(2, "冻结");
+	
+    @EnumValue
+    private final Integer code;
+    @JsonValue
+    private final String message;
+
+    UserStatus(Integer code, String message) {
+        this.code = code;
+        this.message = message;
+    }
+}
+```
+
+5. 测试效果
+
+> ![](javaweb2/77.png)
+
+#### JSON处理器
+
+同样地，当数据库中需要的数据为JSON格式时，MyBatis并没有能力直接将Java实体转换为JSON，每次操作数据时我们自己来转换也非常麻烦，因此MyBatis-Plus提供了JSON处理器来处理实体与JSON的转换问题
+
+**示例**
+
+将User实体类中的userInfo字段类型提升为一个UserInfo实体类，通过实体类来表示用户信息
+
+1. 创建UserInfo实体类
+
+```java
+package com.itheima.mp.domain.po;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder
+public class UserInfo {
+
+    private Integer age;
+    private String intro;
+    private String sex;
+}
+```
+
+2. 在User实体类中为userInfo字段添加@TableField(typeHandler = JacksonTypeHandler.class)注解以启用JSON处理器
+
+```java
+@TableField(typeHandler = JacksonTypeHandler.class)
+private UserInfo info;
+```
+
+3. 在User实体类上添加@TableName(autoResultMap = true)以启动自动ResultMap，保证查询时能够自动创建自定义结果集
+
+```java
+@Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
+@TableName(autoResultMap = true)
+public class User {
+	...
+}
+```
+
+4. 测试效果
+
+> ![](javaweb2/78.png)
+
+### 分页插件
+
+MyBatis-Plus也提供了分页功能，可以避免项目中使用过多的依赖导致的兼容性或者性能问题
+
+#### 快速入门
+
+1. 创建MyBatis-Plus拦截器，并启用分页插件
+
+```java
+package com.itheima.mp.config;
+
+import com.baomidou.mybatisplus.annotation.DbType;
+import com.baomidou.mybatisplus.extension.plugins.MybatisPlusInterceptor;
+import com.baomidou.mybatisplus.extension.plugins.inner.PaginationInnerInterceptor;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class MyBatisPlusConfiguration {
+
+    @Bean
+    public MybatisPlusInterceptor mybatisPlusInterceptor() {
+        // 创建拦截器
+        MybatisPlusInterceptor interceptor = new MybatisPlusInterceptor();
+        // 声明分页拦截器，并设置后台数据库类型为MYSQL
+        PaginationInnerInterceptor paginationInnerInterceptor = new PaginationInnerInterceptor(DbType.MYSQL);
+        // 设置最大分页长度
+        paginationInnerInterceptor.setMaxLimit(5000L);
+        // 添加拦截器
+        interceptor.addInnerInterceptor(paginationInnerInterceptor);
+        return interceptor;
+    }
+}
+```
+
+2. 在Service中使用分页
+
+```java
+@Override
+public List<UserVO> pageQuery(Integer pageNum, Integer pageSize) {
+    pageNum = pageNum == null ? 1 : pageNum;
+    pageSize = pageSize == null ? 10 : pageSize;
+
+    // 定义分页实体
+    Page<User> page = new Page<>(pageNum, pageSize);
+    // 设置分页排序条件
+    page.addOrder(new OrderItem("id", true));
+    // 执行分页查询
+    this.page(page);
+    // 获取分页结果
+    List<User> records = page.getRecords();
+    return records.stream()
+            .map(user -> {
+                UserVO userVO = new UserVO();
+                BeanUtils.copyProperties(user, userVO);
+                return userVO;
+            })
+            .toList();
+}
+```
+
+> ![](javaweb2/79.png)
+
+#### 通用分页实体
+
+在分页功能实际使用过程中，经常会出现需要自定义排序条件的情况，如果每次都由开发人员构造一个Page对象并设置相关的排序条件，就会显得非常麻烦，因此我们可以定义一个通用分页实体，分页实体接收通用属性pageNum、pageSize、sortBy、isAsc，然后由子类接收专有属性，如name、status、minBalance等等，再在通用分页实体中完成对Page对象的转换
+
+**示例**
+
+改造现有的分页查询接口，添加一些查询条件
+
+1. 创建通用分页实体
+
+```java
+package com.itheima.mp.domain.query;
+
+import lombok.Data;
+
+@Data
+public class PageQuery {
+    private Integer pageNo;
+    private Integer pageSize;
+    private String sortBy;
+    private Boolean isAsc;
+}
+```
+
+2. 将用户查询实体继承分页实体
+
+```java
+package com.itheima.mp.domain.query;
+
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+@EqualsAndHashCode(callSuper = true)
+@Data
+@ApiModel(description = "用户查询条件实体")
+public class UserQuery extends PageQuery{
+    @ApiModelProperty("用户名关键字")
+    private String name;
+    @ApiModelProperty("用户状态：1-正常，2-冻结")
+    private Integer status;
+    @ApiModelProperty("余额最小值")
+    private Integer minBalance;
+    @ApiModelProperty("余额最大值")
+    private Integer maxBalance;
+}
+```
+
+3. 在通用分页实体中完成分页实体对mp分页实体Page的转换
 
 
 
