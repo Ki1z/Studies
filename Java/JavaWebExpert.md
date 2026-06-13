@@ -1,6 +1,6 @@
 # Java Web Medium
 
-`更新时间：2026-6-11`
+`更新时间：2026-6-13`
 
 注释解释：
 
@@ -1116,14 +1116,162 @@ public class UserQuery extends PageQuery{
 
 3. 在通用分页实体中完成分页实体对mp分页实体Page的转换
 
+定义一个方法，声明方法泛型\<T\>，参数为OrderItem可变参数，因为addOrder()方法支持接收可变参数。然后创建mp的page实体，根据PageQuery的属性值与toPage()方法的参数列表来添加排序条件，否则使用默认排序。并且为了方便使用，我们又定义了两个重写方法，支持无参数与简易参数
 
+```java
+package com.itheima.mp.domain.query;
 
+import com.baomidou.mybatisplus.core.metadata.OrderItem;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import lombok.Data;
 
+@Data
+public class PageQuery {
+    private Integer pageNo = 1;
+    private Integer pageSize = 10;
+    private String sortBy;
+    private Boolean isAsc = true;
+
+    /**
+     * 转换为mp分页对象
+     * @param items 排序条件
+     * @return mp分页对象
+     */
+    public <T> Page<T> toPage(OrderItem ... items) {
+        // 创建mp分页对象
+        Page<T> page = new Page<>(pageNo, pageSize);
+        // 设置排序条件
+        if (sortBy != null && !sortBy.isEmpty()) {
+            // 如果sortBy不为空，则设置排序条件
+            page.addOrder(new OrderItem(sortBy, isAsc));
+        } else if (items != null && items.length > 0) {
+            // 如果items不为空，则设置排序条件
+            page.addOrder(items);
+        } else {
+            // 默认排序
+            page.addOrder(OrderItem.desc("id"));
+        }
+        return page;
+    }
+
+    /**
+     * 创建mp分页对象
+     * @return mp分页对象
+     * 默认id降序
+     */
+    public <T> Page<T> toPage() {
+        return toPage(new OrderItem[0]);
+    }
+
+    /**
+     * 创建mp分页对象
+     * @param sortBy 排序字段
+     * @param isAsc 是否升序
+     * @return mp分页对象
+     */
+    public <T> Page<T> toPage(String sortBy, Boolean isAsc) {
+        return toPage(new OrderItem(sortBy, isAsc));
+    }
+}
+```
 
 ## 微服务
 
-微服务是一种软件架构风格，它是以专注于单一职责的很多小项目为基础，组合出复杂的大型应用
+### 单体架构
+
+单体架构是指将业务的所有功能集中在一个项目中开发，打成一个包部署，其优点为架构简单，部署成本低，缺点也很明显，团队协作成本高，系统发布效率低，系统可用性差
+
+### 微服务架构
+
+微服务是一种软件架构风格，是服务化思想指导下的一套最佳实践架构的解决方案。它以专注于单一职责的很多小项目为基础，组合出复杂的大型应用
+
+微服务架构要求粒度小，团队自洽，服务自洽
 
 微服务架构同样会遇到很多问题，包括但不限于服务拆分、远程调用、服务治理、请求路由、身份认证、配置管理、服务保护、分布式事务、异步通信、消息可靠性、延迟消息、分布式搜索、倒排索引、数据聚合等等
 
-学习微服务，就是要解决微服务架构所面临的各种问题
+### Spring Cloud
+
+SpringCloud是目前业界使用最广泛的微服务框架，集成了各种微服务功能组件，并基于SpringBoot实现了这些组件的自动装配，从而提供了良好的开箱即用体验
+
+### 拆分原则
+
+**项目架构选择**
+
+1. 创业型项目：先采用单体架构，快速开发，快速试错。随着规模扩大，再逐渐拆分
+2. 确定的大型项目：资金充足，目标明确，可以直接选择微服务架构，避免后续拆分的麻烦
+
+**已有项目拆分**
+
+1. 高内聚：每个微服务的职责尽量单一，包含的业务相互关联度高，完整度高
+2. 低耦合：每个微服务的功能要求相对独立，尽量减少对其他服务的依赖
+
+从拆分方式来说，一般包含两种拆分模式，横向拆分是指按照业务模块来拆分，纵向拆分是指抽取公共服务，提高复用性
+
+#### 实践-商品模块拆分
+
+现在要求对商品模块进行拆分，拆分完成后，商品模块需要能够独立完成自己的所有逻辑
+
+1. 创建模块
+
+> ![](javaweb2/80.png)
+
+2. 创建com.hmall.item包，并定义需要的controller、service、mapper和domain
+
+> ![](javaweb2/81.png)
+
+3. 复制配置文件，并修改端口为8081防止冲突，修改spring.appilcation.name，以及修改knife4j的扫描包
+
+```yml
+server:
+  port: 8081
+spring:
+  application:
+    name: hmall-item
+  profiles:
+    active: local
+  datasource:
+    url: jdbc:mysql://${hm.db.host}:3306/hmall?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&serverTimezone=Asia/Shanghai
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: ${hm.db.pw}
+mybatis-plus:
+  configuration:
+    default-enum-type-handler: com.baomidou.mybatisplus.core.handlers.MybatisEnumTypeHandler
+  global-config:
+    db-config:
+      update-strategy: not_null
+      id-type: auto
+logging:
+  level:
+    com.hmall: debug
+  pattern:
+    dateformat: HH:mm:ss:SSS
+  file:
+    path: "logs/${spring.application.name}"
+knife4j:
+  enable: true
+  openapi:
+    title: 黑马商城接口文档
+    description: "黑马商城接口文档"
+    email: zhanghuyi@itcast.cn
+    concat: 虎哥
+    url: https://www.itcast.cn
+    version: v1.0.0
+    group:
+      default:
+        group-name: default
+        api-rule: package
+        api-rule-resources:
+          - com.hmall.item.controller
+```
+
+4. 复制所有需要的类到包中，并创建启动类
+
+> ![](javaweb2/82.png)
+
+5. 启动项目，访问localhost:8081/doc.html
+
+> ![](javaweb2/83.png)
+
+这样我们就拆好了商品模块
+
