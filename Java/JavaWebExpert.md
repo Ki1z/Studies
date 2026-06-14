@@ -1,6 +1,6 @@
 # Java Web Medium
 
-`更新时间：2026-6-13`
+`更新时间：2026-6-14`
 
 注释解释：
 
@@ -1274,4 +1274,244 @@ knife4j:
 > ![](javaweb2/83.png)
 
 这样我们就拆好了商品模块
+
+### 远程调用
+
+在对购物车模块进行拆分时，我们发现其需要商品模块的服务
+
+```java
+// 2.查询商品
+List<ItemDTO> items = itemService.queryItemByIds(itemIds);
+```
+
+但是微服务架构要求每个服务职责单一，因此我们只能通过在微服务中通过网络通信来访问对应的服务，即远程调用
+
+远程调用不是一个插件或功能，而是一种解决方案，任何可以发送并接收HTTP请求的工具都可以进行远程调用，这里我们使用Spring WebClient，当然也可以选择之前苍穹外卖的HttpClient
+
+HTTP客户端的基本用法都是一样的，需要请求路径、请求方法和请求参数三个条件
+
+1. 创建WebClient，并设置请求路径
+
+```java
+// 创建WebClient
+WebClient webClient = WebClient.create("http://localhost:8081/items");
+```
+
+2. 设置请求方法为GET，请求参数为ids，webclient可以自动帮我们将响应内容转换为指定的实体类，并且使用collectList()方法转换为一个List集合
+
+```java
+// 2.发送请求
+List<ItemDTO> items = webClient.get()
+        .uri(uriBuilder -> uriBuilder.queryParam("ids", itemIds).build())
+        .retrieve()
+        .bodyToFlux(ItemDTO.class)
+        .collectList()
+        .block();
+```
+
+### 服务注册
+
+在上文的远程调用实现中，不难发现，当我们需要调用外部服务时，必须直接指定对应服务的固定ip与端口，假设某个服务负载相比其他服务更高，因此需要部署多个服务，但此时其他服务就不能同时指定多个ip地址，或者无法按照指定要求去自动选择ip地址
+
+因此Spring Cloud提供了服务注册这样的解决方案，所有的服务需要在一个服务中心注册自己的服务，然后提供持续的心跳包，以表示服务在线状态，当第三方服务需要远程调用时，直接在服务中心请求对应的服务，由服务中心提供目前拥有的所有对应服务，第三方服务再从中选择一个服务，并获取服务的基本信息，如ip、端口等等，最后进行远程调用获取数据
+
+#### NACOS
+
+Nacos是Spring Cloud Alibaba提供的的一个动态服务发现、配置管理和服务管理平台，旨在帮助用户更轻松地构建和管理微服务架构，Nacos 支持基于 DNS 和 RPC 的服务发现，允许服务提供者注册服务，服务消费者可以通过 DNS 或 API 查找和发现服务。Nacos 还提供实时健康检查，确保请求不会发送到不健康的服务实例
+
+##### 快速入门
+
+1. 下载并启动nacos
+
+> ![](javaweb2/84.png)
+
+2. 在项目中引入nacos依赖
+
+```xml
+<!--nacos-->
+<dependency>
+    <groupId>com.alibaba.cloud</groupId>
+    <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+</dependency>
+```
+
+3. 在配置文件中添加nacos服务地址
+
+```yml
+spring:
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+```
+
+如果开启了权限管理，还需要配置用户名与密码
+
+```yml
+spring:
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+        username: kiiz
+        password: kiiz
+```
+
+4. 重启服务，在nacos中已经能够看到注册的服务
+
+> ![](javaweb2/85.png)
+
+5. 在hmall-cart中注入DiscoveryClient
+
+```java
+private final DiscoveryClient discoveryClient;
+```
+
+6. 获取服务列表，选取服务，并发送请求
+
+```java
+// 获取服务列表
+List<ServiceInstance> serviceInstances = discoveryClient.getInstances("hmall-item");
+// 选取服务实例
+ServiceInstance serviceInstance = serviceInstances.get(0);
+// 获取服务uri
+URI uri = serviceInstance.getUri();
+// 创建WebClient
+WebClient webClient = WebClient.create(uri.toString());
+// 2.发送请求
+List<ItemDTO> items = webClient.get()
+        .uri(uriBuilder -> uriBuilder
+                .path("/items")
+                .queryParam("ids", itemIds)
+                .build()
+        )
+        .retrieve()
+        .bodyToFlux(ItemDTO.class)
+        .collectList()
+        .block();
+```
+
+#### OpenFeign
+
+Spring Cloud OpenFeign是一种基于Spring Cloud的声明式REST客户端，它简化了与HTTP服务交互的过程。它将REST客户端的定义转化为Java接口，并且可以通过注解的方式来声明请求参数、请求方式、请求头等信息，从而使得客户端的使用更加方便和简洁。同时，它还提供了负载均衡和服务发现等功能，可以与Eureka、Consul等注册中心集成使用。Spring Cloud OpenFeign能够提高应用程序的可靠性、可扩展性和可维护性，是构建微服务架构的重要工具之一
+
+简单来说，OpenFeign就是一个HTTP客户端，支持开发人员使用SpringMVC注解快捷访问注册中心的服务
+
+##### 快速入门
+
+1. 引入依赖
+
+```xml
+<!--openfeign-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-openfeign</artifactId>
+</dependency>
+<!--负载均衡-->
+<dependency>
+    <groupId>org.springframework.cloud</groupId>
+    <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+</dependency>
+```
+
+2. 使用@EnableFeignClients注解开启feign
+
+```java
+package com.hmall.cart;
+
+import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+import org.springframework.cloud.openfeign.FeignClient;
+
+@MapperScan("com.hmall.cart.mapper")
+@SpringBootApplication
+@EnableFeignClients
+public class HMallCartApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(HMallCartApplication.class, args);
+    }
+}
+```
+
+3. 定义FeignClient接口，添加@FeignClient()注解用于表明需要的服务名称
+
+```java
+package com.hmall.cart.client;
+
+import com.hmall.cart.domain.ItemDTO;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+
+import java.util.Collection;
+import java.util.List;
+
+@FeignClient("hmall-item")
+public interface ItemClient {
+
+}
+```
+
+4. 定义请求方法，直接使用SpringMVC的注解即可，方法参数为请求参数，方法返回值类型为响应体解析的数据类型。注意这里的参数需要添加@RequestParam注解以标明请求参数
+
+```java
+package com.hmall.cart.client;
+
+import com.hmall.cart.domain.ItemDTO;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.Collection;
+import java.util.List;
+
+@FeignClient("hmall-item")
+public interface ItemClient {
+
+    @GetMapping("/items")
+    List<ItemDTO> queryItemByIds(@RequestParam Collection<Long> ids);
+}
+```
+
+5. 在Service中注入FeignClient，并调用方法获取数据
+
+```java
+private final ItemClient itemClient;
+```
+
+```java
+// 1.获取商品id
+Set<Long> itemIds = vos.stream().map(CartVO::getItemId).collect(Collectors.toSet());
+// 2.调用商品服务，查询商品信息
+List<ItemDTO> items = itemClient.queryItemByIds(itemIds);
+// 3.转为 id 到 item的map
+Map<Long, ItemDTO> itemMap = items.stream().collect(Collectors.toMap(ItemDTO::getId, Function.identity()));
+```
+
+6. 实际测试
+
+> ![](javaweb2/86.png)
+
+##### 连接池
+
+Feign默认使用的HttpURLConnection是不支持连接池的，每次发送请求都会经历一次连接与释放，在负载严重的情况下效率非常低，但Feign支持使用Apache HttpClient或者OKHttp，而后两者支持连接池
+
+1. 引入依赖，注意是引入`feign-httpclient`，而不是真正的`httpclient`
+
+```java
+<!--feign-httpClient -->
+<dependency>
+    <groupId>io.github.openfeign</groupId>
+    <artifactId>feign-httpclient</artifactId>
+</dependency>
+```
+
+2. 在配置文件中启用
+
+```yml
+feign:
+  httpclient:
+    enabled: true
+```
 
