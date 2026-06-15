@@ -1,6 +1,6 @@
 # Java Web Medium
 
-`更新时间：2026-6-14`
+`更新时间：2026-6-15`
 
 注释解释：
 
@@ -1514,4 +1514,246 @@ feign:
   httpclient:
     enabled: true
 ```
+
+##### 最佳实践
+
+- 主动暴露
+
+上文中我们在编写FeignClient时是直接将其定义在子服务中的，但假设这是实际的两个开发团队在进行编写，一个团队很可能并不清楚另一个团队的开发细节，因此我们可以让服务的开发者，也就是实现服务细节的开发人员在自己的模块中编写FeignClient，然后暴露给外部，外部直接引用即可，不需要关注实现细节
+
+一般来说，主动暴露是将子微服务再拆分为DTO、API和BIZ三个模块，DTO是用于微服务之间传输的数据实体，API是暴露的接口，即FeignClient，BIZ则是微服务自己的逻辑实现
+
+- 公共管理
+
+同样的，我们也可以定义一个公共API模块，存储所有的接口和DTO，其他微服务想要获取数据与DTO，直接导入API模块即可
+
+这里我们以第二种举例
+
+1. 创建新模块，创建文件目录
+
+> ![](javaweb2/87.png)
+
+2. 在pom.xml中导入相关依赖
+
+这里需要导入Swagger用于标注DTO，所以直接用hm-common依赖传递，同样地，利用依赖传递，直接在api中导入feign和httpclient，其他微服务就不需要二次导入
+
+```xml
+<dependencies>
+    <!--common-->
+    <dependency>
+        <groupId>com.heima</groupId>
+        <artifactId>hm-common</artifactId>
+        <version>1.0.0</version>
+    </dependency>
+    <!--openfeign-->
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-openfeign</artifactId>
+    </dependency>
+    <!--负载均衡-->
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+    </dependency>
+    <!--feign-httpClient -->
+    <dependency>
+        <groupId>io.github.openfeign</groupId>
+        <artifactId>feign-httpclient</artifactId>
+    </dependency>
+</dependencies>
+```
+
+3. 将ItemDTO和ItemClient复制到api模块中
+
+> ![](javaweb2/88.png)
+
+4. 在启动类中添加对api模块的包扫描
+
+```java
+package com.hmall.cart;
+
+import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+
+@MapperScan("com.hmall.cart.mapper")
+@SpringBootApplication
+@EnableFeignClients(basePackages = "com.hmall.api.client")
+public class HMallCartApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(HMallCartApplication.class, args);
+    }
+}
+```
+
+##### 日志输出
+
+Feign默认是没有日志输出的，想要开启Feign的日志输出，必须要开发人员自己进行相关配置
+
+1. 定义FeignConfig类
+
+定义一个Bean，返回值类型为Logger.Level，但是类上不能添加@Configuration注解，因为这会导致Spring将其作为全局配置，只要是调用了api模块的微服务，这个配置就都会生效，造成配置污染
+
+```java
+package com.hmall.api.config;
+
+import feign.Logger;
+import org.springframework.context.annotation.Bean;
+
+public class FeignLogConfig {
+
+    @Bean
+    public Logger.Level feignLoggerLevel() {
+        return Logger.Level.FULL;
+    }
+}
+```
+
+2. 在希望开启日志的微服务启动类的@EnableFeignClients注解中添加defaultConfiguration字段
+
+```java
+package com.hmall.cart;
+
+import com.hmall.api.config.FeignLogConfig;
+import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.openfeign.EnableFeignClients;
+
+@MapperScan("com.hmall.cart.mapper")
+@SpringBootApplication
+@EnableFeignClients(basePackages = "com.hmall.api.client", defaultConfiguration = FeignLogConfig.class)
+public class HMallCartApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(HMallCartApplication.class, args);
+    }
+}
+```
+
+如果希望配置只是局部生效，可以选择在@FeignClient注解上添加configuration注解
+
+```java
+package com.hmall.api.client;
+
+import com.hmall.api.dto.ItemDTO;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.Collection;
+import java.util.List;
+
+@FeignClient(value = "hmall-item", configuration = FeignConfig.class)
+public interface ItemClient {
+
+    @GetMapping("/items")
+    List<ItemDTO> queryItemByIds(@RequestParam Collection<Long> ids);
+}
+```
+
+### 网关
+
+在服务拆分的过程中，不难发现我们无法获取用户的登录信息。在传统单体架构中，用户每次发起的请求都是通过前端发起的，而前端请求中会携带token信息，通过拦截器拦截请求即可得到token中的用户信息。而微服务架构中，很多请求是微服务间相互调用得到的，微服务间调用并不会传递token，而且我们在进行服务拆分时也并未给每个服务都设置拦截器。而且从前端来看，我们在nginx中只设置了一个服务器地址，如果我们将其拆分为多个微服务地址，假设这些微服务地址需要变化，或者一个微服务需要部署多个实例，实施起来都非常麻烦
+
+所以，我们可以利用网关的思想。在计算机网络中，网关是连接两个使用不同协议的网络的设备。它通常位于网络边界，负责数据接收、解析、协议转换和转发，能够跨越不同的协议体系。而在微服务架构中，网关也是一个微服务，负责接收前端请求，验证用户身份，然后再通过注册中心访问其他服务
+
+#### Spring Cloud Gateway
+
+Spring Cloud Gateway 是 Spring Cloud 生态的微服务网关，基于 WebFlux 响应式编程模型，替代了老旧的 Zuul 网关。它的核心价值是：统一入口、路由转发、业务增强，是微服务架构中不可或缺的中间件。相较于Netfilx Zuul，Zuul基于Servlet的阻塞式编程，需要调优才能获得与SpringCloudGateway相当的性能
+
+#### 快速入门
+
+1. 创建gateway模块
+
+> ![](javaweb2/89.png)
+
+2. 引入依赖
+
+```xml
+<dependencies>
+    <!--common-->
+    <dependency>
+        <groupId>com.heima</groupId>
+        <artifactId>hm-common</artifactId>
+        <version>1.0.0</version>
+    </dependency>
+    <!--nacos-->
+    <dependency>
+        <groupId>com.alibaba.cloud</groupId>
+        <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+    </dependency>
+    <!--负载均衡-->
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-loadbalancer</artifactId>
+    </dependency>
+    <!--gateway-->
+    <dependency>
+        <groupId>org.springframework.cloud</groupId>
+        <artifactId>spring-cloud-starter-gateway</artifactId>
+    </dependency>
+</dependencies>
+```
+
+3. 定义启动类
+
+```java
+package com.hmall.gateway;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class HMallGatewayApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(HMallGatewayApplication.class, args);
+    }
+}
+```
+
+4. 在配置文件中定义路由
+
+通过spring.cloud.gateway.routes记录路由表，每个表由id、uri、predicates三个字段构成，id是路由表中的唯一标识符， uri是路由服务ID，lb://表示负载均衡协议，predicates则表示路由匹配规则
+
+```yml
+server:
+  port: 8080
+spring:
+  application:
+    name: hmall-gateway
+  cloud:
+    nacos:
+      discovery:
+        server-addr: localhost:8848
+        username: kiiz
+        password: kiiz
+    gateway:
+      routes:
+        - id: hmall-item
+          uri: lb://hmall-item
+          predicates:
+            - Path=/items/**,/search/**
+        - id: hmall-cart
+          uri: lb://hmall-cart
+          predicates:
+            - Path=/carts/**
+        - id: hmall-order
+          uri: lb://hmall-order
+          predicates:
+            - Path=/orders/**
+        - id: hmall-pay
+          uri: lb://hmall-pay
+          predicates:
+            - Path=/pay-orders/**
+        - id: hmall-user
+          uri: lb://hmall-user
+          predicates:
+            - Path=/addresses/**,/users/**
+```
+
+5. 访问localhost:8080/items/page测试路由效果
+
+> ![](javaweb2/90.png)
 
