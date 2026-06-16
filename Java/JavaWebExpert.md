@@ -1,6 +1,6 @@
 # Java Web Medium
 
-`更新时间：2026-6-15`
+`更新时间：2026-6-16`
 
 注释解释：
 
@@ -1715,7 +1715,7 @@ public class HMallGatewayApplication {
 
 4. 在配置文件中定义路由
 
-通过spring.cloud.gateway.routes记录路由表，每个表由id、uri、predicates三个字段构成，id是路由表中的唯一标识符， uri是路由服务ID，lb://表示负载均衡协议，predicates则表示路由匹配规则
+通过spring.cloud.gateway.routes记录路由表，每个表由id、uri、predicates三个字段构成，id是路由表中的唯一标识符， uri是路由服务ID，lb://表示负载均衡协议，predicates则表示路由断言
 
 ```yml
 server:
@@ -1756,4 +1756,187 @@ spring:
 5. 访问localhost:8080/items/page测试路由效果
 
 > ![](javaweb2/90.png)
+
+#### 路由属性
+
+路由配置在Spring中通过RouteDefinition类解析，其常见属性有id、uri、predicates和filters
+
+**路由断言**
+
+predicates路由断言由RoutePredicateFactory实现，提供了12种基本的路由断言
+
+| 名称                   | 说明                          | 示例                                                         |
+| ---------------------- | ----------------------------- | ------------------------------------------------------------ |
+| After                  | 某个时间点之后的请求          | - After=2037-01-20T17:00:00.000-07:00[America/Denver]        |
+| Before                 | 某个时间点之前的请求          | - Before=2031-04-13T15:14:47.433+08:00[Asia/Shanghai]        |
+| Between                | 两个时间点之间的请求          | - Between=2037-01-20T17:00:00.000-07:00[America/Denver], 2031-04-13T15:14:47.433+08:00[Asia/Shanghai] |
+| Cookie                 | 请求必须包含某些Cookie        | - Cookie=chocolate, ch.p                                     |
+| Header                 | 请求必须包含某些Header        | - Header=X-Request-Id, \d+                                   |
+| Host                   | 限制请求域名                  | - Host=\*\*.host.org, \*\*.anotherhost.org                   |
+| Method                 | 限制请求方式                  | - Method=GET, POST                                           |
+| Path                   | 限制请求路径                  | - Path=/red/{segment}, /blue/\*\*                            |
+| Query                  | 限制请求参数                  | - Query=name, Jack                                           |
+| RemoteAddr             | 请求者真实ip必须符合指定规则  | - RemoteAddr=192.168.1.1/24                                  |
+| Weight                 | 按权重处理                    | - Weight=group1,2                                            |
+| XForwarded Remote Addr | 请求X-Forward必须符合指定规则 | - XForwardedRemoteAddr=192.168.1.1/24                        |
+
+ **路由过滤器**
+
+Spring Gateway种提供了高达33种路由过滤器，每种过滤器都可以过滤指定的内容
+
+| 名称                 | 说明                       | 示例                                                         |
+| -------------------- | -------------------------- | ------------------------------------------------------------ |
+| AddRequestHeader     | 给请求中添加一个请求头     | AddRequestHeader=headerName, headerValue                     |
+| RemoveRequestHeader  | 移除当前请求中的一个请求头 | RemoveRequestHeader=headerName                               |
+| AddResponseHeader    | 给响应结果中添加一个响应头 | AddResponseHeader=headerName, headerValue                    |
+| RemoveResponseHeader | 从响应结果中移除一个响应头 | RemoveResponseHeader=headerName                              |
+| RewritePath          | 请求路径重写               | RewritePath=/red/?(?\<segment\>.\*), /\$\\{segment}          |
+| StripPrefix          | 去除请求路径中的前缀段数   | StripPrefix=1,则路径/a/b转发时只保留/b，StripPrefix=2，则路径/a/b/c转发时只保留/c |
+| ...                  |                            |                                                              |
+
+如果想要设置全局过滤器，可以在配置文件中定义spring.cloud.default-filters一项
+
+```
+spring:
+  cloud:
+      default-filters:
+        - StripPrefix=1
+        - AddResponseHeader=X-Response-Default-Foo, Default-Bar
+```
+
+#### 登录校验
+
+##### 思路解析
+
+在传统单体架构项目中，登录校验是通过拦截器拦截所有的请求，然后进行jwt令牌校验。同样地，在微服务项目中，也需要在项目入口处，也就是网关位置拦截用户请求，然后进行jwt令牌校验。但是微服务项目只能在网关处进行校验，如果在每个微服务处都进行一次jwt校验会非常浪性能，也没有必要；同时网关需要在验证用户身份后，将用户信息向下传递，微服务间的传递同样需要携带用户信息
+
+在Spring Cloud Gateway中，客户端发送请求，首先由HandlerMapping接收，HandlerMapping根据请求找到匹配的路由，然后将其存入上下文中；接着进入WebHandler，WebHandler的默认实现是FilteringWebHandler，它将自动加载网关配置中的所有过滤器，然后放入集合中排序，形成过滤器链，并依次执行这些过滤器，直到最后一个过滤器NettyRoutingFilter，负责将请求转发到对应的微服务，然后接收微服务返回的结果，最后返回给客户端
+
+从Spring Cloud Gateway的生命周期来看，登录校验的最佳实践是在FilteringWebHandler中注册一个自定义的过滤器，然后插入NettyRoutingFilter的前面，在转发之前进行jwt校验，校验完成后，再根据检验结果决定是否抛出异常，或者进行转发
+
+##### 自定义过滤器
+
+网关过滤器分为两种，GatewayFilter和GlobalFilter，GatewayFilter默认不生效，需要配置到网关的filter属性中才会生效，上文提到的默认33种过滤器就属于GatewayFilter；GlobalFilter是全局过滤器，作用范围是所有路由，一旦声明自动生效
+
+###### GlobalFilter
+
+```java
+/*
+ * Copyright 2013-2020 the original author or authors.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package org.springframework.cloud.gateway.filter;
+
+import reactor.core.publisher.Mono;
+
+import org.springframework.web.server.ServerWebExchange;
+
+/**
+ * Contract for interception-style, chained processing of Web requests that may be used to
+ * implement cross-cutting, application-agnostic requirements such as security, timeouts,
+ * and others.
+ *
+ * @author Rossen Stoyanchev
+ * @since 5.0
+ */
+public interface GlobalFilter {
+
+    /**
+     * Process the Web request and (optionally) delegate to the next {@code WebFilter}
+     * through the given {@link GatewayFilterChain}.
+     * @param exchange the current server exchange
+     * @param chain provides a way to delegate to the next filter
+     * @return {@code Mono<Void>} to indicate when request processing is complete
+     */
+    Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain);
+
+}
+```
+
+- ServerWebExchange exchange：请求上下文，包含整个过滤器链内的所有共享数据，包括Request对象、Response等等
+- GatewayFilterChain chain：过滤器链，指定下一个过滤器
+
+GlobalFilter是一个接口，想要自定义一个GlobalFilter，很显然需要实现这个接口。自定义过滤器MyGlobalFilter也需要添加@Component注解，注册为Bean，同时放行时需要调用GatewayFilterChain的filter方法，并传递ServerWebExchange
+
+```java
+package com.hmall.gateway.filter;
+
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.GlobalFilter;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
+
+@Component
+public class MyGlobalFilter implements GlobalFilter {
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        // 获取HTTP请求
+        ServerHttpRequest request = exchange.getRequest();
+        // 获取请求头
+        HttpHeaders headers = request.getHeaders();
+        // 获取Authorization
+        System.out.println(headers.get("Authorization"));
+        // 放行
+        return chain.filter(exchange);
+    }
+}
+```
+
+但是此时并没有实现排序功能，Spring中通常通过实现Ordered接口来实现排序功能，重写getOrder方法，返回一个int，数值越小优先级越高
+
+```java
+package com.hmall.gateway.filter;
+
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.GlobalFilter;
+import org.springframework.core.Ordered;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
+
+@Component
+public class MyGlobalFilter implements GlobalFilter, Ordered {
+    @Override
+    public int getOrder() {
+        return 0;
+    }
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        // 获取HTTP请求
+        ServerHttpRequest request = exchange.getRequest();
+        // 获取请求头
+        HttpHeaders headers = request.getHeaders();
+        // 获取Authorization
+        System.out.println(headers.get("Authorization"));
+        // 放行
+        return chain.filter(exchange);
+    }
+}
+```
+
+而刚才我们提到的NettyRoutingFilter的默认排序为Ordered中的常量LOWEST_PRECEDENCE，即int的最大值0x7fffffff
+
+```java
+int LOWEST_PRECEDENCE = Integer.MAX_VALUE;
+```
+
+因此NettyRoutingFilter的优先级是最低的
 
