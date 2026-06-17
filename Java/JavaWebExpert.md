@@ -1,6 +1,6 @@
 # Java Web Medium
 
-`更新时间：2026-6-16`
+`更新时间：2026-6-17`
 
 注释解释：
 
@@ -1939,4 +1939,174 @@ int LOWEST_PRECEDENCE = Integer.MAX_VALUE;
 ```
 
 因此NettyRoutingFilter的优先级是最低的
+
+> ![](javaweb2/91.png)
+
+*注：需要访问网关发送请求，而不是微服务端口*
+
+###### GatewayFilter
+
+自定义GatewayFilter相较于GlobalFilter更难，因为自定义GatewayFIlter实际上是在自定义一个GatewayFilterFactory
+
+1. 继承AbstractGatewayFilterFactory类
+
+在Spring Cloud Gateway中，官方更推荐继承AbstractGatewayFilterFactory，而不是直接实现GatewayFilterFactory，因为AbstractGatewayFilterFactory可以通过泛型config处理配置文件中的参数，而且AbstractGatewayFilterFactory中可以重写shortcutFieldOrder()方法来简化键值对配置
+
+```java
+package com.hmall.gateway.filter;
+
+import org.springframework.cloud.gateway.filter.GatewayFilter;
+import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
+import org.springframework.stereotype.Component;
+
+@Component
+public class TestGatewayFilterFactory extends AbstractGatewayFilterFactory<Object> {
+
+}
+```
+
+2. 重写apply()方法
+
+apply()一般返回一个匿名方法，这里使用包装类OrderedGatewayFilter，而不是直接返回GatewayFilter，因为OrderedGatewayFilter中可以通过第二个参数指定Ordered值，而GatewayFilter默认不支持排序
+
+```java
+package com.hmall.gateway.filter;
+
+import org.springframework.cloud.gateway.filter.GatewayFilter;
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
+import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
+
+@Component
+public class TestGatewayFilterFactory extends AbstractGatewayFilterFactory<Object> {
+    @Override
+    public GatewayFilter apply(Object config) {
+        return new OrderedGatewayFilter((exchange, chain) -> {
+            // 获取HTTP请求
+            ServerHttpRequest request = exchange.getRequest();
+            // 获取请求头
+            HttpHeaders headers = request.getHeaders();
+            // 获取Authorization
+            System.out.println(headers.get("Authorization"));
+            // 放行
+            return chain.filter(exchange);
+        }, 0);
+    }
+}
+```
+
+但是同样可以创建一个单独的自定义GatewayFilter，然后实现Ordered
+
+```java
+package com.hmall.gateway.filter;
+
+import org.springframework.cloud.gateway.filter.GatewayFilter;
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.OrderedGatewayFilter;
+import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
+import org.springframework.core.Ordered;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.stereotype.Component;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
+
+@Component
+public class TestGatewayFilterFactory extends AbstractGatewayFilterFactory<Object> {
+    @Override
+    public GatewayFilter apply(Object config) {
+        return new TestGatewayFilter();
+    }
+}
+
+class TestGatewayFilter implements GatewayFilter, Ordered {
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        // 获取HTTP请求
+        ServerHttpRequest request = exchange.getRequest();
+        // 获取请求头
+        HttpHeaders headers = request.getHeaders();
+        // 获取Authorization
+        System.out.println(headers.get("Authorization"));
+        // 放行
+        return chain.filter(exchange);
+    }
+
+    @Override
+    public int getOrder() {
+        return 0;
+    }
+}
+```
+
+3. 加载到yml中，默认GatewayFilter名称为TestGatewayFilterFactory去掉GatewayFilterFactory，即Test
+
+```yml
+spring:
+  cloud:
+    gateway:
+      default-filters:
+        - Test
+```
+
+4. 发送请求
+
+> ![](javaweb2/92.png)
+
+当然，GatewayFilterFactory也支持读取配置文件中的参数
+
+1. 定义静态内部类，定义属性来保存配置参数
+
+```java
+@Data
+public static class Config {
+    private String headerName;
+    private String message;
+}
+```
+
+2. 修改AbstractGatewayFilterFactory泛型为内部类Config，apply()方法的参数也改为Config
+
+```java
+public class TestGatewayFilterFactory extends AbstractGatewayFilterFactory<TestGatewayFilterFactory.Config> {
+     @Override
+    public GatewayFilter apply(Config config) {}
+}
+```
+
+3. 重写shortcutFieldOrder()方法，方法返回一个List\<String\>，字符串顺序即代表参数顺序
+
+```java
+@Override
+public List<String> shortcutFieldOrder() {
+    return List.of("headerName", "message");
+}
+```
+
+4. 定义构造器，返回Config类，将Config交由父类，用于构造指定的GatewayFilter
+
+```java
+public TestGatewayFilterFactory() {
+    super(Config.class);
+}
+```
+
+5. 修改配置文件，获取请求头Authorization，并设置message为testMessage
+
+```yml
+spring:
+  cloud:
+    gateway:
+      default-filters:
+        - Test=Authorization,testMessage
+```
+
+> ![](javaweb2/93.png)
+
+##### 实现
 
