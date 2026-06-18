@@ -1,6 +1,6 @@
 # Java Web Medium
 
-`更新时间：2026-6-17`
+`更新时间：2026-6-18`
 
 注释解释：
 
@@ -2108,5 +2108,316 @@ spring:
 
 > ![](javaweb2/93.png)
 
-##### 实现
+##### 网关拦截校验
+
+1. 首先将需要的配置类、工具类复制到网关模块中
+
+> ![](javaweb2/94.png)
+
+2. 定义AuthGlobalFilter，实现GlobalFilter和Ordered接口
+
+```java
+package com.hmall.gateway.filter;
+
+import com.hmall.common.exception.UnauthorizedException;
+import com.hmall.gateway.config.AuthProperties;
+import com.hmall.gateway.utils.JwtTool;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.GlobalFilter;
+import org.springframework.core.Ordered;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class AuthGlobalFilter implements GlobalFilter, Ordered {
+
+}
+```
+
+3. 注入AuthProperties和JwtTool，我们需要AuthProperties中的排除路径以及JwtTool中解析token的方法
+
+```
+package com.hmall.gateway.filter;
+
+import com.hmall.common.exception.UnauthorizedException;
+import com.hmall.gateway.config.AuthProperties;
+import com.hmall.gateway.utils.JwtTool;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.GlobalFilter;
+import org.springframework.core.Ordered;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class AuthGlobalFilter implements GlobalFilter, Ordered {
+
+    private final AuthProperties authProperties;
+    private final JwtTool jwtTool;
+    
+}
+```
+
+4. 实现getOrder()方法，设置排序顺序
+
+```
+package com.hmall.gateway.filter;
+
+import com.hmall.common.exception.UnauthorizedException;
+import com.hmall.gateway.config.AuthProperties;
+import com.hmall.gateway.utils.JwtTool;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.GlobalFilter;
+import org.springframework.core.Ordered;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class AuthGlobalFilter implements GlobalFilter, Ordered {
+
+    private final AuthProperties authProperties;
+    private final JwtTool jwtTool;
+
+    @Override
+    public int getOrder() {
+        return 0;
+    }
+}
+```
+
+5. 实现filter()方法，定义验证逻辑
+
+首先通过exchange获取原始请求，然后获取请求中的请求路径，如果请求路径是authProperties中的排除路径，则直接放行。这里需要注意，我们在配置文件中配置的排除路径都是AntPath，而不是正则表达式，需要用Spring提供的AntPathMatcher来判断是否匹配。然后获取请求头中的Authorization头，如果头为空或者不存在头，则返回401，利用exchange获取响应，并直接调用响应的setComplete()方法完成请求，不再向下传递。然后解析token，根据JwtTool是否报错来判断解析是否通过，最后将解析成功得到的UserId保存在请求头中并向下传递。
+
+```java
+package com.hmall.gateway.filter;
+
+import com.hmall.common.exception.UnauthorizedException;
+import com.hmall.gateway.config.AuthProperties;
+import com.hmall.gateway.utils.JwtTool;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.GlobalFilter;
+import org.springframework.core.Ordered;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.server.reactive.ServerHttpRequest;
+import org.springframework.stereotype.Component;
+import org.springframework.util.AntPathMatcher;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class AuthGlobalFilter implements GlobalFilter, Ordered {
+
+    private final AuthProperties authProperties;
+    private final JwtTool jwtTool;
+    private final AntPathMatcher antPathMatcher = new AntPathMatcher();
+
+    @Override
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+        // 获取请求
+        ServerHttpRequest request = exchange.getRequest();
+        // 获取请求路径
+        String path = request.getPath().toString();
+        // 如果路径在排除路径中，则放行
+        List<String> excludePaths = authProperties.getExcludePaths();
+        if (excludePaths.stream().anyMatch(p -> antPathMatcher.match(p, path))) {
+            return chain.filter(exchange);
+        }
+        // 获取请求头
+        List<String> authorization = request.getHeaders().get("Authorization");
+        if (authorization == null || authorization.isEmpty()) {
+            // 如果请求头中没有token，则返回401
+            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            return exchange.getResponse().setComplete();
+        }
+        // 获取token
+        String token = authorization.get(0);
+        // 解析token
+        Long userId;
+        try {
+            userId = jwtTool.parseToken(token);
+        } catch (UnauthorizedException e) {
+            // 如果解析失败，则返回401
+            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            return exchange.getResponse().setComplete();
+        }
+        // 如果解析成功，则将用户ID添加到请求头中
+        log.info("用户ID: {}", userId);
+        exchange.getRequest()
+                .mutate()
+                .header("userId", userId.toString())
+                .build();
+
+        // 放行
+        return chain.filter(exchange);
+    }
+
+    @Override
+    public int getOrder() {
+        return 0;
+    }
+}
+```
+
+##### 微服务获取网关下发数据
+
+网关处登录校验通过后，登录校验的步骤并没有完成，而是还需要微服务接收来自网关下发的用户数据。已知用户数据存储在请求头中，我们可以利用拦截器在请求到达Controller之前获取请求头中UserId请求，然后将UserId存储在上下文，即ThreadLocal中，供Service调用。如果在每个微服务中都编写一次Interceptor，会非常麻烦，因此可以在通用模块common中定义一个Interceptor，然后在微服务中启用这个配置
+
+1. 定义UserIdInterceptor
+
+实现HandlerInterceptor接口，这里只需要实现preHandle()和afterCompletion()，在preHandle()中获取userId并添加到ThreadLocal中，然后在afterCompletion()中删除userId
+
+```java
+package com.hmall.common.Interceptor;
+
+import com.hmall.common.utils.UserContext;
+import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.HandlerInterceptor;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+@Component
+public class UserIdInterceptor implements HandlerInterceptor {
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        // 获取header
+        String userId = request.getHeader("userId");
+        // 添加到UserContext
+        if (userId != null)
+            UserContext.setUser(Long.parseLong(userId));
+        // 放行
+        return true;
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        // 移除UserContext
+        UserContext.removeUser();
+    }
+}
+```
+
+2. 定义MvcConfig，注册Interceptor
+
+```java
+package com.hmall.common.config;
+
+import com.hmall.common.Interceptor.UserIdInterceptor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class MvcConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new UserIdInterceptor());
+    }
+}
+```
+
+3. 在 spring.factories 中添加MvcConfig
+
+因为Spring默认的包扫描是不包含com.hmall.common的，其他的微服务无法扫描到MvcConfig，也就无法注册UserIdInterceptor。这里涉及Spring自动配置的原理，我们其实已经在[JavaWebMedium](./JavaWebMedium.md)中就已经解释过了，这里再次提及一下。SpringBoot项目默认的组件扫描路径是启动类所在包及其子包，所以微服务默认不会扫描com.hmall.common。解决办法有多种，第一，为启动类添加@ComponentScan注解，并指定com.hmall.common；第二，利用@Import注解导入；第三，则是利用Spring的自动配置原理，Spring会自动配置spring.factories中的所有类，Spring3.x+的版本中将文件名改为了org.springframework.boot.autoconfigure.AutoConfiguration.imports，并且位于META-INF的spring包下
+
+```java
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+  com.hmall.common.config.MyBatisConfig,\
+  com.hmall.common.config.JsonConfig,\
+  com.hmall.common.config.MvcConfig
+```
+
+4. 在MvcConfig类上添加@ConditionalOnClass注解
+
+Interceptor需要SpringMVC的核心包，其他微服务都有，但是Gateway微服务却没有，所以直接启动会导致Gateway无法找到WebMvcConfigurer类而报错。因此需要为MvcConfig添加@@ConditionalOnClass(WebMvcConfigurer.class)，只有拥有SpringMVC的微服务才启用拦截器
+
+```java
+package com.hmall.common.config;
+
+import com.hmall.common.Interceptor.UserIdInterceptor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+@ConditionalOnClass(WebMvcConfigurer.class)
+public class MvcConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new UserIdInterceptor());
+    }
+}
+```
+
+##### 微服务间传递数据
+
+微服务间的数据传递相对就比较简单。微服务间的请求原本是通过Feign发送的，而请求头的修改也就需要基于Feign。Feign提供了RequestInterceptor用于拦截Feign的请求，开发人员可以对其请求进行更改
+
+为了方便注册为Bean，我们不再定义一个单独的Filter，而是直接在FeignClientConfig中定义一个Bean，返回RequestInterceptor。只要是@EnableFeignClients中配置了defaultConfiguration = FeignClientConfig.class的微服务，拦截器就可以直接生效，而不需要做其他配置
+
+```java
+package com.hmall.api.config;
+
+import com.hmall.common.utils.UserContext;
+import feign.Logger;
+import feign.RequestInterceptor;
+import org.springframework.context.annotation.Bean;
+
+public class FeignClientConfig {
+
+    /**
+     * feign日志级别
+     * @return 日志级别
+     */
+    @Bean
+    public Logger.Level feignLoggerLevel() {
+        return Logger.Level.FULL;
+    }
+
+    @Bean
+    public RequestInterceptor userIdInterceptor() {
+        return requestTemplate -> requestTemplate.header("userId", String.valueOf(UserContext.getUser()));
+    }
+}
+```
 
