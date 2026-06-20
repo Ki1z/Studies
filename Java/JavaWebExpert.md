@@ -1,6 +1,6 @@
 # Java Web Medium
 
-`更新时间：2026-6-18`
+`更新时间：2026-6-20`
 
 注释解释：
 
@@ -2421,3 +2421,104 @@ public class FeignClientConfig {
 }
 ```
 
+> ![](javaweb2/95.png)
+
+### 配置管理
+
+在上文的微服务开发中不难发现，像nacos地址、mybatis-plus配置、日志配置等等的配置项，几乎所有的微服务都需要使用，但内容却基本相同。当微服务数量达到一定级别后，针对每个微服务都进行单独配置就会显得非常麻烦。
+
+而Nacos不仅提供了注册中心的功能，也提供了配置管理的功能，利用Nacos，可以快捷、方便地管理微服务的各项配置信息，提高开发效率
+
+#### 配置共享
+
+1. 在Nacos中创建共享配置
+
+将常用的公共配置，如数据库、Slf4j配置、Swagger配置等等移动到hm-common.yml中，使用占位符，如\${hm.swagger.title}来预留每个微服务的不同子配置项
+
+```yml
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/hmall?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&serverTimezone=Asia/Shanghai
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: root
+mybatis-plus:
+  configuration:
+    default-enum-type-handler: com.baomidou.mybatisplus.core.handlers.MybatisEnumTypeHandler
+  global-config:
+    db-config:
+      update-strategy: not_null
+      id-type: auto
+logging:
+  level:
+    com.hmall: debug
+  pattern:
+    dateformat: HH:mm:ss:SSS
+  file:
+    path: "logs/${spring.application.name}"
+knife4j:
+  enable: true
+  openapi:
+    title: ${hm.swagger.title}
+    description: ${hm.swagger.description}
+    email: kiiz@eiousee.com
+    concat: Ki1z
+    url: www.eiousee.com
+    version: v1.0.0
+    group:
+      default:
+        group-name: default
+        api-rule: package
+        api-rule-resources:
+          - ${hm.swagger.package}
+```
+
+> ![](javaweb2/96.png)
+
+2. 在微服务中引入依赖
+
+```xml
+<dependency>
+    <groupId>com.alibaba.cloud</groupId>
+    <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+</dependency>
+```
+
+3. 在微服务的application.yml中进行改写，删除不必要的公共配置，并添加占位符配置
+
+这里使用了spring.config.import项，这一项使用List\<String\>存储，所以可以使用`-`引入多个公共配置
+
+```yml
+server:
+  port: 8083
+spring:
+  application:
+    name: hmall-user
+  config:
+    import: optional:nacos:hm-common.yml
+  profiles:
+    active: dev
+  cloud:
+    nacos:
+      server-addr: localhost:8848
+      username: kiiz
+      password: kiiz
+      config:
+        file-extension: yaml
+feign:
+  httpclient:
+    # 开启httpclient连接池
+    enabled: true
+hm:
+  jwt:
+    location: classpath:hmall.jks
+    alias: hmall
+    password: hmall123
+    tokenTTL: 30m
+  swagger:
+    title: 黑马商城用户服务接口
+    description: 黑马商城用户服务接口
+    package: com.hmall.user.controller
+```
+
+> ![](javaweb2/97.png)
