@@ -1,6 +1,6 @@
 # Java Web Medium
 
-`更新时间：2026-6-20`
+`更新时间：2026-6-22`
 
 注释解释：
 
@@ -2522,3 +2522,360 @@ hm:
 ```
 
 > ![](javaweb2/97.png)
+
+#### 配置热更新
+
+配置热更新是指在修改微服务的配置后，无需重启微服务，即可让新配置生效。这对于时效敏感型服务非常重要，服务不可用即代表直接损失
+
+在Nacos中，启用配置共享后，会自动从注册中心加载一份名为 `<spring.application.name>[-spring.profile.active].<spring.cloud.nacos.config.file-extension>`的配置文件，这份配置文件就是热更新配置文件
+
+举个例子，我们的购物车微服务名为hmall-cart，如果注册中心存在任何hmall-cart.yaml、hmall-cart-dev.yaml、hmall-cart-local.yaml，那么都可以作为热更新配置文件
+
+而如果使用spring.config.import，那么默认就属于热更新配置，如上图中的Listening config，表示是监听配置，而不是单纯加载配置
+
+**示例**
+
+1. 在nacos创建hmall-cart.yaml配置，配置项为购物车最大数量
+
+> ![](javaweb2/98.png)
+
+2. 在购物车微服务中定义一个configProperty类，用于解析热更新配置
+
+```java
+package com.hmall.cart.config;
+
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+@Data
+@Component
+@ConfigurationProperties(prefix = "hm.cart")
+public class CartConfigProperty {
+    private Integer maxItems;
+}
+```
+
+3. 在CartService中修改checkCartsFull()方法，将最大值修改为配置类中的属性
+
+```java
+private void checkCartsFull(Long userId) {
+    Long count = lambdaQuery().eq(Cart::getUserId, userId).count();
+    if (count >= cartConfigProperty.getMaxItems()) {
+        throw new BizIllegalException(StrUtil.format("用户购物车课程不能超过{}", cartConfigProperty.getMaxItems()));
+    }
+}
+```
+
+4. 修改购物车微服务配置
+
+```yml
+server:
+  port: 8082
+spring:
+  application:
+    name: hmall-cart
+  config:
+    import:
+      - optional:nacos:hm-common.yml
+      - optional:nacos:hmall-cart.yaml
+  profiles:
+    active: dev
+  cloud:
+    nacos:
+      server-addr: localhost:8848
+      username: kiiz
+      password: kiiz
+      config:
+        file-extension: yaml
+feign:
+  httpclient:
+    # 开启httpclient连接池
+    enabled: true
+hm:
+  swagger:
+    title: 黑马商城购物车模块接口文档
+    description: 黑马商城购物车模块接口文档
+    package: com.hmall.cart.controller
+```
+
+5. 修改最大数量为1，尝试添加商品失败
+
+> ![](javaweb2/99.png)
+
+6. 修改最大数量为10，尝试添加商品成功
+
+> ![](javaweb2/100.png)
+
+可以看到，在修改配置后，nacos会自动将新配置推送到微服务中
+
+> ![](javaweb2/101.png)
+
+#### 动态路由
+
+先前在配置网关的时候，我们对路由表的配置是直接写死在微服务配置文件中的。刚才我们了解了配置热更新，假设我们能够利用配置热更新，在配置变动时获取配置信息，再更新路由表，就能实现动态路由配置
+
+**示例**
+
+1. 在注册中心配置路由表
+
+> ![](javaweb2/102.png)
+
+2. 在网关中删除所有的路由表，并使用import引入注册中心配置
+
+```yml
+server:
+  port: 8080
+spring:
+  application:
+    name: hmall-gateway
+  config:
+    import: optional:nacos:hm-gateway.yml
+  cloud:
+    nacos:
+      server-addr: localhost:8848
+      username: kiiz
+      password: kiiz
+      config:
+        file-extension: yaml
+hm:
+  jwt:
+    location: classpath:hmall.jks
+    alias: hmall
+    password: hmall123
+    tokenTTL: 30m
+  auth:
+    excludePaths:
+      - /search/**
+      - /users/login
+      - /items/page
+      - /hi
+```
+
+3. 定义RouteProperty类，用于解析hm-gateway.yml
+
+在RouteProperty中，直接声明一个List\<RouteDefinition\>，因为路由更新时使用的就是List\<RouteDefinition\>，不需要作类型变更，而且RouteDefinition能够直接解析routes下所有的配置项，不需要我们再定义一个实体类存储routes
+
+```java
+package com.hmall.gateway.config;
+
+import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.cloud.gateway.route.RouteDefinition;
+import org.springframework.stereotype.Component;
+
+import java.util.List;
+
+@Data
+@Component
+@ConfigurationProperties(prefix = "hm.gateway")
+public class RouteProperty {
+    private List<RouteDefinition> routes;
+}
+```
+
+4. 定义RouteLoader类
+
+RouteLoader是路由更新的逻辑实现类，主要功能就是监听配置更新并发布更新。有关监听配置更新，可以利用@EventListener注解，@EventListener注解是Spring提供的监听注解，默认参数是一个事件类，只要事件类触发，对应@EventListener的方法就会同步触发。而在配置更新时，会发布一个RefreshScopeRefreshedEvent，只要我们在方法上添加@EventListener(RefreshScopeRefreshedEvent.class)注解，只要路由配置发生变更，方法就会执行，这个方法就成为了监听器方法。但是RefreshScopeRefreshedEvent只会在配置发生变更时触发，第一次启动网关时不会触发，所以还需要一个@EventListener(ApplicationReadyEvent.class)，在Spring项目启动完成后触发一次，实现路由初始化。接着是路由更新逻辑，路由更新需要利用RouteDefinitionWriter类，其下有save和delete两个更新方法，但是save只会新增，不会删除，所以在每次更新路由的时候，必须要先删除当前所有的路由配置，才能保证路由完全更新。而delete必须按照路由ID删除，所以还需要一个Set\<String\>来保存当前所有的路由ID，以便下次路由更新时，能够删除当前的所有路由。在RouteDefinitionWriter更新完成后，还需要ApplicationEventPublisher发布一个RefreshRoutesEvent事件，告知网关路由表需要更新
+
+```java
+package com.hmall.gateway.router;
+
+import com.hmall.gateway.config.RouteProperty;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.cloud.context.scope.refresh.RefreshScopeRefreshedEvent;
+import org.springframework.cloud.gateway.event.RefreshRoutesEvent;
+import org.springframework.cloud.gateway.route.RouteDefinition;
+import org.springframework.cloud.gateway.route.RouteDefinitionWriter;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Component;
+import reactor.core.publisher.Mono;
+
+import javax.annotation.PostConstruct;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+@Slf4j
+@RequiredArgsConstructor
+@Component
+public class RouteLoader {
+
+    private final RouteProperty routeProperty;
+    private final RouteDefinitionWriter routeDefinitionWriter;
+    private final ApplicationEventPublisher applicationEventPublisher;
+
+    private final Set<String> routeIds = new HashSet<>();
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void initRoutes() {
+        log.info("初始化路由信息: {}", routeProperty.getRoutes());
+        refreshRouter();
+    }
+
+    @EventListener(RefreshScopeRefreshedEvent.class)
+    public void onConfigChange() {
+        log.info("刷新路由信息: {}", routeProperty.getRoutes());
+        refreshRouter();
+    }
+
+    private void refreshRouter() {
+        // 删除所有路由
+        if (!routeIds.isEmpty()) {
+            routeIds.forEach(routeId ->
+                    routeDefinitionWriter.
+                            delete(Mono.just(routeId)).
+                            subscribe()
+            );
+            routeIds.clear();
+        }
+        // 添加所有路由
+        List<RouteDefinition> routes = routeProperty.getRoutes();
+        if (routes != null && !routes.isEmpty()) {
+            routes.forEach(route -> {
+                routeDefinitionWriter.save(Mono.just(route)).subscribe();
+                routeIds.add(route.getId());
+            });
+        }
+        // 发布事件
+        applicationEventPublisher.publishEvent(new RefreshRoutesEvent(this));
+        log.info("刷新路由完成");
+    }
+}
+```
+
+> ![](javaweb2/103.png)
+
+### 微服务保护
+
+#### 雪崩问题
+
+雪崩问题是指当某个微服务不可用时，从而引发的其他微服务也不可用，最后导致整个微服务链都不可用的连锁问题。雪崩问题是微服务的常见问题，也是对微服务项目损害极大的问题。
+
+##### 解决方案
+
+###### 请求限流
+
+请求限流是针对服务提供者的解决方案，在请求到达微服务前设置一个限流器，设置最大的请求数量。一旦请求超过最大请求数量，限流器就可以执行相应的应对措施，如让请求排队，或者直接拒绝请求等等。
+
+###### 线程隔离
+
+线程隔离又称舱壁模式，模拟船舱隔板的防水原理。通过限定每个业务能够使用的线程数量而将故障业务隔离，避免故障扩散。
+
+###### 服务熔断
+
+服务熔断是由断路器统计请求的异常比例或者慢调用比例，如果超出阈值则直接熔断该业务，拦截该接口的请求。进一步地，可以在调用服务中设置一个被调用服务的熔断冗余，当被调用服务不可用时，所有向被调用服务的请求直接发送到熔断冗余，而不再发送到被调用服务。
+
+#### Sentinel
+
+Sentinel 是阿里巴巴提供的，面向分布式、多语言异构化服务架构的流量治理组件，主要以流量为切入点，从流量控制、流量路由、熔断降级、系统自适应保护等多个维度来帮助用户保障微服务的稳定性
+
+##### 快速入门
+
+1. 引入依赖
+
+```xml
+<!--sentinel-->
+<dependency>
+    <groupId>com.alibaba.cloud</groupId>
+    <artifactId>spring-cloud-starter-alibaba-sentinel</artifactId>
+</dependency>
+```
+
+2. 配置仪表盘地址
+
+可以配置在nacos中，方便针对每个微服务生效
+
+```yml
+spring:
+  cloud:
+    sentinel:
+      transport:
+        dashboard: localhost:8090
+```
+
+3. 访问Sentinel仪表盘，并访问几次接口，就能在仪表盘中看到对应服务
+
+> ![](javaweb2/104.png)
+
+Sentinel默认只会监控微服务中的所有Endpoint，也就是HTTP接口
+
+> ![](javaweb2/105.png)
+
+但这也会导致相同路径中不同请求方式的接口被划分到同一个接口中，因此需要在配置中添加
+
+```yml
+spring:
+  cloud:
+    sentinel:
+      http-method-specify: true
+```
+
+这样Sentinel就会将请求方式和路径一并作为资源名
+
+> ![](javaweb2/106.png)
+
+##### 请求限流
+
+在簇点链路处点击流控
+
+> ![](javaweb2/107.png)
+
+配置最高QPS为6，即最多每秒6个请求
+
+> ![](javaweb2/108.png)
+
+然后进行并发测试
+
+> ![](javaweb2/109.png)
+
+##### 线程隔离
+
+同样地在簇点链路处点击流控，但是这次配置的阈值类型为并发线程数，设置为5个
+
+> ![](javaweb2/110.png)
+
+我们先来看没有设置线程隔离的情况，在购物车微服务中，调整购物车中商品数量后，会调用一次查询商品信息的服务，我们让查询商品信息接口变慢，以模拟微服务中某个服务执行缓慢的问题
+
+```java
+@ApiOperation("根据id批量查询商品")
+@GetMapping
+public List<ItemDTO> queryItemByIds(@RequestParam("ids") List<Long> ids){
+    try {
+        Thread.sleep(500);
+    } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+    }
+    return itemService.queryItemByIds(ids);
+}
+```
+
+然后设置购物车服务的最大tomcat线程数为50，等待队列为10，最大连接数80，否则tomcat会尝试接收所有连接，无法达到某个服务不可用的目的
+
+```yml
+server:
+  tomcat:
+    threads:
+      max: 50
+    accept-count: 10
+    max-connections: 80
+```
+
+先来看正常情况，查询购物车列表
+
+38ms和19ms是修改购物车服务时间，而大于500ms的是查询购物车服务时间
+
+> ![](javaweb2/111.png)
+
+现在我们对查询购物车服务进行并发测试，模拟购物车请求人数很多的情况
+
+可以看到，由于查询购物车服务变慢，修改购物车服务直接不可用
+
+> ![](javaweb2/115.png)
+
+所以我们在Sentinel中启用线程隔离，无论查询购物车服务的可用性如何，更新购物车服务始终可用
+
+> ![](javaweb2/116.png)
