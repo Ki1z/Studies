@@ -1,6 +1,6 @@
 # Java Web Medium
 
-`更新时间：2026-6-22`
+`更新时间：2026-6-23`
 
 注释解释：
 
@@ -2879,3 +2879,181 @@ server:
 所以我们在Sentinel中启用线程隔离，无论查询购物车服务的可用性如何，更新购物车服务始终可用
 
 > ![](javaweb2/116.png)
+
+##### Fallback
+
+Fallback是指在接口调用失败，或者是接口忙时，可以提供的一种冗余方案，基于Fallback可以向用户提供友好信息，来避免请求失败造成的糟糕体验。Feign客户端也提供了Fallback解决方案
+
+首先开启Feign资源簇点，这一配置可以在nacos配置中进行
+
+```yml
+feign:
+  sentinel:
+    enabled: true
+```
+
+然后在Sentinel中就可以看到Feign接口簇点
+
+> ![](javaweb2/117.png)
+
+然后我们对Feign接口设置线程隔离，而不对cart设置，以此来保证cart可用
+
+> ![](javaweb2/118.png)
+
+然后定义ItemClientFallbackFactory，实现FallbackFactory，泛型为ItemClient。接着实现create()方法，方法返回一个ItemClient实例，这个返回的实例就是Fallback实例，然后实现ItemClient接口中的所有方法，定义实际的Fallback逻辑
+
+```java
+package com.hmall.api.fallback;
+
+import com.hmall.api.client.ItemClient;
+import com.hmall.api.dto.ItemDTO;
+import com.hmall.api.dto.OrderDetailDTO;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.openfeign.FallbackFactory;
+import org.springframework.stereotype.Component;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+
+@Slf4j
+public class ItemClientFallbackFactory implements FallbackFactory<ItemClient> {
+    @Override
+    public ItemClient create(Throwable cause) {
+        return new ItemClient() {
+            @Override
+            public List<ItemDTO> queryItemByIds(Collection<Long> ids) {
+                log.error("查询商品异常", cause);
+                return new ArrayList<>();
+            }
+
+            @Override
+            public void deductStock(List<OrderDetailDTO> items) {
+                log.error("扣减库存异常", cause);
+            }
+        };
+    }
+}
+```
+
+在Config类中将ItemClientFallbackFactory注册为Bean，因为hmall-cart无法扫描到`com.hmall.api`的Bean，不能添加@Component
+
+```java
+@Bean
+public ItemClientFallbackFactory itemClientFallbackFactory() {
+    return new ItemClientFallbackFactory();
+}
+```
+
+在ItemClient上指定fallbackFactory
+
+```java
+package com.hmall.api.client;
+
+import com.hmall.api.dto.ItemDTO;
+import com.hmall.api.dto.OrderDetailDTO;
+import com.hmall.api.fallback.ItemClientFallbackFactory;
+import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.stereotype.Component;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.Collection;
+import java.util.List;
+
+@FeignClient(value = "hmall-item", fallbackFactory = ItemClientFallbackFactory.class)
+public interface ItemClient {
+
+    @GetMapping("/items")
+    List<ItemDTO> queryItemByIds(@RequestParam Collection<Long> ids);
+
+    @PutMapping("/items/stock/deduct")
+    void deductStock(@RequestBody List<OrderDetailDTO> items);
+}
+```
+
+然后进行并发测试，可以看到异常率为0，表明Fallback生效，后端并没有直接拒绝连接
+
+> ![](javaweb2/119.png)
+
+##### 服务熔断
+
+在应用Fallback后，不难发现P99，也就是99%百分位的数值依然比较大，这是因为后端仍会尝试放行一些请求。而在实际业务中，这些个位数的放行数量是没有意义的，后端甚至还会因为这些请求进一步增加响应时长。因此比较妥善的办法是直接中止服务，也就是服务熔断。在服务熔断后，会直接拒绝所有的请求，保证没有任何请求能够通过，如果配置了fallback，则直接重定向到fallback
+
+Sentinel中的服务熔断配置相对比较简单，点击簇点链路中的熔断
+
+> ![](javaweb2/120.png)
+
+熔断规则如下
+
+> ![](javaweb2/121.png)
+
+- 最大RT：最大慢调用阈值，超过阈值的视为异常
+- 比例阈值：在最小请求数中最大RT数量占比超过比例阈值，则触发服务熔断
+- 熔断时长：服务终止的时长
+- 最小请求数：采集样本的最小数量
+- 统计时长：采集样本的周期
+
+然后再执行一次并发测试
+
+> ![](javaweb2/122.png)
+
+可以看到，在触发一次慢调用后，服务立即熔断，P99直接缩短到6ms
+
+### 分布式事务
+
+之前我们提到过事务，事务是一组操作的集合，它时一个不可分割的工作单位。事务会把所有的操作作为一个整体一起向系统提交或撤销操作请求，即这些操作要么同时成功，要么同时失败。而在微服务中，事务也同样存在，例如用户下单操作中，首先在OrderService创建订单，然后在CartService清除购物车，然后在ItemService扣减库存。而这种在不同的微服务间执行的同一事务就是分布式事务
+
+分布式事务面临的最大问题就是事务的ACID，即原子性、一致性、隔离性和持久性。假设同时有两个用户下同一个商品，同时创建订单，清除购物车，但是此时库存仅剩一件商品，那么在ItemService中必定会抛出一次异常。但是OrderService和CartService对此次异常并不知情，这就破坏了事务的ACID原则
+
+#### Apache Seata
+
+Apache Seata是阿里巴巴与蚂蚁金服合作开发的一款分布式事务解决方案，致力于在微服务架构下提供高性能和简单易用的分布式事务服务
+
+在seata中，对分布式事务设计了三个重要角色
+
+- TC (Transaction Coordinator) 事务协调者：维护全局和分支事务的状态，协调全局事务提交或回滚
+- TM (Transaction Manager) 事务管理器：定义全局事务的范围，开始全局事务，提交或回滚全局事务
+- RM (Resource Manager) 资源管理器：管理分支事务，与TC交谈以注册分支事务和报告分支事务状态
+
+简单来说，分布式事务的步骤大致如下
+$$
+TM \xrightarrow{通知全局事务} TC \xrightarrow{创建事务} RM \xrightarrow{申请并报告分支事务} TC \xrightarrow{注册并维护分支事务} TM \xrightarrow{结束全局事务} TC
+$$
+
+#### 微服务集成Seata
+
+首先引入依赖
+
+```xml
+<!--seata-->
+<dependency>
+    <groupId>com.alibaba.cloud</groupId>
+    <artifactId>spring-cloud-starter-alibaba-seata</artifactId>
+</dependency>
+```
+
+然后编写配置，可以使用nacos共享配置
+
+```yml
+seata:
+  registry:
+    nacos:
+      server-addr: localhost:8848
+      namespace: 
+      group: DEFAULT_GROUP
+      application: seata-server
+      username: kizz
+      password: kiiz
+  tx-service-group: hmall
+  service:
+    vgroup-mapping:
+      hmall: default
+```
+
+tx-service-group是事务组，vgroup-mapping是事务组与TC集群的映射
+
+然后重启微服务
+
