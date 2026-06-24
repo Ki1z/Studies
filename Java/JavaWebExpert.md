@@ -3057,3 +3057,120 @@ tx-service-group是事务组，vgroup-mapping是事务组与TC集群的映射
 
 然后重启微服务
 
+> ![](javaweb2/123.png)
+
+可以看到RM和TM已经注册成功，如果报错`can not get cluster name in registry config 'service.vgroupMapping.hmall', please make sure registry config correct`，则需要在nacos中添加一条配置
+
+> ![](javaweb2/124.png)
+
+DataID设置为service.vgroupMapping.hmall，内容为default，格式为text。在设置配置为nacos管理后，seata默认只会读取nacos中的配置，不会读取客户端本地配置
+
+#### XA模式
+
+XA规范是X/Open组织定义的分布式事务处理(DTP, Distributed Transaction Processing)标准，XA规范描述了全局的TM与局部RM之间的接口，几乎所有主流关系型数据库都对XA规范提供了支持
+
+在Seata中，XA模式的过程如下。首先由TM开启全局事务，然后TM调用各微服务的分支事务，RM此时向TC注册分支事务，接着才执行sql语句。但是这里的sql事务不能提交，因为事务还没有结束。然后RM报告事务完成状态，当TM处理完所有事务后，才会告知TC结束全局事务。TC会检查所有分支事务状态，如果都执行成功，则向所有分支发送提交指令，这时候RM才提交sql事务，释放锁；若存在至少一个分支事务失败，则向所有分支发送回滚指令，所有RM回滚事务
+
+XA模式的优点是事务的强一致性，满足ACID原则，而且常用数据库都支持，实现简单，没有代码侵入。但缺点也很明显，一阶段需要锁定数据库资源，等待二阶段释放，性能较差，如果多个分支事物中存在一个慢分支，将会导致所有分支事物对应的数据库都无法释放资源，导致资源浪费；同时XA模式依赖关系型数据库实现事务，无法在NoSQL数据库中使用
+
+##### 快速入门
+
+在Seata中启用XA模式非常地简单
+
+1. 修改application.yml配置，开启XA模式
+
+```yml
+seata:
+  data-source-proxy-mode: XA
+```
+
+2. 给全局事务的入口添加方法添加@GlobalTransactional注解，启用全局事务控制
+
+```java
+@Override
+@GlobalTransactional
+public Long createOrder(OrderFormDTO order) {
+    itemService.removeByItemIds();
+    ...
+}
+```
+
+3. 为了保证事务回滚，分支方法上也应该加上@Transactional注解
+
+```java
+@Override
+@Transactional
+public void removeByItemIds() {
+    ...
+}
+```
+
+#### AT模式
+
+AT模式同样是分阶段提交的事务模型，但是AT模式弥补了XA模型中资源锁定周期过长的缺陷
+
+AT模式的工作流程如下。首先由TM开启全局事务，然后TM调用各微服务的分支事务，RM此时向TC注册分支事务。这之前与XA模式相同，但是在SQL语句执行之前，AT模式会先生成一个数据表快照，然后执行SQL语句，并立即提交事务。此时其实已经破坏了ACID原则，但由于快照的存在，逻辑上如果需要回滚事务，则可以将数据表还原为快照状态，实现回滚效果
+
+AT模式的使用方式与XA模式相同，只是在配置中将XA修改为AT，或者直接删除，默认使用AT模式
+
+```yml
+seata:
+  data-source-proxy-mode: AT
+```
+
+然后在客户端数据库中添加一个undo_log表
+
+```mysql
+-- for AT mode you must to init this sql for you business database. the seata server not need it.
+CREATE TABLE IF NOT EXISTS `undo_log`
+(
+    `branch_id`     BIGINT       NOT NULL COMMENT 'branch transaction id',
+    `xid`           VARCHAR(128) NOT NULL COMMENT 'global transaction id',
+    `context`       VARCHAR(128) NOT NULL COMMENT 'undo_log context,such as serialization',
+    `rollback_info` LONGBLOB     NOT NULL COMMENT 'rollback info',
+    `log_status`    INT(11)      NOT NULL COMMENT '0:normal status,1:defense status',
+    `log_created`   DATETIME(6)  NOT NULL COMMENT 'create datetime',
+    `log_modified`  DATETIME(6)  NOT NULL COMMENT 'modify datetime',
+    UNIQUE KEY `ux_undo_log` (`xid`, `branch_id`)
+) ENGINE = InnoDB
+  AUTO_INCREMENT = 1
+  DEFAULT CHARSET = utf8mb4 COMMENT ='AT transaction mode undo table';
+```
+
+注意，如果之前配置了ItemClient的Fallback，记得在FallBackFactory中抛出异常，否则ItemService抛出异常后，会直接进入FallBack，但FallBack不会抛出异常，导致分布式事务失败
+
+```java
+@Override
+public void deductStock(List<OrderDetailDTO> items) {
+    log.error("扣减库存异常", cause);
+    throw new RuntimeException("扣减库存异常");
+}
+```
+
+> ![](javaweb2/125.png)
+
+## 消息队列
+
+### 同步调用与异步调用
+
+之前的项目中，微服务间的调用是基于Feign的HTTP请求，实际也就是TCP请求。而TCP请求必须完成三次握手与四次挥手，也就是必须等待对方响应结果，连接才能断开，这就是同步调用。在微服务调用中，大多数的调用都是需要返回结果的，即使是抛出的异常也是一种返回结果，所以大多数微服务调用都是同步调用
+
+举个例子，支付服务完成后，需要即时更新用户余额，所以需要调用用户服务，但是如果用户服务更新失败的话，支付服务需要进行退款，所以这里就必须是同步调用。但如果支付服务完成后，需要推送一个支付成功的消息到用户，而这个行为是不需要返回结果的；同样地，支付成功后需要为用户增加积分，或者记录用户购买偏好，对于支付服务本身而言，不是必须要返回结果，所以也就不需要同步调用。因为同步调用是阻塞式调用，一旦连接开始，就必须等待连接结束后，程序才会进行下一步了。假设用户积分服务出现异常，发生慢调用，而因为同步调用的阻塞问题，导致整个支付服务也出现慢调用，就会导致微服务雪崩问题。所以，这里就需要引入异步调用
+
+异步调用与同步调用相斥，也就是收发双方不需要知道准确的发送和接收时机，而只是根据消息状态执行对应的处理逻辑。例如支付完成后，用户积分服务出现异常，发生慢调用，如果积分服务调用属于异步调用，支付服务无需知道调用的结果，只是作为消息告知方，就可以避免雪崩的发生
+
+异步调用一般基于消息转发机制，也就是提供一个消息代理，发送方只负责将消息发送到消息代理中，不需要准确知道接收方的身份，也不需要确认接收方接收。而且基于消息代理，发送方可以进一步解耦，只需要发送服务消息，而不是主动发送调用请求。接收方也不再被动接收请求，而是主动在消息代理中查询消息，如果有属于自己的消息，则执行对应逻辑
+
+### RabbitMQ
+
+MQ，MessageQueue，也就是消息队列，是指异步调用中用于存放消息的容器，即上文提到的消息代理，又被称为Broker。目前市面上有多种MQ产品
+
+| 产品     | 开发者  | 开发语言     | 协议支持                          | 可用性 | 单机吞吐量 | 消息延迟 | 消息可靠性 |
+| -------- | ------- | ------------ | --------------------------------- | ------ | ---------- | -------- | ---------- |
+| RabbitMQ | Rabbit  | Erlang       | AMQP、XMPP、SMTP、STOMP           | HIGN   | NORMAL     | μs       | HIGN       |
+| ActiveMQ | Apache  | Java         | OpenWire、STOMP、REST、XMPP、AMQP | NORMAL | LOW        | ms       | NORMAL     |
+| RocketMQ | Alibaba | Java         | Custom                            | HIGN   | HIGN       | ms       | HIGH       |
+| Kafka    | Apache  | Scala & Java | Custom                            | HIGN   | VERY HIGN  | ms       | NORMAL     |
+
+国内企业MQ产品使用中，RabbitMQ使用较多，所以我们选择RabbitMQ
+
