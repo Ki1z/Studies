@@ -1,6 +1,6 @@
 # Java Web Medium
 
-`更新时间：2026-6-23`
+`更新时间：2026-6-26`
 
 注释解释：
 
@@ -3173,4 +3173,400 @@ MQ，MessageQueue，也就是消息队列，是指异步调用中用于存放消
 | Kafka    | Apache  | Scala & Java | Custom                            | HIGN   | VERY HIGN  | ms       | NORMAL     |
 
 国内企业MQ产品使用中，RabbitMQ使用较多，所以我们选择RabbitMQ
+
+#### 快速入门
+
+在RabbitMQ数据模型中，划分了四个关键角色，首先是Publisher生产者，负责发布消息到消息队列中，对应微服务中发起请求的服务接口；接着是exchange交换机，生产者发送的消息在消息队列中首先到达交换机，交换机根据路由规则来决定消息如何继续下发；然后是queue消息队列，一个交换机对应多个消息队列，消息的接收也是在队列中进行的；最后Consumer消费者，也就是被调用服务，负责监听消息队列，并将消息从消息队列中取出消费
+
+1. 首先创建两个队列
+
+> ![](javaweb2/126.png)
+
+2. 在默认交换机amq.fanout中绑定两个队列
+
+> ![](javaweb2/127.png)
+
+3. 在amq.fanout中发送测试消息
+
+> ![](javaweb2/128.png)
+
+4. 在队列中查看消息
+
+> ![](javaweb2/129.png)
+
+### Spring AMQP
+
+Spring AMQP是一个基于AMQP协议的消息中间件框架，它提供了一个简单的API来发送和接收异步、可靠的消息。它是Spring框架的一部分，可以与Spring Boot和其他Spring项目一起使用。Spring AMQP支持多种消息协议，包括RabbitMQ、Apache ActiveMQ和Qpid等。它提供了一个高级的消息模型，包括消息确认、事务和消息监听器等功能，使得开发者可以轻松地编写可靠的消息应用程序。Spring AMQP还提供了一些高级特性，如消息转换器、消息路由、消息过滤和消息拦截等。这些特性可以帮助开发者更加灵活地处理不同类型的消息，同时也提高了应用程序的性能和可靠性。总之，Spring AMQP是一个强大的消息中间件框架，它可以帮助开发者轻松地构建可靠的消息应用程序，并提供了许多高级特性来满足不同的需求
+
+#### 快速入门
+
+1. 引入依赖
+
+```xml
+<!--spring amqp-->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-amqp</artifactId>
+</dependency>
+```
+
+2. 添加rabbitmq配置
+
+```yml
+spring:
+  rabbitmq:
+    host: localhost
+    port: 5672
+    virtual-host: /
+    username: kiiz
+    password: kiiz
+```
+
+3. 创建生产者
+
+我们直接将消息发往消息队列，不经过路由器。在Spring AMQP中，提供了RabbitTemplate类来操作RabbitMQ
+
+```java
+package com.hmall.cart;
+
+import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.Test;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.boot.test.context.SpringBootTest;
+
+@Slf4j
+@SpringBootTest
+public class MQTest {
+
+    RabbitTemplate rabbitTemplate;
+
+    @Test
+    public void testPublisher() {
+        // 创建消息
+        String message = "Hello Spring AMQP";
+        // 指定队列
+        String queue = "test.queue1";
+        // 发送消息
+        rabbitTemplate.convertAndSend(queue, message);
+    }
+}
+```
+
+4. 创建消费者
+
+创建消费者使用@RabbitListener注解，queues属性表示监听的队列
+
+```java
+package com.hmall.cart.queue;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Component;
+
+@Slf4j
+@Component
+public class TestListener {
+
+    @RabbitListener(queues = "test.queue1")
+    public void onMessage(String message) {
+        log.info("收到消息: {}", message);
+    }
+}
+```
+
+5. 发送消息，在消费者端观察日志
+
+> ![](javaweb2/130.png)
+
+#### Work Queues
+
+work queues又称任务模型，是指让多个消费者绑定一个队列，共同消费队列中的消息
+
+在work queues模型中，默认的消息分发规则是轮询模式。因为默认消息队列中的消息会直接被消费者消费，而不是引用，所以在没有作为缓存的情况下，消息队列中的消息数量应当保持为0
+
+**效率优先**
+
+假设存在两台性能不一致的服务器，因为rabbitmq默认的轮询机制，可能会导致其中一台已经消费完成，而另一台仍在继续消费的情况，这会导致不必要的资源浪费。因此可以在配置中启用prefetch项，prefetch项会限制消息队列投递到消费者的数量，如果设置为1，则表示每次投递最多1条消息，这条消息消费完成后，才能继续投递下一条消息
+
+```yml
+spring:
+  rabbitmq:
+    listener:
+      simple:
+        prefecth: 1
+```
+
+#### 交换机
+
+##### Fanout
+
+Fanout exchange，广播交换机，会将每一条接收的消息都路由到所有与其绑定的消息队列中，所有的消费者都能够接收到消息
+
+例如先前提到的支付案例，如果是纯消息队列实现，就需要保证消息队列中的消息数量等于消费者数量，而且需要保证每个消费者都能够收到一份消息。而利用Fanout交换机，只需要为每个消费者设置一个单独的消息队列，然后绑定到Fanout交换机上，生产者只需要发送一条消息，所有的消费者都能收到，并且直接杜绝了一个消费者收到多条消息的可能
+
+> ![](javaweb2/132.png)
+
+> ![](javaweb2/131.png)
+
+##### Direct
+
+Direct exchange，定向路由交换机，会将接收到的消息按照指定规则路由到指定消息队列中，具体规则如下
+
+每一个消息队列都需要与交换机设置一个BindingKey，发布者发布消息时，需要指定消息的BindingKey，然后Direct交换机就会将消息路由到BindingKey对应的队列中去
+
+> ![](javaweb2/135.png)
+
+然后发送一个Key为test2的消息
+
+> ![](javaweb2/134.png)
+
+而且一个队列可以绑定多个Key，一个Key允许被多个队列绑定，所以Direct实际上也可以实现Fanout的功能
+
+> ![](javaweb2/136.png)
+
+然后向test发送消息
+
+> ![](javaweb2/137.png)
+
+##### Topic
+
+Topic exchange，主题交换机，与Direct类似，使用路由Key来区分消息队列，但是Topic的路由Key是一串用点号`.`分隔的多个域组成的字符串，如`formula.one.news`、`formula.two.race`等
+
+topic key允许使用通配符来匹配路由，#表示多个域，\*表示一个域，如`formula.#`匹配任意以`formula`开头的key，而`formula.*`则匹配任意以`formula`开头，但是只能有两个域的key
+
+需要注意，通配符应该使用在交换机匹配规则上
+
+> ![](javaweb2/138.png)
+
+然后我们发送一个消息，key设置为test.queue
+
+> ![](javaweb2/139.png)
+
+再发送一个消息，key设置为test.kiiz
+
+> ![](javaweb2/140.png)
+
+#### Java声明队列和交换机
+
+Spring AMQP提供了几个类，用于声明队列、交换机及其绑定关系
+
+- Queue: 用于声明消息队列，可以用工厂类QueueBuilder构建
+- Exchange: 用于声明交换机，可以用工厂类ExchangeBuilder构建
+- Binding: 用于声明队列和交换机之间的绑定关系，可以用工厂类BindingBuilder构建
+
+##### 基于Bean创建
+
+**示例**
+
+创建一个config类，定义Bean返回交换机、消息队列以及绑定关系
+
+```java
+package com.hmall.cart.config;
+
+import org.springframework.amqp.core.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class RabbitMQConfig {
+
+    // 创建交换机
+    @Bean
+    public TopicExchange topicExchange() {
+        return new TopicExchange("test.topic");
+    }
+
+    // 创建队列
+    @Bean
+    public Queue queue1() {
+        return new Queue("test.queue1");
+    }
+
+    // 绑定队列与交换机
+    @Bean
+    public Binding bindingQueue1() {
+        return BindingBuilder.bind(queue1())
+                .to(topicExchange())
+                .with("test.#");
+    }
+}
+```
+
+##### 基于注解创建
+
+Spring AMQP还提供了基于@RabbitListener注解的声明方式
+
+**示例**
+
+```java
+package com.hmall.cart.queue;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.ExchangeTypes;
+import org.springframework.amqp.rabbit.annotation.Exchange;
+import org.springframework.amqp.rabbit.annotation.Queue;
+import org.springframework.amqp.rabbit.annotation.QueueBinding;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Component;
+
+@Slf4j
+@Component
+public class TestListener {
+
+    @RabbitListener(bindings = @QueueBinding(
+            value = @Queue(name = "test.queue1"),
+            exchange = @Exchange(name = "test.topic", type = ExchangeTypes.TOPIC),
+            key = "test.#"
+    ))
+    public void onMessage(String message) {
+        log.info("监听到消息：{}", message);
+    }
+}
+```
+
+这里的key是一个String[]数组，因此可以为一个队列添加多个key
+
+> ![](javaweb2/141.png)
+
+#### 消息转换器
+
+Spring AMQP在发送消息的时候需要使用一个消息转换器，将Java对象转换为能够发送的数据，也就是序列化。Spring AMQP默认使用的是JDK自己的序列化工具，但JDK原生序列化工具存在诸多问题，如性能低下、数据膨胀，以及严重的安全漏洞问题，如CVE-2017-5638，甚至可以利用反序列化执行RCE漏洞
+
+所以，我们需要将其更改为性能更好，更加安全的消息转换器，这里我们使用Jackson
+
+1. 引入Jackson依赖
+
+```xml
+<!--jackson-->
+<dependency>
+    <groupId>com.fasterxml.jackson.core</groupId>
+    <artifactId>jackson-databind</artifactId>
+</dependency>
+```
+
+2. 在config类中定义Bean，返回一个MessageConverter
+
+```java
+package com.hmall.cart.config;
+
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class RabbitMQConfig {
+
+    @Bean
+    public MessageConverter messageConverter() {
+        return new Jackson2JsonMessageConverter();
+    }
+}
+```
+
+3. 然后重启测试类，发送一个Map集合，查看消息队列中是否为JSON格式
+
+> ![](javaweb2/142.png)
+
+#### 实践-订单支付成功后的订单状态修改
+
+在先前的学习中，订单支付成功后，我们对支付状态的修改是使用Feign调用Order服务接口实现的，这是一种同步调用。现在我们发现，这种同步调用是不必要的，因为对于支付服务来说，订单服务属于边缘业务，支付服务不需要知道订单服务的实现结果与返回值，所以我们将其改造为异步调用
+
+1. 定义消费者
+
+先有需求才有生产，所以先定义消费者，而且消费者注解中才能定义交换机、队列等细节。在订单服务中，定义mq.consumer包，定义OrderConsumer类，注入orderService，因为需要通过OrderConsumer操作orderService，记住添加@Component注解。然后定义一个handlerPaySuccess方法，用于监听消息队列，在方法上添加@RabbitListener注解，设置绑定队列为order.pay.success.queue，命名规则即为 `服务名.业务.queue`，交换机为direct交换机，因为Spring AMQP默认为DIRECT，所以无需添加type属性；最后绑定一个Key为pay.success。在handlerPaySuccess方法内部，调用orderService的markOrderPaySuccess()方法即可将订单标记为已支付
+
+```java
+package com.hmall.order.mq.consumer;
+
+import com.hmall.order.domain.Order;
+import com.hmall.order.service.IOrderService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.ExchangeTypes;
+import org.springframework.amqp.rabbit.annotation.Exchange;
+import org.springframework.amqp.rabbit.annotation.Queue;
+import org.springframework.amqp.rabbit.annotation.QueueBinding;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Component;
+
+@Component
+@RequiredArgsConstructor
+@Slf4j
+public class OrderConsumer {
+
+    private final IOrderService orderService;
+
+    @RabbitListener(bindings = @QueueBinding(
+            value = @Queue(name = "order.pay.success.queue"),
+            exchange = @Exchange(name = "hmall.pay.direct"),
+            key = "pay.success"
+    ))
+    public void handlerPaySuccess(Long orderId) {
+        log.info("订单支付成功：{}", orderId);
+        orderService.markOrderPaySuccess(orderId);
+    }
+}
+```
+
+2. 定义生产者
+
+创建包mq.producer，定义生产者类PayProducer，定义方法sendPaySuccessWithOrderId来发送消息。这里的命名规范需要注意，支付服务无需知道消息的接收者是谁，所以命名方面不应使用sendToOrder或者UpdateOrder，而是描述发送行为即可。接着注入RabbitTemplate，调用rabbitTemplate向hmall.pay.direct交换机发送消息，路由Key随即设置为pay.success，消息内容为订单id
+
+```java
+package com.hmall.pay.mq.producer;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.stereotype.Component;
+
+@Component
+@Slf4j
+@RequiredArgsConstructor
+public class PayProducer {
+
+    private final RabbitTemplate rabbitTemplate;
+
+    public void sendPaySuccessWithOrderId(Long orderId) {
+        log.info("支付成功：{}", orderId);
+        rabbitTemplate.convertAndSend("hmall.pay.direct", "pay.success", orderId);
+    }
+}
+```
+
+*注：在发送消息之前别忘了配置消息转换器*
+
+### 消息可靠性
+
+消息可靠性是指消息在从生产者生产开始，到消费者消费完毕这个过程中消息的可用性，也就是消息的安全性。消息的可靠性可以从三个方面去考虑，分别是发送者可靠性、MQ可靠性与消费者可靠性。生产者出现异常无法正常生产，MQ服务器异常，传输网络异常，消费者自身异常导致消息无法被消费，都会影响消息的可靠性
+
+#### 发送者可靠性
+
+RabbitMQ默认提供了两种方式来确保发送者可靠性，分别是发送者重连和发送者确认
+
+##### 发送者重连
+
+由于网络波动问题，可能会出现发送者连接MQ失败的情况，导致消息无法正确发送。通过配置我们可以开启连接失败后重连
+
+```yml
+spring:
+  rabbitmq:
+    # 设置MQ连接超时时间
+    connection-timeout: 1s
+    template:
+      retry:
+        # 开启超时重连
+        enable: true
+        # 重连等待时间
+        initial-interval: 1000ms
+        # 下次重连等待时间倍数
+        multiplier: 2
+        # 最大重连次数
+        max-attempts: 3
+```
+
+##### 发送者确认
+
+发送者重连解决的是发送者与MQ的连接问题，而发送者确认则是解决消息发送的问题。Spring AMQP提供了Publisher Confirm和Publisher Return两种确认机制，开启发送者确认后，当发送者发送消息给MQ后，MQ会返回确认结果给发送者
 
