@@ -1,6 +1,6 @@
 # Java Web Medium
 
-`更新时间：2026-6-26`
+`更新时间：2026-6-28`
 
 注释解释：
 
@@ -3569,4 +3569,160 @@ spring:
 ##### 发送者确认
 
 发送者重连解决的是发送者与MQ的连接问题，而发送者确认则是解决消息发送的问题。Spring AMQP提供了Publisher Confirm和Publisher Return两种确认机制，开启发送者确认后，当发送者发送消息给MQ后，MQ会返回确认结果给发送者
+
+MQ确认结果一般有以下四种情况
+
+- 当消息投递到MQ，但是路由失败，则返回ACK，并告知路由异常原因
+- 临时消息投递到MQ，入队成功，则返回ACK
+- 持久消息投递到MQ，入队成功并且完成了持久化，返回ACK
+- 以上三种情况之外的，返回NACK
+
+```yml
+spring:
+  rabbitmq:
+    # 消息确认
+    publisher-confirm-type: correloted
+    publisher-returns: true
+```
+
+publisher-confirm-type有三种，默认值none关闭消息确认，simple基于同步的消息确认，correloted基于异步的消息确认
+
+然后为RabbitTemplate设置一个returnsCallback
+
+这里我们需要更改Config类。目前大多数办法是在Config类中注入RabbitTemplate，然后设置RabbitTemplate的ReturnsCallback，但是这里会使用@PostConstruct注解，这个注解会导致循环依赖问题，即RabbitTemplate的创建需要RabbitTemplateConfigurer，而RabbitTemplateConfigurer又需要RabbitMqConfig。所以我们放弃这种方式转而定义一个Bean，直接返回已经设置好的RabbitTemplate，同时将消息转换器也一同设置
+
+```java
+package com.hmall.pay.config;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+@Slf4j
+public class RabbitMqConfig {
+
+    @Bean
+    @ConditionalOnMissingBean
+    public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
+        RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
+        // 配置消息转换器
+        rabbitTemplate.setMessageConverter(new Jackson2JsonMessageConverter());
+        // 配置消息发送失败返回处理
+        rabbitTemplate.setReturnsCallback(result -> log.error("消息发送失败：{}", result));
+        return rabbitTemplate;
+    }
+}
+```
+
+然后设置消息确认回调ConfirmCallback
+
+ConfirmCallback和ReturnsCallback不同，ConfirmCallback是基于消息发送时的CorrelationData，RabbitTemplate的convertAndSend方法有一个重载方法，可以传入一个CorrelationData，在消息发送后，CorrelationData可以通过SettableListenableFuture获取到消息发送情况，SettableListenableFuture继承自Future。然后为SettableListenableFuture设置一个addCallback，这个Callback就是ConfirmCallback。addCallback接收两个参数，都是FunctionalInterface，第一个是successCallback，第二个是failureCallback，但是failureCallback并不是NACK的Callback，而是出现异常时的Callback，failureCallback在实际业务中出现的机率较低，一旦出现，则不仅仅是消息队列问题，而是项目存在致命问题。所以，在successCallback中还需要再判断返回的结果result是否为ACK，然后执行相关的日志记录。重发机制通过递归来实现，而参数的传递我们封装为一个内部实体类RetryContext，并声明一个专门的发送方法send，每次发送前先创建一个CorrelationData，并且使用UUID来防止重复。每次发送的CorrelationData的ID必须不同，因为RabbitMQ会根据ID来推送发送数据，如果两个发送请求使用同一个ID，会造成后来的请求覆盖第一次请求的可能。消息发送失败后，我们再定义一个retrySend方法，方法接收一个参数currentRetries，这个参数也来自send，通过判断currentRetries与RetryContext中的maxRetries来决定是否继续重发，当选择继续重发时，currentRetries + 1，而递归出口则是重发次数超过限制，不再重发消息，仅作日志记录
+
+```java
+package com.hmall.pay.mq.producer;
+
+import lombok.*;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.stereotype.Component;
+
+import java.util.UUID;
+
+@Component
+@Slf4j
+@RequiredArgsConstructor
+public class PayProducer {
+
+    private final RabbitTemplate rabbitTemplate;
+
+    @Getter
+    private class RetryContext<T>{
+        private final String exchange;
+        private final String routingKey;
+        private final T message;
+        @Setter
+        private int maxRetries;
+
+        public RetryContext(String exchange, String routingKey, T message, int maxRetries) {
+            this.exchange = exchange;
+            this.routingKey = routingKey;
+            this.message = message;
+            this.maxRetries = maxRetries;
+        }
+
+        public RetryContext(String exchange, String routingKey, T message) {
+            this(exchange, routingKey, message, 3);
+        }
+    }
+
+    public void sendPaySuccessWithOrderId(Long orderId) {
+        log.info("支付成功：{}", orderId);
+        RetryContext<Long> rc = new RetryContext<>("hmall.pay.topic", "pay.success", orderId);
+        send(rc);
+    }
+
+    private <T> void send(RetryContext<T> rc, Integer currentRetries) {
+        // 创建CorrelationData
+        CorrelationData correlationData = new CorrelationData(UUID.randomUUID().toString());
+        // 注册回调
+        correlationData.getFuture().addCallback(
+                // 发送结果
+                result -> {
+                    // 判断是否成功
+                    if (result != null && result.isAck())
+                        log.info("消息发送成功：{}", result);
+                    else {
+                        log.error("消息发送失败：{}", result);
+                        // 尝试重发
+                        retrySend(rc, currentRetries);
+                    }
+                },
+                // 异常
+                ex -> {
+                    log.error("消息接收出现异常：{}", ex.getMessage());
+                    retrySend(rc, currentRetries);
+                }
+        );
+        // 发送消息
+        rabbitTemplate.convertAndSend(rc.getExchange(), rc.getRoutingKey(), rc.getMessage(), correlationData);
+    }
+
+    private <T> void send(RetryContext<T> rc) {
+        send(rc, 0);
+    }
+
+    private <T> void retrySend(RetryContext<T> rc, Integer currentRetries) {
+        if (currentRetries < rc.getMaxRetries()) {
+            log.error("准备第 {} 次重试", currentRetries + 1);
+            send(rc, currentRetries + 1);
+        } else {
+            log.error("消息重试达到上限，发送最终失败！");
+        }
+    }
+}
+```
+
+> ![](javaweb2/143.png)
+
+#### MQ可靠性
+
+在默认情况下，RabbitMQ会将消息接收到的信息保存在内存中以降低消息的收发延迟，但这容易造成两个问题。第一，一旦RabbitMQ服务器出现故障，内存中的所有消息都会丢失，进而导致业务异常；第二，内存空间相对有限，当消费者故障或者处理速度过慢时，会导致消息积压，从而引发MQ阻塞
+
+所以RabbitMQ为交换机、队列和消息都设置了持久化的设置，也就是Durable
+
+> ![](javaweb2/144.png)
+
+非持久化模式时，RabbitMQ在内存占用阈值过高后会进行一次阻塞式磁盘存储操作，将一些消息转存到磁盘中，这个过程中队列处于不可用状态，所以会严重影响RabbitMQ的性能
+
+##### LazyQueue
+
+从RabbitMQ的3.6.0版本开始，引入了LazyQueue惰性队列，惰性队列会直接将所有消息存储到磁盘中，不再存储到内存，只有消费者需要消费消息时，才用磁盘中读取消息并加载到内存中。从3.12版本后，所有队列都是LazyQueue模式，无法更改。本文章使用的是4.3.2版本，所有无法测试持久化与非持久化性能差异
+
+
 
