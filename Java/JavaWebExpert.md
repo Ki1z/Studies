@@ -1,6 +1,6 @@
-# Java Web Medium
+# Java Web Expert
 
-`更新时间：2026-6-28`
+`更新时间：2026-7-1`
 
 注释解释：
 
@@ -3724,5 +3724,107 @@ public class PayProducer {
 
 从RabbitMQ的3.6.0版本开始，引入了LazyQueue惰性队列，惰性队列会直接将所有消息存储到磁盘中，不再存储到内存，只有消费者需要消费消息时，才用磁盘中读取消息并加载到内存中。从3.12版本后，所有队列都是LazyQueue模式，无法更改。本文章使用的是4.3.2版本，所有无法测试持久化与非持久化性能差异
 
+#### 消费者可靠性
 
+##### 消费者确认
+
+消费者确认机制(Consumer Acknowledgement)是为了确认消费者是否成功处理消息。当消费者处理消息结束后，应该向RabbitMQ发送一个回执，告知RabbitMQ自己的消息处理状态。消费者确认一般提供了三种确认消息
+
+- ACK：成功处理消息，RabbitMQ从队列中删除该消息
+- NACK：消息处理失败，RabbitMQ需要再次投递消息
+- REJECT：消息处理失败并拒绝该消息，RabbitMQ从队列中删除该消息
+
+Spring AMQP已经实现了消息确认的功能，并且允许我们通过配置文件选择ACK处理方式，有三种常用方式：
+
+- none：不处理，消息投递到消费者后立即发送ACK，消息会立刻从MQ中删除，非常不安全
+- manual：手动模式，需要自己在业务代码中调用API，发送ACK或者REJECT，更加灵活，但是存在业务入侵
+- auto：自动模式，Spring AMQP利用AOP对消息处理逻辑制定环绕增强，当业务正常返回时自动返回ACK，当业务出现异常时，如果时业务异常，返回NACK，如果是消息处理或者校验异常，返回REJECT
+
+```yml
+spring:
+  rabbitmq:
+    listener:
+      simple:
+        # 自动消费者确认
+        acknowledge-mode: auto
+```
+
+##### 失败重试
+
+Spring AMQP的auto模式其实存在一个问题，当某个消息无法被消费者消费，此时Spring AMQP返回NACK，导致消息队列重新发布消息，而消费者又无法消费，Spring AMQP再次返回NACK，消息队列又重新发布消息，如此反复，从而导致死锁。因此Spring AMQP提供了失败重试机制，在配置文件中设置重试参数，以避免死锁发生
+
+```yml
+spring:
+  rabbitmq:
+    listener:
+      simple:
+        # 自动消费者确认
+        acknowledge-mode: auto
+        # 失败重连
+        retry:
+          enable: true
+          # 初始等待时长
+          initial-interval: 1000ms
+          # 等待时长倍数
+          multiplier: 3
+          # 最大重试次数
+          max-attempts: 3
+          # 是否有状态
+          stateless: true
+```
+
+但是失败重试开启后，Spring AMQP默认会将重试失败的消息直接删除，这会导致数据直接丢失，因此需要我们手动配置MessageRecoverer，MessageRecoverer是一个接口，有三种实现
+
+- RejectAndDontRequeueRecoverer：直接返回REJECT，默认方式
+- ImmediateRequeueMessageRecoverer：返回NACK，消息重新入队
+- RepublishMessageRecoverer：将失败消息转发投递到指定交换机
+
+配置失败重试策略也非常简单，在消费者的配置类中声明一个Bean，返回一个RepublishMessageRecoverer，RepublishMessageRecoverer的构造器支持三个参数，分别是rabbitTemplate，转发交换机以及路由Key
+
+```java
+@Bean
+public MessageRecoverer messageRecoverer(RabbitTemplate rabbitTemplate) {
+    return new RepublishMessageRecoverer(rabbitTemplate, "error.direct", "error.order");
+}
+```
+
+然后我们再定义一个错误消费者，监听error.order。RepublishMessageRecoverer发送的消息类型为Message，所以在监听方法中使用Message来接收
+
+```java
+package com.hmall.order.mq.consumer;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.rabbit.annotation.Exchange;
+import org.springframework.amqp.rabbit.annotation.Queue;
+import org.springframework.amqp.rabbit.annotation.QueueBinding;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Component;
+
+@Component
+@Slf4j
+public class ErrorConsumer {
+
+    @RabbitListener(bindings = @QueueBinding(
+            value = @Queue(name = "error.order.queue"),
+            exchange = @Exchange(name = "error.direct"),
+            key = "error.order"
+    ))
+    public void handleError(Message error) {
+        log.error("消息接收错误：{}", error);
+    }
+}
+```
+
+##### 业务幂等性
+
+幂等是一个数学概念，用函数表达式可以表示为
+$$
+f(x) = f(f(x))
+$$
+而在程序开发中，幂等性是指同一个业务，执行一次或者执行多次，对业务状态的影响是一致的。举个例子，更新库存的逻辑不满足幂等，因为只要调用一次更新库存，库存一定会发生变化；而查询库存的逻辑是幂等的，查询库存不会对库存本身产生任何影响
+
+而消费者确认机制可能会导致非幂等的业务被重复执行，从而造成严重损失。因此，Spring AMQP也提供了几种解决方案
+
+**唯一消息id**
 
