@@ -1,6 +1,6 @@
 # Java Web Expert
 
-`更新时间：2026-7-1`
+`更新时间：2026-7-2`
 
 注释解释：
 
@@ -3826,5 +3826,197 @@ $$
 
 而消费者确认机制可能会导致非幂等的业务被重复执行，从而造成严重损失。因此，Spring AMQP也提供了几种解决方案
 
-**唯一消息id**
+###### 唯一消息id
+
+给每个消息都设置一个唯一id，利用消息id区分是否是重复消息，大致过程如下
+
+1. 每一条消息都生成一个唯一id，与消息一起投递给消费者
+2. 消费者接收到消息后处理自己的业务，业务处理成功后将消息id保存到数据库
+3. 如果下次接收到同样的消息，去数据库查询判断是否存在，存在则为重复消息，放弃处理
+
+在消息转换器中，可以使用setCreateMessageIds方法，传入true来启用消息id
+
+```java
+@Bean
+@ConditionalOnMissingBean
+public RabbitTemplate rabbitTemplate(ConnectionFactory connectionFactory) {
+    RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
+    // 配置消息转换器
+    Jackson2JsonMessageConverter jackson2JsonMessageConverter = new Jackson2JsonMessageConverter();
+    // 启用消息id
+    jackson2JsonMessageConverter.setCreateMessageIds(true);
+    rabbitTemplate.setMessageConverter(jackson2JsonMessageConverter);
+    // 配置消息发送失败返回处理
+    rabbitTemplate.setReturnsCallback(result -> log.error("消息发送失败：{}", result));
+    return rabbitTemplate;
+}
+```
+
+> ![](javaweb2/145.png)
+
+而消费者想要接收消息id，就需要将参数类型改为Message，然后获取其中的消息头
+
+```java
+@RabbitListener(queues = "test.queue1")
+public void handleTest(Message msg) {
+    log.info("消息id: {}", msg.getMessageProperties().getMessageId());
+    log.info("消息内容: {}", new String(msg.getBody()));
+}
+```
+
+> ![](javaweb2/146.png)
+
+*注：这里不建议调用msg.getBody().toString()*
+
+如果设置消息id，还需要在原有业务基础上添加数据库操作，这是严重的业务侵入行为，而且增加的数据库操作也会增大业务性能开销，所以需要谨慎使用
+
+###### 业务判断
+
+假设在支付服务中，用户已经支付完成，支付服务发布支付成功通知，订单服务接收到支付成功消息，然后将对应订单修改为已支付状态。但是在向消息队列返回ACK的过程中出现网络故障，队列没有收到ACK回复，此时队列认为消费者未收到消息，所以将消息保存在队列中。用户此时取消订单，订单服务又将订单状态修改为已退款，而网络恢复正常，导致消息重新发送到订单服务中，订单服务又将订单状态修改为已支付。这会造成严重的业务问题，所以我们需要基于业务逻辑判断，在消费者消费消息之前验证消息对应数据状态是否正常
+
+**示例**
+
+在更新订单状态之前先判断订单状态是否为未支付，然后再进行下一步的逻辑
+
+```java
+@RabbitListener(bindings = @QueueBinding(
+        value = @Queue(name = "order.pay.success.queue"),
+        exchange = @Exchange(name = "hmall.pay.direct"),
+        key = "pay.success"
+))
+public void handlePaySuccess(Long orderId) {
+    log.info("订单支付成功：{}", orderId);
+    // 判断订单是否为未支付状态
+    Order order = orderService.getById(orderId);
+    if (order == null || order.getStatus() != 1)
+        return;
+    // 更新订单状态为已支付
+    orderService.markOrderPaySuccess(orderId);
+}
+```
+
+#### 延迟消息
+
+即使使用了消费者确认、失败重试、业务幂等性等技术或思想，但仍无法解决极端情况下的多服务间业务的一致性。举个例子，当前秒杀商品仅剩一件，某位用户成功下单，但是无论如何都无法发送支付状态消息，导致订单服务和商品服务一直无法获取订单支付状态和商品库存，从而导致其他用户无法抢购该商品
+
+延迟消息是指生产者在生产消息时指定一个时间，在消息队列中，这个消息必须在倒计时结束或者指定时间到达时才能发往消费者。通过延迟消息，我们就可以避免核心消息无法送达，从而导致消费者持续等待的问题
+
+##### 死信交换机
+
+RabbitMQ默认不支持延迟消息，但是可以通过死信交换机来模拟延迟消息。当队列中的消息满足以下情况之一时，就会成为死信 Dead Letter
+
+- 消费者回复basic.reject或者basic.nack且消息requeue为false
+- 消息是一个过期消息；队列或消息本身可以设置过期时间，当超时无人消费时，消息自动过期
+- 队列堆积满了，最早投递的消息可能成为死信
+
+如果队列设置了dead-letter-exchange指定了一个交换机，那么该队列中的所有死信都会投递到指定的交换机中，那么这个交换机就被成为死信交换机Dead Letter Exchange(LDX)
+
+**示例**
+
+首先创建一个普通交换机normal.direct，绑定一个队列normal.queue，设置路由Key为test，同时在队列中设置死信交换机hmall.test.dlx。注意，普通交换机不能有消费者，否则会将存储在其中的延迟消息错误消费
+
+```java
+package com.hmall.order.config;
+
+import org.springframework.amqp.core.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class DLXConfig {
+
+    @Bean
+    public DirectExchange normalExchange() {
+        return new DirectExchange("normal.direct", true, false);
+    }
+
+    @Bean
+    public Queue normalQueue() {
+        return QueueBuilder
+                .durable("normal.queue")
+                .deadLetterExchange("hmall.test.dlx")
+                .build();
+    }
+
+    @Bean
+    public Binding normalBinding() {
+        return BindingBuilder
+                .bind(normalQueue())
+                .to(normalExchange())
+                .with("test");
+    }
+}
+```
+
+然后创建死信交换机与死信队列，路由Key同样为test，并配置消费者
+
+```java
+@RabbitListener(bindings = @QueueBinding(
+        value = @Queue(name = "dlx.queue"),
+        exchange = @Exchange(name = "hmall.test.dlx"),
+        key = "test"
+))
+public void handleTest(Message msg) {
+    log.info("消息内容: {}", new String(msg.getBody()));
+}
+```
+
+在生产者方面，发送消息时需要指定一个MessagePostProcessor，利用MessagePostProcessor来设置消息过期时间。这里我们设置为一分钟
+
+```java
+@Test
+public void send() {
+    rabbitTemplate.convertAndSend("normal.direct", "test", "Hello, RabbitMQ!", message -> {
+        message.getMessageProperties().setExpiration(String.valueOf(1000 * 60));
+        return message;
+    });
+}
+```
+
+然后发送消息，观察消息发送与接收时间
+
+> ![](javaweb2/147.png)
+
+> > ![](javaweb2/148.png)
+
+时间刚好一分钟，达到延迟消息的目的
+
+##### 延迟消息插件
+
+延迟消息插件是RabbitMQ社区开发的一款功能插件，可以将普通交换机改造为支持延迟消息功能的交换机，当消息投递到交换机后可以暂存一定时间，到期后再投递到队列
+
+*注：rabbitmq-delayed-message-exchange插件已经不再维护，支持的最高RabbitMQ版本时4.2.x，因为rabbitmq-delayed-message-exchange依赖于Mnesia，而RabbitMQ在4.3.x版本将Mnesia移除了*
+
+然后在创建交换机时，指定属性`delayed="true"`
+
+```java
+@RabbitListener(bindings = @QueueBinding(
+        value = @Queue(name = "delay.queue"),
+        exchange = @Exchange(name = "hmall.test.delay", delayed = "true"),
+        key = "test"
+))
+public void handleTest(Message msg) {
+    log.info("消息内容: {}", new String(msg.getBody()));
+}
+```
+
+发送消息时，不再使用setExpiration，而是setDelay
+
+```java
+@Test
+public void send() {
+    rabbitTemplate.convertAndSend("delay.direct", "test", "Hello, RabbitMQ!", message -> {
+        message.getMessageProperties().setDelay(1000 * 60);
+        return message;
+    });
+}
+```
+
+## Elasticsearch
+
+Lucene是一个Java语言的搜索引擎类库，是Apache公司的顶级项目，由Doug Cutting与1999年研发，Lucene的优势是易扩展，高性能
+
+2004年，Shay Banon基于Lucene开发了Compass，2010年，Shay Banon重写了Compass，并取名为Elasticsearch。目前ES是使用最广泛的搜索引擎类库，支持分布式，可水平扩展，提供Restful接口，可以被任何语言调用
+
+Elasticsearch结合kibana、Logstash、Beats可以组合一套完整的技术栈，被称为ELK，广泛应用在日志数据分析、实时监控等领域
 
