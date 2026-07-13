@@ -1,6 +1,6 @@
 # Java Web Expert
 
-`更新时间：2026-7-2`
+`更新时间：2026-7-13`
 
 注释解释：
 
@@ -4020,3 +4020,608 @@ Lucene是一个Java语言的搜索引擎类库，是Apache公司的顶级项目�
 
 Elasticsearch结合kibana、Logstash、Beats可以组合一套完整的技术栈，被称为ELK，广泛应用在日志数据分析、实时监控等领域
 
+### 倒排索引
+
+相对地，我们先来了解一下正向索引。正向索引是传统数据库，如MySQL、Oracle等使用的索引方式，在底层上的数据结构一般为B/B+树。简单来说，就是将已有的索引字段，通常为PRIMARY KEY设置为根节点，然后将其他字段挂载在根节点下。如果使用索引字段进行查询，查询的效率非常高，但是如果使用非索引字段进行模糊查询，则只能遍历每条数据，然后判断数据中是否有匹配的内容，这样效率就会低很多
+
+而倒排索引则是为了解决模糊查询效率低下的问题，倒排索引在存储方面有文档和词条两个概念。文档即是指每条数据，词条则是每个文档中按照语义分成的词语。举个例子，假设存在一个文档“JavaSpringBoot微服务教程”，那么其中包含的词条可以为“Java”、“Spring”、“Boot”、“微服务”、“教程”。然后将每个词条作为一个索引，保存在一张特殊的数据表中，每个词条对应的字段为文档包含该词条的文档id，如果遇到多个文档包含相同的词条，则在词条对应字段中添加多个文档id。在搜索的时候，先将搜索关键字进行分词，例如搜索“Java教程”，则分词为“Java”、“教程”，然后在词条表中进行匹配，最后返回包含这些分词的文档
+
+### IK分词器
+
+基于上文对倒排索引的基本认识，我们可以知道，分词在倒排索引中相当重要，而且中文语句简练，同一句话不同的分词结果会造成不同的语义，因此分词器的选择也非常重要。这里我们使用国内开发的，着重于中文分词的IK分词器
+
+IK分词器是林良益于2006年开源发布的中文分词器，其采用的正向迭代最细粒度切分算法一直沿用至今
+
+**示例**
+
+安装好IK分词器插件，我们来对比一下ES标准分词器与IK分词器的差距。首先使用ES标准分词器，搜索关键字为`Java微服务教程`
+
+```REQUEST
+POST http://localhost:9200/_analyze
+
+{
+    "analyzer": "standard",
+    "text": "Java微服务教程"
+}
+```
+
+```json
+{
+    "tokens": [
+        {
+            "token": "java",
+            "start_offset": 0,
+            "end_offset": 4,
+            "type": "<ALPHANUM>",
+            "position": 0
+        },
+        {
+            "token": "微",
+            "start_offset": 4,
+            "end_offset": 5,
+            "type": "<IDEOGRAPHIC>",
+            "position": 1
+        },
+        {
+            "token": "服",
+            "start_offset": 5,
+            "end_offset": 6,
+            "type": "<IDEOGRAPHIC>",
+            "position": 2
+        },
+        {
+            "token": "务",
+            "start_offset": 6,
+            "end_offset": 7,
+            "type": "<IDEOGRAPHIC>",
+            "position": 3
+        },
+        {
+            "token": "教",
+            "start_offset": 7,
+            "end_offset": 8,
+            "type": "<IDEOGRAPHIC>",
+            "position": 4
+        },
+        {
+            "token": "程",
+            "start_offset": 8,
+            "end_offset": 9,
+            "type": "<IDEOGRAPHIC>",
+            "position": 5
+        }
+    ]
+}
+```
+
+可以看到，默认的标准分词器对于英文提取没有问题，但是对于中文仅是单字符提取，毫无语义。因此我们切换为IK的smart模式
+
+```REQUEST
+POST http://localhost:9200/_analyze
+
+{
+    "analyzer": "ik_smart",
+    "text": "Java微服务教程"
+}
+```
+
+```json
+{
+    "tokens": [
+        {
+            "token": "java",
+            "start_offset": 0,
+            "end_offset": 4,
+            "type": "ENGLISH",
+            "position": 0
+        },
+        {
+            "token": "微",
+            "start_offset": 4,
+            "end_offset": 5,
+            "type": "CN_CHAR",
+            "position": 1
+        },
+        {
+            "token": "服务",
+            "start_offset": 5,
+            "end_offset": 7,
+            "type": "CN_WORD",
+            "position": 2
+        },
+        {
+            "token": "教程",
+            "start_offset": 7,
+            "end_offset": 9,
+            "type": "CN_WORD",
+            "position": 3
+        }
+    ]
+}
+```
+
+而在IK的smart模式中，针对中文的分词就体现出来了，IK还提供了最细粒度的max_word模式
+
+```REQUEST
+POST http://localhost:9200/_analyze
+
+{
+    "analyzer": "ik_max_word",
+    "text": "Java微服务教程"
+}
+```
+
+```json
+{
+    "tokens": [
+        {
+            "token": "java",
+            "start_offset": 0,
+            "end_offset": 4,
+            "type": "ENGLISH",
+            "position": 0
+        },
+        {
+            "token": "微服",
+            "start_offset": 4,
+            "end_offset": 6,
+            "type": "CN_WORD",
+            "position": 1
+        },
+        {
+            "token": "服务",
+            "start_offset": 5,
+            "end_offset": 7,
+            "type": "CN_WORD",
+            "position": 2
+        },
+        {
+            "token": "教程",
+            "start_offset": 7,
+            "end_offset": 9,
+            "type": "CN_WORD",
+            "position": 3
+        }
+    ]
+}
+```
+
+最细粒度就是将所有可能的语义全部分词出来
+
+#### 词典扩展
+
+IK分词器是基于词典索引的形式，词典中没有的词语是无法进行分词的，就例如上文中的“微服务”被拆分为了“微”和“服务”。不过好在IK分词器可以进行词典扩展，让开发人员加入符合当前网络环境的新词
+
+IK分词器的默认词典位于conifg目录中的main.dic，可以以文本的形式打开
+
+> ![](javaweb2/149.png)
+
+然后在IKAnalyzer.cfg.xml中配置扩展词典
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
+<properties>
+	<comment>IK Analyzer 扩展配置</comment>
+	<!--用户可以在这里配置自己的扩展字典 -->
+	<entry key="ext_dict">ext.dic</entry>
+	 <!--用户可以在这里配置自己的扩展停止词字典-->
+	<entry key="ext_stopwords"></entry>
+	<!--用户可以在这里配置远程扩展字典 -->
+	<!-- <entry key="remote_ext_dict">words_location</entry> -->
+	<!--用户可以在这里配置远程扩展停止词字典-->
+	<!-- <entry key="remote_ext_stopwords">words_location</entry> -->
+</properties>
+```
+
+创建一个文本文档，命名为ext.dic，并添加一些新词，这里添加“浔麟”和“溟汐”
+
+> ![](javaweb2/150.png)
+
+在重启之前，我们先进行一次分词
+
+> ![](javaweb2/151.png)
+
+由于词典中并不存在浔麟、溟汐分词，因此结果为单字符。然后重启ES，再次分词
+
+> ![](javaweb2/152.png)
+
+在添加新词后，IK分词器成功地进行了分词
+
+### 基础概念
+
+所有ES的文档在进行存储时都会被序列化为JSON格式的数据，然后再存储到ES中，为了避免数据混乱，难以管理，ES会将所有文档进行分类，同一个分类的文档被成为一个索引/索引库。需要注意的是，ES索引对应的是MySQL中的表，而不是字段索引。MySQL中表对于其中的数据有一定的约束，如字段数量、字段类型等等，ES索引对于其中的文档也有一定的约束，简单来说就是JSON格式必须一致，在ES索引中，索引约束被成为映射
+
+| MySQL  | Elasticsearch | 说明                                                         |
+| ------ | ------------- | ------------------------------------------------------------ |
+| Table  | Index         | 索引即文档的集合，类似数据库中的表                           |
+| Row    | Document      | 文档就是一条条的数据，类似数据库中的行，而ES文档均为JSON格式 |
+| Column | Field         | 字段，即JSON中的每个键，类似数据库中的列，而列在数据库中也被成为字段 |
+| Schema | Mapping       | 映射，索引中对文档的约束，类似数据库中的表结构               |
+| SQL    | DSL           | DSL，全程Domain Specific Language，是用于与ES交互的专用语言，一般为JSON风格的请求语句，用来定义搜索条件 |
+
+### Mapping映射
+
+映射是对索引库中文档的约束，常见的映射属性包括
+
+- type：字段数据类型
+  - 字符串：text可分词文本，keyword不可分精确文本
+  - 数值：long、integer、short、byte、double、float
+  - 布尔：boolean
+  - 日期：date
+  - 对象：object
+-  index：是否创建索引，默认为true
+
+- analyzer：使用的分词器。如果type为text，则需要分词器，其他数据类型则不需要
+
+- properties：专属于type为object类型，即该对象的属性
+
+#### 创建映射
+
+ES中创建映射需要使用DSL，基于Restful风格的HTTP请求，请求体为JSON格式
+
+```JSON
+PUT http://localhost:9200/users
+
+{
+    "mappings": {
+        "properties": {
+            "id": {
+                "type": "integer"
+            },
+            "username": {
+                "type": "keyword"
+            },
+            "info": {
+                "type": "text",
+                "analyzer": "ik_smart"
+            },
+            "realName": {
+                "type": "object",
+                "properties": {
+                    "firstName": {
+                        "type": "keyword",
+                        "index": false
+                    },
+                    "lastName": {
+                        "type": "keyword",
+                        "index": false
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+> ![](javaweb2/153.png)
+
+另外，对于索引库的基本操作，也都符合Restful API，如查询索引库为`GET /users`，删除为`DELETE /users`等
+
+### 文档操作
+
+文档操作同样使用Restful API，例如新增文档
+
+```JSON
+POST /users/_doc/1
+
+{
+    "id":1,
+    "username": "Ocean",
+    "info": "Java开发人员，艾欧希创始人",
+    "realName": {
+        "firstName": "溟汐",
+        "lastName": "奥辛"
+    }
+}
+```
+
+> ![](javaweb2/154.png)
+
+而查询文档则使用GET
+
+> ![](javaweb2/155.png)
+
+以此类推，删除使用DELETE，修改使用PUT。但是ES的修改稍有不同，ES的修改存在两种方式，一种是使用PUT，PUT方式是覆盖，先删除原来的文档，再添加新文档。如果PUT指定的文档id不存在，则会直接创建该文档；第二种方式是使用POST，但是请求路径变为/users/\_update/1，并且请求体中包含的属性为doc，doc中存储需要修改的文档字段
+
+```JSON
+POST http://localhost:9200/users/_update/1
+
+{
+    "doc": {
+        "username": "Mexi Ocean"
+    }
+}
+```
+
+> ![](javaweb2/156.png)
+
+> ![](javaweb2/157.png)
+
+#### 文档批处理
+
+ES支持在一次请求中进行多个文档操作，请求路径为/\_bulk，请求体语法相对有些不同。在批处理请求中，每一行代表一个操作或者携带的数据体，如下
+
+```JSON
+POST /_bulk
+
+{"index": {"_index": "users", "_id": "2"}}
+{"username": "Kiiz", "info": "Java开发人员"}
+{"index": {"_index": "users", "_id": "3"}}
+{"username": "Esoul", "info": "C++开发人员"}
+```
+
+请求体中，第一行表示操作，index为索引库操作，\_index指定索引库名，\_id指定文档id，第二行是插入的文档内容
+
+> ![](javaweb2/158.png)
+
+在使用Postman发送请求时需要注意，普通JSON默认并不支持末尾存在换行符，所以需要将请求体格式改为Text，并添加请求头Content-Type=application/x-ndjson，而且在请求体最后一行必须包含一个空行
+
+然后我们查询新增的两个用户
+
+> ![](javaweb2/159.png)
+
+对于DELETE这样的操作就不需要携带请求体，因此批量操作仅需一行即可
+
+```JSON
+POST /_bulk
+
+{"delete": {"_index": "users", "_id": "2"}}
+{"delete": {"_index": "users", "_id": "3"}}
+```
+
+> ![](javaweb2/160.png)
+
+### Java REST Client
+
+java rest client是一个在java中操作ES的客户端插件，可以通过依赖的方式引入java项目中并进行使用
+
+1. 引入依赖
+
+```xml
+<!--rest high level client-->
+<dependency>
+    <groupId>org.elasticsearch.client</groupId>
+    <artifactId>elasticsearch-rest-high-level-client</artifactId>
+</dependency>
+```
+
+2. 在父工程中修改版本，ES对版本限制非常严格
+
+```xml
+<properties>
+    <elasticsearch.version>7.14.1</elasticsearch.version>
+</properties>
+```
+
+#### 索引库操作
+
+首先来了解针对索引库的API操作
+
+1. 初始化客户端
+
+创建一个测试类，声明一个RestHighLevelClient，参数为一个RestClient，使用HttpHost设置主机名和端口号
+
+```java
+package com.hmall.es;
+
+import org.apache.http.HttpHost;
+import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+
+import java.io.IOException;
+
+public class ESTest {
+
+    private RestHighLevelClient client;
+
+    @BeforeEach
+    public void init() {
+        client = new RestHighLevelClient(RestClient.builder(
+                new HttpHost("localhost", 9200)
+        ));
+    }
+
+    @AfterEach
+    public void destroy() throws IOException {
+            client.close();
+    }
+}
+```
+
+2. 测试连接
+
+```java
+@Test
+public void testConnection() {
+    System.out.println(client);
+}
+```
+
+> ![](javaweb2/161.png)
+
+3. 查询当前已有的users索引库
+
+Java Rest Client使用一系列的如GetIndexRequest、PutIndexRequest、DeleteIndexRequest来封装不同请求方式的请求体，便于开发人员直接调用。发送请求通过RestHighLevelClient进行，所以调用client的indices()来发送针对索引库的请求，请求方式为get，所以调用get方法，然后传入请求体和一个空的RequestOptions对象，RequestOptions.DEFAULT就是默认的空对象。然后通过GetIndexResponse来获取响应，结果集被封装为了一个MappingMetadata，通过getSourceAsMap方法转换为Map，然后根据键名properties访问
+
+```java
+@Test
+public void testGetIndex() throws IOException {
+    // 创建请求
+    GetIndexRequest request = new GetIndexRequest("users");
+    // 发送请求
+    GetIndexResponse response = client.indices().get(request, RequestOptions.DEFAULT);
+    // 获取结果
+    MappingMetadata mappingMetadata = response.getMappings().get("users");
+    // 输出结果
+    System.out.println(mappingMetadata.getSourceAsMap().get("properties"));
+}
+```
+
+> ![](javaweb2/162.png)
+
+4. 删除users索引库
+
+```java
+@Test
+public void testDeleteIndex() throws IOException {
+    // 创建请求
+    DeleteIndexRequest request = new DeleteIndexRequest("users");
+    // 发送请求
+    client.indices().delete(request, RequestOptions.DEFAULT);
+}
+```
+
+> ![](javaweb2/163.png)
+
+5. 再次查询，确认users已经被删除
+
+> ![](javaweb2/164.png)
+
+6. 新建users索引库，但是这次使用Java Rest Client来创建
+
+在使用Java Rest Client创建索引库的时候，需要使用source方法定义映射，source有多个重载方法，这里使用的是String source, XContentType xContentType为参数的方法，String source就是先前准备好的请求体，直接传入request中，然后指定数据类型为XContentType.JSON，最后发送请求即可
+
+```java
+@Test
+public void testCreateIndex() throws IOException {
+    // 创建请求
+    CreateIndexRequest request = new CreateIndexRequest("users");
+    // 添加映射信息
+    request.source(REQUEST_BODY, XContentType.JSON);
+    // 发送请求
+    client.indices().create(request, RequestOptions.DEFAULT);
+}
+
+private static final String REQUEST_BODY = "{\n" +
+            "    \"mappings\": {\n" +
+            "        \"properties\": {\n" +
+            "            \"id\": {\n" +
+            "                \"type\": \"integer\"\n" +
+            "            },\n" +
+            "            \"username\": {\n" +
+            "                \"type\": \"keyword\"\n" +
+            "            },\n" +
+            "            \"info\": {\n" +
+            "                \"type\": \"text\",\n" +
+            "                \"analyzer\": \"ik_smart\"\n" +
+            "            },\n" +
+            "            \"realName\": {\n" +
+            "                \"type\": \"object\",\n" +
+            "                \"properties\": {\n" +
+            "                    \"firstName\": {\n" +
+            "                        \"type\": \"keyword\",\n" +
+            "                        \"index\": false\n" +
+            "                    },\n" +
+            "                    \"lastName\": {\n" +
+            "                        \"type\": \"keyword\",\n" +
+            "                        \"index\": false\n" +
+            "                    }\n" +
+            "                }\n" +
+            "            }\n" +
+            "        }\n" +
+            "    }\n" +
+            "}";
+```
+
+> ![](javaweb2/165.png)
+
+7. 查询users索引库
+
+> ![](javaweb2/166.png)
+
+#### 文档操作
+
+文档操作与索引库操作类似，文档操作是直接针对特定索引库的操作，所以其API与index有关
+
+1. 新增文档
+
+首先创建一个实体类，用于存储用户数据，然后声明一个IndexRequest，指定索引库为users，以及设置id为用户id，再将用户实体转换为JSON，并插入请求中，最后发送请求
+
+```java
+@Test
+public void testCreateDoc() throws IOException {
+    // 创建用户
+     User user = User.builder()
+             .id(1)
+             .username("Ocean")
+             .info("Java开发，艾欧希创始人")
+             .realName(Map.of("firstName", "Ocean", "lastName", "Mexi"))
+             .build();
+    // 创建请求，并设置id
+    IndexRequest request = new IndexRequest("users").id(user.getId().toString());
+    // 将用户转换为JSON
+    String json = JSON.toJSONString(user);
+    // 插入数据
+    request.source(json, XContentType.JSON);
+    // 发送请求
+    client.index(request, RequestOptions.DEFAULT);
+}
+
+@Data
+@Builder
+class User {
+    private Integer id;
+    private String username;
+    private String info;
+    private Map<String, String> realName;
+}
+```
+
+> ![](javaweb2/167.png)
+
+2. 查询文档
+
+查询文档使用GetRequest，并设置目标索引库以及文档id。获取响应通过GetResponse，直接调用getSourceAsString，而不再需要MappingMetadata
+
+```java
+@Test
+public void testGetDoc() throws IOException {
+    // 创建请求
+    GetRequest request = new GetRequest("users", "1");
+    // 发送请求
+    GetResponse response = client.get(request, RequestOptions.DEFAULT);
+    // 获取数据
+    String json = response.getSourceAsString();
+    // 输出
+    System.out.println(json);
+}
+```
+
+> ![](javaweb2/168.png)
+
+3. 更新文档
+
+这里就不再演示覆盖更新，仅演示增量更新。声明UpdateRequest，然后调用doc方法，doc有多个重载方法，这里使用的是Object... source参数的方法，接收多个String类型，每两个参数为一组，第一个是键名，第二个是键值
+
+```java
+@Test
+public void testUpdateDoc() throws IOException {
+    // 创建更新请求
+    UpdateRequest request = new UpdateRequest("users", "1");
+    // 更新数据
+    request.doc("username", "MexiOcean");
+    // 发送请求
+     client.update(request, RequestOptions.DEFAULT);
+}
+```
+
+> ![](javaweb2/169.png)
+
+> ![](javaweb2/170.png)
+
+4. 删除文档
+
+```java
+@Test
+public void testDeleteDoc() throws IOException {
+    // 创建删除请求
+    DeleteRequest request = new DeleteRequest("users", "1");
+    // 删除数据
+    client.delete(request, RequestOptions.DEFAULT);
+}
+```
+
+> ![](javaweb2/171.png)
