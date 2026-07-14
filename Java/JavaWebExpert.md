@@ -1,6 +1,6 @@
 # Java Web Expert
 
-`更新时间：2026-7-13`
+`更新时间：2026-7-14`
 
 注释解释：
 
@@ -4625,3 +4625,757 @@ public void testDeleteDoc() throws IOException {
 ```
 
 > ![](javaweb2/171.png)
+
+#### 批处理
+
+Java Rest Client中提供了BulkRequest来处理批量请求，BulkRequest中有多个add重载方法，可以接收如IndexRequest、DeleteRequest、UpdateRequest等在内的多种请求对象，然后调用RestHighLevelClient的批处理方法bulk，传递BulkRequest，实现批量处理
+
+**示例**
+
+首先声明一个BulkRequest，然后准备需要批量处理的请求体，如果是DELETE或者GET则不需要，然后调用BulkRequest的add方法，分别传入IndexRequest，利用链式编程为其设置id以及请求体，最后调用RestHighLevelClient的bulk方法执行批量操作
+
+```java
+@Test
+public void testBatch() throws IOException {
+    // 批量请求
+    BulkRequest request = new BulkRequest();
+    // 准备数据
+    User user1 = User.builder()
+             .id(1)
+             .username("张三")
+             .info("张三的信息")
+             .realName(Map.of("firstName", "三", "lastName", "张"))
+             .build();
+    User user2 = User.builder()
+             .id(2)
+             .username("李四")
+             .info("李四的信息")
+             .realName(Map.of("firstName", "四", "lastName", "李"))
+             .build();
+    // 添加批量操作
+    request.add(new IndexRequest("users").id(user1.getId().toString()).source(JSON.toJSONString(user1), XContentType.JSON));
+    request.add(new IndexRequest("users").id(user2.getId().toString()).source(JSON.toJSONString(user2), XContentType.JSON));
+    // 执行批量操作
+    client.bulk(request, RequestOptions.DEFAULT);
+}
+```
+
+> ![](javaweb2/172.png)
+
+### 查询
+
+#### DSL查询
+
+DSL查询分为两大类，叶子查询 Leaf Query Clauses，一般是在特定的字段里查询特定值，属于简单查询，但是很少单独使用；复合查询 Compound Query Clauses，以逻辑方式组合多个叶子查询的行为方式
+
+同时，在查询之后，还可以对查询结果进行一定的处理，包括：
+
+- 排序：按照一个或多个字段值进行排序，可以定义排序方向
+- 分页：根据from和size实行分页
+- 高亮：对搜索结果中的关键字添加特殊样式，使其更加醒目
+- 聚合：对搜索结果进行数据统计形成报表
+
+**标准语法**
+
+```JSON
+GET /<indexName>/_search
+
+{
+    "query": {
+        "<queryType>": {
+            "<queryCondition>": "<conditionValue>"
+        }
+    }
+}
+```
+
+例如，我们查询users索引库中的所有文档，查询方式为match_all，match_all没有查询条件，所以留空
+
+```JSON
+GET http://localhost:9200/users/_search
+
+{
+    "query": {
+        "match_all": {}
+    }
+}
+```
+
+```JSON
+{
+    "took": 2,
+    "timed_out": false,
+    "_shards": {
+        "total": 1,
+        "successful": 1,
+        "skipped": 0,
+        "failed": 0
+    },
+    "hits": {
+        "total": {
+            "value": 2,
+            "relation": "eq"
+        },
+        "max_score": 1.0,
+        "hits": [
+            {
+                "_index": "users",
+                "_type": "_doc",
+                "_id": "1",
+                "_score": 1.0,
+                "_source": {
+                    "id": 1,
+                    "info": "张三的信息",
+                    "realName": {
+                        "lastName": "张",
+                        "firstName": "三"
+                    },
+                    "username": "张三"
+                }
+            },
+            {
+                "_index": "users",
+                "_type": "_doc",
+                "_id": "2",
+                "_score": 1.0,
+                "_source": {
+                    "id": 2,
+                    "info": "李四的信息",
+                    "realName": {
+                        "lastName": "李",
+                        "firstName": "四"
+                    },
+                    "username": "李四"
+                }
+            }
+        ]
+    }
+}
+```
+
+响应体中，took表示查询用时，单位为ms，hits表示结果集，total表示总结果数量，relation是当前数量与真实数量的关系，因为ES默认单次查询上限10000条数据，而索引库中实际可能大于10000，此时的relation为gte，即greater than euqal大于等于。但是目前索引库中仅有两条数据，所以关系为equal。max_score表示匹配度，分数越高，匹配度越高，第二个hits则是所有的数据
+
+##### 叶子查询
+
+叶子查询还可以进一步分为三类，如下：
+
+- 全文检索：利用分词器对用户输入内容分词，然后去词条列表中匹配，常见方式有match、multi_match
+
+**示例**
+
+使用match方式，查询条件为info，查询内容为info中包含“艾欧希”
+
+```JSON
+GET http://localhost:9200/users/_search
+
+{
+    "query": {
+        "match": {
+            "info": "艾欧希"
+        }
+    }
+}
+```
+
+```JSON
+{
+    "took": 4,
+    "timed_out": false,
+    "_shards": {
+        "total": 1,
+        "successful": 1,
+        "skipped": 0,
+        "failed": 0
+    },
+    "hits": {
+        "total": {
+            "value": 1,
+            "relation": "eq"
+        },
+        "max_score": 0.60996956,
+        "hits": [
+            {
+                "_index": "users",
+                "_type": "_doc",
+                "_id": "1",
+                "_score": 0.60996956,
+                "_source": {
+                    "id": 1,
+                    "username": "Ocean",
+                    "info": "Java开发人员，艾欧希创始人",
+                    "realName": {
+                        "firstName": "溟汐",
+                        "lastName": "奥辛"
+                    }
+                }
+            }
+        ]
+    }
+}
+```
+
+但是假设我们搜索Ocean，是无法搜索到溟汐的，因为Ocean关键字位于username字段，因此需要使用multi_match查询多个字段。multi_match需要两个查询条件，query是查询内容，fields是匹配字段，在进行查询时，ES会将query的值在所有fields字段进行匹配
+
+```JSON
+GET http://localhost:9200/users/_search
+
+{
+    "query": {
+        "multi_match": {
+            "query": "Ocean",
+            "fields": ["info", "username"]
+        }
+    }
+}
+```
+
+```JSON
+{
+    "took": 1,
+    "timed_out": false,
+    "_shards": {
+        "total": 1,
+        "successful": 1,
+        "skipped": 0,
+        "failed": 0
+    },
+    "hits": {
+        "total": {
+            "value": 1,
+            "relation": "eq"
+        },
+        "max_score": 0.6931471,
+        "hits": [
+            {
+                "_index": "users",
+                "_type": "_doc",
+                "_id": "1",
+                "_score": 0.6931471,
+                "_source": {
+                    "id": 1,
+                    "username": "Ocean",
+                    "info": "Java开发人员，艾欧希创始人",
+                    "realName": {
+                        "firstName": "溟汐",
+                        "lastName": "奥辛"
+                    }
+                }
+            }
+        ]
+    }
+}
+```
+
+- 精确查询：不对用户输入内容分词，直接精确匹配，一般.是查找关键字、数值、日期、布尔等类型，常见方式有ids、range、term
+
+**示例**
+
+在检索查询中，搜索Java可以查询到溟汐，精确搜索没有返回内容
+
+```JSON
+GET http://localhost:9200/users/_search
+
+{
+    "query": {
+        "term": {
+            "info": {
+                "value": "Java"
+            }
+        }
+    }
+}
+```
+
+> ![](javaweb2/173.png)
+
+即使搜索全文“Java开发人员，艾欧希创始人”也无法返回内容
+
+```JSON
+GET http://localhost:9200/users/_search\
+
+{
+    "query": {
+        "term": {
+            "info": {
+                "value": "Java开发人员，艾欧希创始人"
+            }
+        }
+    }
+}
+```
+
+> ![](javaweb2/174.png)
+
+这是因为我们在创建映射的时候为info字段启用了分词，这就导致info字段的所有内容都以分词的形式保存，而并不保存整段文本，即使我们输入整段文本，分词表中也并不存在这个分词，所以没有返回结果
+
+然后我们再来尝试范围匹配，查询id大于1的所有用户
+
+```JSON
+GET http://localhost:9200/users/_search
+
+{
+    "query": {
+        "range": {
+            "id": {
+                "gt": 1
+            }
+        }
+    }
+}
+```
+
+> ![](javaweb2/175.png)
+
+- 地理查询：用于搜索地理位置，因为地理位置命名可能有所不同，搜索方式也有很多，常见有geo_distance、geo_bounding_box
+
+##### 复合查询
+
+复合查询大致也可以分为两类，如下：
+
+- 基于逻辑运算组合叶子查询，实现组合条件，如bool
+
+布尔查询是一个或多个查询子句的组合，子查询的组合方式有多种，包括must逻辑与、should逻辑或、must_not逻辑非以及filter特殊逻辑与，但不参与算分
+
+**示例**
+
+我们为users插入了一些测试数据，现在使用布尔查询来构造一个查询条件，查询id从1到8的开发人员
+
+对于开发人员，我们使用match方式，匹配字段为info，内容为“开发”，这里不用“开发人员”是因为IK默认将“开发人员“定义为了一个分词，这会导致”开发“无法被检索，然后设置一个filter，因为id范围不影响排名先后
+
+```JSON
+GET http://localhost:9200/users/_search
+
+{
+    "query": {
+        "bool": {
+            "must": [
+                {
+                    "match": {
+                        "info": "开发"
+                    }
+                }
+            ],
+            "filter": [
+                {
+                    "range": {
+                        "id": {
+                            "gte": 1,
+                            "lte": 8
+                        }
+                    }
+                }
+            ]
+        }
+    }
+}
+```
+
+```JSON
+"hits": [
+            {
+                "_index": "users",
+                "_type": "_doc",
+                "_id": "1",
+                "_score": 1.8714952,
+                "_source": {
+                    "id": 1,
+                    "username": "Ocean",
+                    "info": "Java开发工程师，艾欧希创始人",
+                    "realName": {
+                        "firstName": "溟汐",
+                        "lastName": "奥辛"
+                    }
+                }
+            },
+            {
+                "_index": "users",
+                "_type": "_doc",
+                "_id": "3",
+                "_score": 1.5900602,
+                "_source": {
+                    "id": 3,
+                    "info": "高级后端开发工程师，擅长分布式系统设计",
+                    "realName": {
+                        "lastName": "王",
+                        "firstName": "五"
+                    },
+                    "username": "王五"
+                }
+            }
+        ]
+```
+
+- 基于算法修改查询时文档相关性分数计算，从而改变文档排名，如function_score、dis_max
+
+##### 排序和分页
+
+ES支持对搜索结果进行排序，默认根据相关度分数降序排序，也可以指定字段排序，可以被指定的字段有关键字类型、数值类型、地理坐标类型以及日期类型
+
+排序使用sort字段，sort接收一个数组，可以设置多个排序字段，每个排序字段为一个对象
+
+**示例**
+
+查询所有用户，但是以id字段降序排序
+
+```JSON
+GET http://localhost:9200/users/_search
+
+{
+    "query": {
+        "match_all": {}
+    },
+    "sort": [
+        {"id": "desc"}
+    ]
+}
+```
+
+> ![](javaweb2/176.png)
+
+分页功能与排序类似，但分页直接使用from和size两个字段控制，与sort字段同级，我们将刚才的查询结果进行分页，每页五条，查询第二页，ES的下标从0开始
+
+> ![](javaweb2/177.png)
+
+###### 深度分页问题
+
+ES的数据一般会采用分片存储，也就是把一个索引中的数据分成N份，然后存储到不同的节点上，查询数据时再将需要的分片进行汇总。假设我们分页查询一个索引库，每页数量10条，起始偏移990，也就是第100页的数据
+
+```JSON
+GET /targetIndex/_search
+
+{
+    "from": 990,
+    "size": 10
+}
+```
+
+假设ES将数据分成了四片，要获取第100页的数据，就需要先获取前1000条，然后再选择第991到1000条。而在四个数据节点中，所有数据并不是有序存储的，所以只能先分别取出四个节点中各自的前1000条，然后聚合成一个数据集合，再进行排序，这样获取所有数据的前1000条，最后将分页结果返回。而这会导致一个性能问题，分页的数量越大，从各个数据节点中取出的数据也就越多，而由于数据量庞大，数据的节点数量也会越多，这很可能导致内存不足，从而引起程序崩溃，甚至服务器宕机
+
+针对深度分页问题，ES提供了两种解决方案
+
+- search after：分页时需要排序，原理是从上一次的排序值开始，查询下一页数据
+- scroll：将排序数据形成快照，保存在内存中
+
+而在实际的业务实践中，通常的解决方案是直接设置一个分页最大限制，因为一般的用户不会使用太大的分页数量，而ES中默认的最大分页限制为10000条，即from+size不能大于10000
+
+> ![](javaweb2/178.png)
+
+##### 高亮显示
+
+ES的高亮显示可以直接在对应的内容中添加自定义样式，例如在Bing中搜索Java，所有的网站标题中的Java关键字都是红色样式，这里的根本原因是Java关键字被添加了一个strong标签，而css样式中为strong标签设置了红色
+
+> ![](javaweb2/179.png)
+
+因此，ES的高亮显示就可以在指定的关键字处添加strong标签，让前端可以为其设置为不同的样式。ES高亮使用highlight字段，然后指定需要高亮的结果字段，可以设置多个字段
+
+**示例**
+
+为“开发”添加高亮
+
+```JSON
+GET http://localhost:9200/users/_search
+
+{
+    "query": {
+        "match": {
+            "info": "开发"
+        }
+    },
+    "highlight": {
+        "fields": {
+            "info": {
+                "pre_tags": "<strong>",
+                "post_tags": "</strong>"
+            }
+        }
+    }
+}
+```
+
+> ![](javaweb2/180.png)
+
+*注：highlight默认添加\<em\>标签*
+
+#### Java Rest Client查询
+
+##### 快速入门
+
+使用Java Rest Client查询所有的用户，并封装为实体类
+
+```java
+@Test
+public void testSearch() throws IOException {
+    // 创建搜索请求
+    SearchRequest request = new SearchRequest("users");
+    // 设置搜索条件
+    request.source().query(QueryBuilders.matchAllQuery());
+    // 执行搜索
+    SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+    // 获取搜索结果
+    SearchHit[] hits = response.getHits().getHits();
+    // 封装为实体类
+    Arrays.stream(hits).map(hit -> {
+        // 获取源数据
+        String json = hit.getSourceAsString();
+        // 转为实体类
+        return JSONUtil.toBean(json, User.class);
+    }).forEach(System.out::println);
+}
+```
+
+首先创建一个SearchRequest，然后调用source以及query，声明一个QueryBuilders来指定搜索条件，这里使用matchAllQuery方法，然后执行搜索，搜索结果封装为了SearchResponse，想要获取其中的数据数据三步，第一步调用getHits获取SearchHits对象，然后调用getHits获取SearchHit数组，最后遍历SearchHit数组，调用getSourceAsString获取原始JSON，再利用JSONUtil的toBean转换为实体类
+
+> ![](javaweb2/181.png)
+
+##### 构建复杂查询条件
+
+在Java Rest API中，查询条件的构建都是通过QueryBuilders来构建的，QueryBuilders包含了所有的DSL查询条件方法
+
+> ![](javaweb2/182.png)
+
+利用这些方法，就可以构建复杂查询条件，例如match方式查询，第一个参数为查询字段，第二个参数为查询值
+
+```java
+@Test
+public void testConditionSearch() throws IOException {
+    // 创建搜索请求
+    SearchRequest request = new SearchRequest("users");
+    // 全文检索
+    request.source().query(QueryBuilders.matchQuery("username", "张三"));
+}
+```
+
+或者是multi_match查询，第一个参数为查询值，后续参数为查询字段
+
+```java
+@Test
+public void testConditionSearch() throws IOException {
+    // 创建搜索请求
+    SearchRequest request = new SearchRequest("users");
+    // 多字段全文检索
+    request.source().query(QueryBuilders.multiMatchQuery("张三", "username", "info"));
+}
+```
+
+精确查询使用termQuery方法，第一个参数为查询字段，第二个为查询值
+
+```java
+@Test
+public void testConditionSearch() throws IOException {
+    // 创建搜索请求
+    SearchRequest request = new SearchRequest("users");
+    // 精确匹配
+    request.source().query(QueryBuilders.termQuery("username", "张三"));
+}
+```
+
+以及范围查询rangeQuery，但是范围查询有些不同，只接收一个参数查询字段，后面通过链式编程再追加范围限制
+
+```java
+@Test
+public void testConditionSearch() throws IOException {
+    // 创建搜索请求
+    SearchRequest request = new SearchRequest("users");
+    // 范围匹配
+    request.source().query(QueryBuilders.rangeQuery("age").gte(20).lte(30));
+}
+```
+
+布尔查询需要先声明一个BoolQueryBuilder，然后将其他搜索条件追加到BoolQueryBuilder中，再传入SearchSourceBuilder
+
+```java
+@Test
+public void testConditionSearch() throws IOException {
+    // 创建搜索请求
+    SearchRequest request = new SearchRequest("users");
+    // 布尔查询
+    BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+    // 添加条件
+    boolQuery.must(QueryBuilders.matchQuery("username", "张三"));
+    boolQuery.filter(QueryBuilders.matchQuery("info", "张三的信息"));
+    // 设置搜索条件
+    request.source().query(boolQuery);
+}
+```
+
+值得一提的是，BoolQueryBuilder也支持链式编程，所以上述代码可以进行简化
+
+```java
+@Test
+public void testConditionSearch() throws IOException {
+    // 创建搜索请求
+    SearchRequest request = new SearchRequest("users");
+    // 设置搜索条件
+    request.source().query(QueryBuilders.boolQuery()
+            .must(QueryBuilders.matchQuery("username", "张三"))
+            .filter(QueryBuilders.matchQuery("info", "张三的信息"))
+    );
+    // 执行搜索
+    SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+}
+```
+
+##### 排序和分页
+
+排序和分页在DSL中与搜索同级，因此可以直接利用链式编程，直接在查询条件后面构建排序和分页
+
+**示例**
+
+```java
+@Test
+public void testSearch() throws IOException {
+    // 创建搜索请求
+    SearchRequest request = new SearchRequest("users");
+    request.source()
+            // 设置查询条件
+            .query(QueryBuilders.matchAllQuery())
+            // 设置排序
+            .sort("id", SortOrder.DESC)
+            // 设置分页
+            .from(0)
+            .size(5);
+    // 执行搜索
+    SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+}
+```
+
+##### 高亮显示
+
+高亮显示与排序和分页类似，使用highlighter方法，接收一个HighlightBuilder，这里我们利用SearchSourceBuilder.highlight()创建这个HighlightBuilder，然后设置高亮字段info和高亮样式\<strong\>
+
+```java
+@Test
+public void testSearch() throws IOException {
+    // 创建搜索请求
+    SearchRequest request = new SearchRequest("users");
+    request.source()
+            // 设置查询条件
+            .query(QueryBuilders.matchQuery("info", "开发"))
+            // 设置高亮
+            .highlighter(SearchSourceBuilder.highlight()
+                    .field("info")
+                    .preTags("<strong>")
+                    .postTags("</strong>")
+            );
+    // 执行搜索
+    SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+}
+```
+
+但高亮字段的获取有所不同，在DSL中也能够体现，高亮字段不属于\_source字段，而是单独的highlight字段，所以Java Rest API也不同。想要获取高亮结果，首先调用SearchHit的getHighlightFields，返回值类型为Map<String, HighlightField>，因为可能设置了多个高亮字段，然后根据键名来获取对应字段的高亮内容。在Java Rest Client中，高亮内容的存储使用Text[]，而不是String，因此需要调用getFragments，并设定下标0，最后调用string或者toString方法转换为String
+
+```java
+// 获取数据集
+SearchHit[] hits = response.getHits().getHits();
+for (SearchHit hit : hits) {
+    // 获取原始JSON
+    User user = JSONUtil.toBean(hit.getSourceAsString(), User.class);
+    // 获取高亮结果
+    Map<String, HighlightField> highlightFields = hit.getHighlightFields();
+    HighlightField highlightField = highlightFields.get("info");
+    String info = highlightField.getFragments()[0].string();
+    user.setInfo(info);
+    System.out.println(user);
+}
+```
+
+> ![](javaweb2/183.png)
+
+*注：在获取高亮结果前应进行非空判断*
+
+### 数据聚合
+
+聚合是指对文档数据的统计、分析和运算，Elasticsearch中聚合常见的有三类：
+
+- Bucket：桶聚合，用来对文档进行分组，有TermAggregation按照文档字段值分组，以及Date Histogram按照日期阶梯分组
+- Metric：度量聚合，用于计算一些值，如最大值Max、最小值Min、平均值Avg等，还有Stats同时计算多个聚合值。需要注意的是参与聚合的字段必须是keyword、数值、日期和布尔类型
+- Pipeline：管道聚合，以其他聚合的结果作为基础的复合聚合
+
+#### DSL聚合
+
+DSL中，聚合使用aggs字段，与query同级，为了避免数据过多，可以将size设置为0，只显示聚合数据。aggs中，首先为聚合命名，然后设置聚合方式，再根据不同的聚合方式设置相应的字段以及其他数据
+
+**示例**
+
+聚合users索引库中的所有职位，使用聚合类型为Bucket桶聚合其下的terms精确匹配，聚合字段为position，聚合数据最大长度为10条
+
+```JSON
+GET http://localhost:9200/users/_search
+
+{
+    "size": 0,
+    "aggs": {
+        "TestAgg": {
+            "terms": {
+                "field": "position",
+                "size": 10
+            }
+        }
+    }
+}
+```
+
+> ![](javaweb2/184.png)
+
+当查询与聚合同时存在时，ES会将聚合目前限定为查询结果集
+
+```JSON
+GET http://localhost:9200/users/_search
+
+{
+    "query": {
+        "range": {
+            "id": {
+                "gte": 1,
+                "lte": 5
+            }
+        }
+    },
+    "size": 0,
+    "aggs": {
+        "TestAgg": {
+            "terms": {
+                "field": "position",
+                "size": 10
+            }
+        }
+    }
+}
+```
+
+> ![](javaweb2/185.png)
+
+#### Java Rest Client聚合
+
+聚合与查询同级，那么在Rest Client中API也相似
+
+**示例**
+
+使用Java Rest Client聚合所有开发人员的数量
+
+首先定义一个搜索条件，使用match方式，查询info中包含开发的所有用户，然后添加聚合条件，设置聚合字段为position。这里容易造成的误区是聚合结果的数据类型，首先通过response.getAggregations()获取一个Aggregations，再调用Aggregations的get()方法，传入聚合名称获取对应的聚合结果，但get()方法的方法签名为public final \<A extends Aggregation\> A get(String name)，IDEA默认认为其返回值类型为Aggregation，实际需要我们自己手动指定类型，也就是Aggregation的子类。由于我们在添加聚合条件时指定的聚合类型为terms，因此结果类型为Terms，注意是org.elasticsearch.search.aggregations.bucket.terms.Terms，而不是org.apache.lucene.index.Terms。然后调用getBuckets获取所有的桶，再遍历桶获取聚合结果
+
+```java
+@Test
+public void testAggregation() throws IOException {
+    // 创建搜索请求
+    SearchRequest request = new SearchRequest("users");
+    request.source()
+            // 添加搜索条件
+            .query(QueryBuilders.matchQuery("info", "开发"))
+            // 添加聚合条件
+            .aggregation(AggregationBuilders.terms("positionAgg").field("position").size(10));
+    // 执行搜索
+    SearchResponse response = client.search(request, RequestOptions.DEFAULT);
+    // 获取聚合结果
+    Terms positionAgg = response.getAggregations().get("positionAgg");
+    // 获取桶
+    List<? extends Terms.Bucket> buckets = positionAgg.getBuckets();
+    // 遍历桶，输出结果
+    for (Terms.Bucket bucket : buckets) {
+        System.out.println(bucket.getKeyAsString() + ":" + bucket.getDocCount());
+    }
+}
+```
+
+> ![](javaweb2/186.png)
