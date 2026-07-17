@@ -1,6 +1,6 @@
 # Java Web Enhance
 
-`更新时间：2026-7-16`
+`更新时间：2026-7-17`
 
 注释解释：
 
@@ -735,4 +735,354 @@ Nacos本身自带了严格的环境隔离，例如Namespace、Group、Service/Da
 ### 分级模型
 
 上文提到，Nacos使用Namespace、Group将各个实例进行了环境隔离，但实际上在Service之下还有一个分级Cluster。一些较大的企业会在全国各地的机房部署同一个服务的不同实例，这些不同的地域的机房就成为一个集群。因此Nacos的分级模型可以概述为Namespace、Group、Service、Cluster、Instance。而在Nacos源码中，存储这些信息的数据结构是一个Map\<String, Map\<String, Service\>\>，第一个String表示命名空间，内含所有的分组，所以Group也是一个Map，而Group的Map\<String, Serivce\>的String是分组名称，Service则是服务，Service可能包含多个集群，因此也是Map\<String, Cluster\>，String是服务名称，Cluster是集群，而Cluster不需要键值对结构，因此Cluster采用了Set\<Instance\>来保证实例的唯一性
+
+### Eureka与Nacos
+
+Eureka是Netflix网飞开源的一个注册中心组件，目前被集成在SpringCloudNetflix模块下，工作原理与Nacos类似
+
+Eureka支持集群，Eureka集群内所有的服务数据互通，一旦有任何Eureka服务宕机，都可以随时切换到另外的Eureka注册中心，保证可用性。而针对于分布式事务的CAP定理，Eureka选择了AP模式，即如果产生局部网络，保证服务注册可用，允许出现一定的数据不一致。因为此时服务发现可能仍旧可用
+
+Nacos也支持集群，同样选择AP模式，保证注册可用性，而Nacos与Eureka的区别在于其健康状态监测机制，Nacos的服务默认每5秒向注册中心发送一次心跳包，如果Nacos在15秒内仍未检测到心跳包，则认为该服务下线。而Eureka服务默认每30秒发送一次心跳包，最多超时3次，也就是90秒后未收到心跳包，则认为服务下线。而且Nacos提供了一种主动检测方式，默认关闭状态，可以在配置文件中开启。Nacos主动检测开启后，服务会更改为永久服务，即使服务下线，服务也存在于服务列表中，所以一般不会启用。Nacos还有主动推送服务变更的功能，如果某个服务中某台实例上线或者下线，Nacos会通过UDP主动将新的服务列表推送到订阅者服务，无需订阅者主动拉取
+
+### 远程调用
+
+#### 负载均衡远程调用原理
+
+自SpringCloud2020版本开始，SpringCloud弃用Ribbon，改用Spring自己开源的SpringCloudLoadBalancer，我们通常使用的OpenFeign、Gateway也已经与其进行了整合。而OpenFeign在整合SpringCloudLoadBalancer时，与我们手动服务发现、负载均衡的流程类似。总体来说，可以分为基本四步
+
+- 获取ServiceId服务名称
+- 根据ServiceId拉取服务列表
+- 利用负载均衡算法选择一个服务
+- 重构请求URL，发起远程调用
+
+我们来跟踪Feign的远程调用，查看Feign的源码实现是否与预期的一致
+
+Feign在执行远程调用后，会使用一个动态代理类，而需要执行动态代理方法则需要动态代理类的InvocationHandler来执行，所以我们定义到Feign的InvocationHandler，也就是ReflectiveFeign中的内部类FeignInvocationHandler
+
+```java
+static class FeignInvocationHandler implements InvocationHandler {
+
+  private final Target target;
+  private final Map<Method, MethodHandler> dispatch;
+
+  FeignInvocationHandler(Target target, Map<Method, MethodHandler> dispatch) {
+    this.target = checkNotNull(target, "target");
+    this.dispatch = checkNotNull(dispatch, "dispatch for %s", target);
+  }
+
+  @Override
+  public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
+    if ("equals".equals(method.getName())) {
+      try {
+        Object otherHandler =
+            args.length > 0 && args[0] != null ? Proxy.getInvocationHandler(args[0]) : null;
+        return equals(otherHandler);
+      } catch (IllegalArgumentException e) {
+        return false;
+      }
+    } else if ("hashCode".equals(method.getName())) {
+      return hashCode();
+    } else if ("toString".equals(method.getName())) {
+      return toString();
+    }
+
+    return dispatch.get(method).invoke(args);
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (obj instanceof FeignInvocationHandler) {
+      FeignInvocationHandler other = (FeignInvocationHandler) obj;
+      return target.equals(other.target);
+    }
+    return false;
+  }
+
+  @Override
+  public int hashCode() {
+    return target.hashCode();
+  }
+
+  @Override
+  public String toString() {
+    return target.toString();
+  }
+}
+```
+
+在invoke方法中，最后执行方法调用了dispatch.get(method).invoke(args)，这里并不是FeignInvocationHandler直接执行方法，而是通过了private final Map<Method, MethodHandler> dispatch来执行调用，dispatch保存了方法和方法执行器，因为这里是远程调用。然后进入dispatch的invoke方法，转到SynchronousMethodHandler
+
+```java
+@Override
+public Object invoke(Object[] argv) throws Throwable {
+  RequestTemplate template = buildTemplateFromArgs.create(argv);
+  Options options = findOptions(argv);
+  Retryer retryer = this.retryer.clone();
+  while (true) {
+    try {
+      return executeAndDecode(template, options);
+    } catch (RetryableException e) {
+      try {
+        retryer.continueOrPropagate(e);
+      } catch (RetryableException th) {
+        Throwable cause = th.getCause();
+        if (propagationPolicy == UNWRAP && cause != null) {
+          throw cause;
+        } else {
+          throw th;
+        }
+      }
+      if (logLevel != Logger.Level.NONE) {
+        logger.logRetry(metadata.configKey(), logLevel);
+      }
+      continue;
+    }
+  }
+}
+```
+
+在SynchronousMethodHandler的invoke方法中，首先通过RequestTemplate构建了一个请求，然后由executeAndDecode(template, options)执行
+
+```java
+Object executeAndDecode(RequestTemplate template, Options options) throws Throwable {
+  Request request = targetRequest(template);
+
+  if (logLevel != Logger.Level.NONE) {
+    logger.logRequest(metadata.configKey(), logLevel, request);
+  }
+
+  Response response;
+  long start = System.nanoTime();
+  try {
+    response = client.execute(request, options);
+    // ensure the request is set. TODO: remove in Feign 12
+    response = response.toBuilder()
+        .request(request)
+        .requestTemplate(template)
+        .build();
+  } catch (IOException e) {
+    if (logLevel != Logger.Level.NONE) {
+      logger.logIOException(metadata.configKey(), logLevel, e, elapsedTime(start));
+    }
+    throw errorExecuting(request, e);
+  }
+  long elapsedTime = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - start);
+
+
+  if (decoder != null)
+    return decoder.decode(response, metadata.returnType());
+
+  CompletableFuture<Object> resultFuture = new CompletableFuture<>();
+  asyncResponseHandler.handleResponse(resultFuture, metadata.configKey(), response,
+      metadata.returnType(),
+      elapsedTime);
+
+  try {
+    if (!resultFuture.isDone())
+      throw new IllegalStateException("Response handling not done");
+
+    return resultFuture.join();
+  } catch (CompletionException e) {
+    Throwable cause = e.getCause();
+    if (cause != null)
+      throw cause;
+    throw e;
+  }
+}
+```
+
+在executeAndDecode中，先获取请求，然后通过response = client.execute(request, options)直接执行请求，这里会继续调用FeignBlockingLoadBalancerClient的execute方法
+
+```java
+@Override
+public Response execute(Request request, Request.Options options) throws IOException {
+    final URI originalUri = URI.create(request.url());
+    String serviceId = originalUri.getHost();
+    Assert.state(serviceId != null, "Request URI does not contain a valid hostname: " + originalUri);
+    String hint = getHint(serviceId);
+    DefaultRequest<RequestDataContext> lbRequest = new DefaultRequest<>(
+          new RequestDataContext(buildRequestData(request), hint));
+    Set<LoadBalancerLifecycle> supportedLifecycleProcessors = LoadBalancerLifecycleValidator
+          .getSupportedLifecycleProcessors(
+                loadBalancerClientFactory.getInstances(serviceId, LoadBalancerLifecycle.class),
+                RequestDataContext.class, ResponseData.class, ServiceInstance.class);
+    supportedLifecycleProcessors.forEach(lifecycle -> lifecycle.onStart(lbRequest));
+    ServiceInstance instance = loadBalancerClient.choose(serviceId, lbRequest);
+    org.springframework.cloud.client.loadbalancer.Response<ServiceInstance> lbResponse = new DefaultResponse(
+          instance);
+    if (instance == null) {
+       String message = "Load balancer does not contain an instance for the service " + serviceId;
+       if (LOG.isWarnEnabled()) {
+          LOG.warn(message);
+       }
+       supportedLifecycleProcessors.forEach(lifecycle -> lifecycle
+             .onComplete(new CompletionContext<ResponseData, ServiceInstance, RequestDataContext>(
+                   CompletionContext.Status.DISCARD, lbRequest, lbResponse)));
+       return Response.builder().request(request).status(HttpStatus.SERVICE_UNAVAILABLE.value())
+             .body(message, StandardCharsets.UTF_8).build();
+    }
+    String reconstructedUrl = loadBalancerClient.reconstructURI(instance, originalUri).toString();
+    Request newRequest = buildRequest(request, reconstructedUrl);
+    LoadBalancerProperties loadBalancerProperties = loadBalancerClientFactory.getProperties(serviceId);
+    return executeWithLoadBalancerLifecycleProcessing(delegate, options, newRequest, lbRequest, lbResponse,
+          supportedLifecycleProcessors, loadBalancerProperties.isUseRawStatusCodeInResponseData());
+}
+```
+
+首先由final URI originalUri = URI.create(request.url())获取请求URL，类似于`http://item-service/item?ids=100001`，但是这个请求肯定无法直接发送，因为item-service时服务名。下一步String serviceId = originalUri.getHost()便从请求路径中获取到了服务名`item-service`，第一步完成；下方的ServiceInstance instance = loadBalancerClient.choose(serviceId, lbRequest)就开始挑选服务，第二步与第三步完成；然后由String reconstructedUrl = loadBalancerClient.reconstructURI(instance, originalUri).toString()完成URL重构，第四步完成。
+
+不过我们仍不知道负载均衡的具体实现，因此继续深入loadBalancerClient的choose方法。LoadBalancerClient是一个接口，仅有一个实现类BlockingLoadBalancerClient，于是我们查看BlockingLoadBalancerClient的choose方法
+
+```java
+@Override
+public <T> ServiceInstance choose(String serviceId, Request<T> request) {
+    ReactiveLoadBalancer<ServiceInstance> loadBalancer = loadBalancerClientFactory.getInstance(serviceId);
+    if (loadBalancer == null) {
+       return null;
+    }
+    Response<ServiceInstance> loadBalancerResponse = Mono.from(loadBalancer.choose(request)).block();
+    if (loadBalancerResponse == null) {
+       return null;
+    }
+    return loadBalancerResponse.getServer();
+}
+```
+
+从源码中看出，BlockingLoadBalancerClient也并不是负载均衡的实现类，而是一个调用类，实际的负载均衡器为ReactiveLoadBalancer，ReactiveLoadBalancer是交互式负载均衡器接口，其下有三个实现类NacosLoadBalancer、RandomLoadBalancer、RoundRobinLoadBalancer
+
+> ![](javaweb2/235.png)
+
+默认选择的是RoundRobinLoadBalancer轮询负载均衡器，而BlockingLoadBalancerClient中调用了ReactiveLoadBalancer的choose方法，所以我们继续跟入RoundRobinLoadBalancer的choose方法
+
+```java
+@SuppressWarnings("rawtypes")
+@Override
+// see original
+// https://github.com/Netflix/ocelli/blob/master/ocelli-core/
+// src/main/java/netflix/ocelli/loadbalancer/RoundRobinLoadBalancer.java
+public Mono<Response<ServiceInstance>> choose(Request request) {
+    ServiceInstanceListSupplier supplier = serviceInstanceListSupplierProvider
+          .getIfAvailable(NoopServiceInstanceListSupplier::new);
+    return supplier.get(request).next()
+          .map(serviceInstances -> processInstanceResponse(supplier, serviceInstances));
+}
+```
+
+在RoundRobinLoadBalancer的choose中，服务拉取通过ServiceInstanceListSupplier，底层就是通过DiscoveryClient来实现的，而服务的选取继续调用processInstanceResponse
+
+```java
+private Response<ServiceInstance> processInstanceResponse(ServiceInstanceListSupplier supplier,
+       List<ServiceInstance> serviceInstances) {
+    Response<ServiceInstance> serviceInstanceResponse = getInstanceResponse(serviceInstances);
+    if (supplier instanceof SelectedInstanceCallback && serviceInstanceResponse.hasServer()) {
+       ((SelectedInstanceCallback) supplier).selectedServiceInstance(serviceInstanceResponse.getServer());
+    }
+    return serviceInstanceResponse;
+}
+```
+
+在processInstanceResponse中继续调用getInstanceResponse
+
+```java
+private Response<ServiceInstance> getInstanceResponse(List<ServiceInstance> instances) {
+    if (instances.isEmpty()) {
+       if (log.isWarnEnabled()) {
+          log.warn("No servers available for service: " + serviceId);
+       }
+       return new EmptyResponse();
+    }
+
+    // Ignore the sign bit, this allows pos to loop sequentially from 0 to
+    // Integer.MAX_VALUE
+    int pos = this.position.incrementAndGet() & Integer.MAX_VALUE;
+
+    ServiceInstance instance = instances.get(pos % instances.size());
+
+    return new DefaultResponse(instance);
+}
+```
+
+在getInstanceResponse中，编写了轮询算法的核心代码，其实也非常简单。Feign维护了一个position，这个position是AtomicInteger类型，AtomicInteger位于java.util.concurrent.atomic包下，用于在多线程环境中对int进行原子操作。简单来说，就是一个线程安全的计数器。this.position.incrementAndGet()进行自增操作，但AtomicInteger基于int，因此存在一个上限，也就是int的最大值，所以这里与Integer.MAX_VALUE进行逻辑与，保证计数器不为负数。举个例子，假设int为8位，第一位作为符号位，那么int最大值为01111111，此时如果再进行自增，就变成了10000000，负数的最小值，因此需要与最大值逻辑与，10000000 & 01111111 = 00000000，重置为0。然后通过pos与拉取到的实例数量进行取模，即得到的索引永远不会超过实例数量最大值，而且随着计数器增加，余数也会增加，因此实现了轮询算法
+
+#### 切换负载均衡算法
+
+在分析负载均衡原理的时候我们发现ReactiveLoadBalancer有三个实现类，分别是NacosLoadBalancer、RandomLoadBalancer、RoundRobinLoadBalancer，其中RandomLoadBalancer和RoundRobinLoadBalancer由Spring-Cloud-Loadbalancer模块提供，而NacosLoadBalancer则由Nacos-Discovery提供
+
+ReactiveLoadBalancer由SpringBoot自动装配实现，我们可以查看spring-cloud-loadbalancer包，观察其Config类
+
+```java
+@Bean
+@ConditionalOnMissingBean
+public ReactorLoadBalancer<ServiceInstance> reactorServiceInstanceLoadBalancer(Environment environment,
+       LoadBalancerClientFactory loadBalancerClientFactory) {
+    String name = environment.getProperty(LoadBalancerClientFactory.PROPERTY_NAME);
+    return new RoundRobinLoadBalancer(
+          loadBalancerClientFactory.getLazyProvider(name, ServiceInstanceListSupplier.class), name);
+}
+```
+
+定位到LoadBalancerClientConfiguration，第一个方法便是reactorServiceInstanceLoadBalancer，用于创建一个ReactiveLoadBalancer的Bean，而且reactorServiceInstanceLoadBalancer方法上有@ConditionalOnMissingBean注解，因此我们可以自己创建一个ReactiveLoadBalancer的Bean，返回需要的负载均衡器，或者甚至可以自定义一个负载均衡器，然后通过reactorServiceInstanceLoadBalancer方法注入
+
+但是自定义LoadBalancerClientConfiguration类不要添加@Configuration注解，一旦添加，这个配置会对整个服务生效，而负载均衡仅限于Feign的远程调用，所以要保持最小职责原则，应该在启动类上使用@LoadBalanceClients注解，再传入配置类的类文件。例如我们返回一个Nacos的负载均衡器
+
+```java
+@Bean
+public ReactorLoadBalancer<ServiceInstance> reactorServiceInstanceLoadBalancer(
+    Environment environment,
+    LoadBalancerClientFactory loadBalancerClientFactory,
+    NacosDiscoveryProperties properties
+) {
+    String name = environment.getProperty(LoadBalancerClientFactory.PROPERTY_NAME);
+    return new NacosLoadBalancer(
+          loadBalancerClientFactory.getLazyProvider(name, ServiceInstanceListSupplier.class), name, properties);
+}
+```
+
+Nacos负载均衡器的算法是集群优先，在相同集群的情况下基于权重进行随机选择
+
+## 服务保护
+
+### 线程隔离
+
+一般来说，线程隔离有两种实现方案，线程池隔离和信号量隔离。线程池隔离在SpringCloudAlibaba中由早期的Hystix采用，而现在的Sentinel采用信号量隔离
+
+线程池隔离一般是为各个服务调用单独设置一个线程池，每次请求到达时，需要从线程池中申请线程，然后再发往对应服务。线程池大小小于服务器总逻辑可用线程数量，因此当一个服务被高频访问时，仅有对应服务的线程池被占满，而其他服务的线程池可以正常使用，避免雪崩。其优势为隔离效果显著，每个远程调用都有自己的线程池，不存在资源共享问题，而且线程池可以直接控制其中的线程，如果线程出现问题或者慢调用，可以直接中断线程；线程池隔离的缺点是，一旦一个服务中存在大量的远程调用，就需要准备同等规模的线程池，而每个线程池都会消耗一部分服务器资源，因此远程调用越多，额外资源消耗越多
+
+信号量隔离机制并不直接隔离线程，而是通过一个信号量计数器，在请求被远程调用前进行计数，一旦信号量达到上限，则拒绝后续请求。信号量隔离的优点是没有额外的资源消耗，性能更好；相对地，缺点就是隔离性较弱
+
+### 滑动窗口算法
+
+**固定窗口计数器算法**
+
+在了解滑动窗口算法之前，需要先了解固定窗口计数器算法，因为滑动窗口算法基于固定窗口计数器算法改进而来
+
+固定窗口计数器算法将时间划分为多个窗口，也就是多个时间段，窗口时间的跨度称为Interval。每个窗口分别计数统计，每有一次请求就将计数器加一，限流就是设置计数器阈值，如果计数器超过了阈值，那么超出阈值的请求都会被拒绝
+
+而固定窗口计数器算法存在一定的缺陷，假设窗口设置为1000ms，阈值设置为3，在第1500ms时有三个请求到达，1000到2000ms内阈值为3，所以放行；而2500ms又有三个请求到达，2000到3000ms内阈值为3，因此也放行。如果观察1500ms到2500ms这一个窗口，就有6个请求到达，严重超出了设置的阈值
+
+**滑动窗口计数器算法**
+
+滑动窗口计数器算法正是为了解决这个问题，我们可以将一个窗口跨度拆分为更小的跨度，例如窗口设置为1000ms，子窗口设置为500ms。在计数时，也按照子窗口来进行计数，例如当2500ms有请求到达时，以1500ms为窗口起始位置，计算1500到2500ms窗口内的请求数量，这样就可以尽量避免请求时间位于其他窗口。这里需要注意，滑动窗口计数器算法的计数是基于请求到达时的子窗口及其上一个子窗口，而固定窗口计数器算法的计数是基于请求当前窗口。滑动窗口算法并不能从根本上解决请求位于其他窗口的情况，但是可以通过设置更高的子窗口数量来扩大精度
+
+从数学上来看，滑动窗口计数器的子窗口，也就是桶的数量及其限流精度的关系可以用以下表达式概括
+$$
+\epsilon \approx 1 / N
+$$
+ε表示限流误差，N表示桶数量。如果要求误差小于10%，则应该选择N大于等于10，若要求误差小于等于1%，则应该选择N大于等于100
+
+### 漏桶算法
+
+在滑动窗口算法拒绝请求后，默认遵循快速失败原则，直接放弃该请求。但是如果是一些比较重要的业务请求，就不能轻易放弃，而应该将其保存在某个位置，等待并发放缓后继续执行。这里就需要用到漏桶算法
+
+漏桶算法是指将每个请求视作水滴，存入漏桶中进行存储，漏桶会按照固定的速率向外漏出请求执行，如果漏桶为空，则停止漏水；但漏桶也有容量上限，一旦漏桶被装满，其余的请求也应当拒绝
+
+Sentinel的排队等待控流就是基于漏桶算法进行的，同时在Sentinel中也可以设置请求超时时间，超过TTL的请求会直接从桶中被移除
+
+### 令牌桶算法
+
+令牌桶算法是准备一个桶，但是这个桶不存储任何数据，而是系统生成的令牌，系统以固定速率生成令牌，达到桶容量上限后停止生成。每当请求到达时，必须先尝试从令牌桶中申请一个令牌，然后才能继续执行，若请求没能获取令牌，则阻塞或直接拒绝。令牌桶可以解决请求积压的问题，但是令牌桶在请求速率波动较大的场景容易出现限流失败的问题
+
+举个例子，假设系统生成令牌的速率是每秒十个，令牌桶的容量为十个，现在一瞬间有二十个请求进入，前十个请求会立即消耗桶中的所有令牌，然后系统再生成十个令牌供后十个请求消耗，这样QPS就增长为了20，严重超出限流阈值
+
+而在SpringCloudGateway中，限流也是基于Redis实现的令牌桶算法
 
