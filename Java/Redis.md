@@ -1,6 +1,6 @@
 # Redis
 
-`更新时间：2026-8-4`
+`更新时间：2026-8-5`
 
 注释解释：
 
@@ -138,17 +138,17 @@ String底层通过字节数组存储，但是不同的String类型的编码方�
 
 #### 常用命令
 
-| 命令        | 标准语法                                                     | 说明                                                         | 示例                   |
-| ----------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ---------------------- |
-| SET         | SET \<KEY\> \<VALUE> [EX SECONDS \| PX MILLISECONDS] [NX \| XX] | 添加或修改一个String类型的KEY，可以携带EX或PX设置过期时间，EX单位为秒，PX单位为毫秒，NX和XX用于指定执行前提，NX表示不存在则执行，XX表示存在则执行，NX和XX一般用于锁 | SET name jack          |
-| GET         | GET \<KEY>                                                   | 获取一个String类型的KEY的VALUE                               | GET name               |
-| MSET        | MSET \<KEY> \<VALUE> [\<KEYS> \<VALUES>...]                  | 批量添加多个String类型的KEY                                  | MSET name jack  age 20 |
-| MGET        | MGET \<KEY> [\<KEYS>...]                                     | 批量获取多个String类型的KEY的VALUE                           | MGET name age          |
-| INCR        | INCR \<KEY>                                                  | 让一个整型KEY自增1                                           | INCR age               |
-| INCRBY      | INCRBY \<KEY> \<INCREMENT>                                   | 让一个整型KEY自增并设置自增步长                              | INCRBY age 10          |
-| INCRBYFLOAT | INCRBYFLOAT \<KEY> \<INCREMENT>                              | 让一个浮点型KEY自增并设置自增步长                            | INCRBYFLOAT scores 1.2 |
-| SETNX       | SETNX \<KEY> \<VALUE>                                        | 如果KEY不存在，则添加一个String类型的KEY                     | SETNX name jack        |
-| SETEX       | SETEX \<KEY> \<SECONDS> \<VALUE>                             | 添加一个String类型的KEY，并同时设置TTL                       | SETEX name 20 jack     |
+| 命令        | 标准语法                                                     | 说明                                                         |
+| ----------- | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| SET         | SET \<KEY\> \<VALUE> [EX SECONDS \| PX MILLISECONDS] [NX \| XX] | 添加或修改一个String类型的KEY，可以携带EX或PX设置过期时间，EX单位为秒，PX单位为毫秒，NX和XX用于指定执行前提，NX表示不存在则执行，XX表示存在则执行，NX和XX一般用于锁 |
+| GET         | GET \<KEY>                                                   | 获取一个String类型的KEY的VALUE                               |
+| MSET        | MSET \<KEY> \<VALUE> [\<KEYS> \<VALUES>...]                  | 批量添加多个String类型的KEY                                  |
+| MGET        | MGET \<KEY> [\<KEYS>...]                                     | 批量获取多个String类型的KEY的VALUE                           |
+| INCR        | INCR \<KEY>                                                  | 让一个整型KEY自增1                                           |
+| INCRBY      | INCRBY \<KEY> \<INCREMENT>                                   | 让一个整型KEY自增并设置自增步长                              |
+| INCRBYFLOAT | INCRBYFLOAT \<KEY> \<INCREMENT>                              | 让一个浮点型KEY自增并设置自增步长                            |
+| SETNX       | SETNX \<KEY> \<VALUE>                                        | 如果KEY不存在，则添加一个String类型的KEY                     |
+| SETEX       | SETEX \<KEY> \<SECONDS> \<VALUE>                             | 添加一个String类型的KEY，并同时设置TTL                       |
 
 ### KEY的分级结构
 
@@ -186,15 +186,369 @@ ooez:channel:room:id
 
 #### 常用命令
 
-| 命令    | 标准语法                                                | 说明                                              | 示例                        |
-| ------- | ------------------------------------------------------- | ------------------------------------------------- | --------------------------- |
-| HSET    | HSET \<KEY> \<FIELD> \<VALUE>                           | 添加或修改Hash类型的KEY的FIELD值                  | HSET user name jack         |
-| HGT     | HGET \<KEY> \<FIELD>                                    | 获取一个Hash类型的KEY的FIELD值                    | HGET user name              |
-| HMSET   | HMSET \<KEY> \<FIELD> \<VALUE> [\<FIELDS> \<VALUES>...] | 批量添加多个Hash类型的KEY的FIELD值                | HMSET user name jack age 20 |
-| HMGET   | HMGET \<KEY> \<FIELD> [\<FIELDS>...]                    | 批量获取多个Hash类型的KEY的FIELD值                | MGET user name age          |
-| HGETALL | HGETALL \<KEY>                                          | 获取一个Hash类型的KEY中的所有FIELD和VALUE         | HGETALL user                |
-| HKEYS   | HKEYS \<KEY>                                            | 获取一个Hash类型的KEY中的所有FIELD                | HKEYS user                  |
-| HVALS   | HVALS \<KEY>                                            | 获取一个Hash类型的KEY中的所有VALUE                | HVALS user                  |
-| HINCRBY | HINCRBY \<KEY> \<FIELD> \<INCREMENT>                    | 让一个Hash类型KEY的字段值自增并指定步长           | HINCRBY user age 10         |
-| HSETNX  | HSETNX \<KEY> \<FIELD> \<VALUE>                         | 如果FIELD不存在，则添加一个Hash类型的KEY的FIELD值 | HSETNX user name kiiz       |
+| 命令    | 标准语法                                                | 说明                                              |
+| ------- | ------------------------------------------------------- | ------------------------------------------------- |
+| HSET    | HSET \<KEY> \<FIELD> \<VALUE>                           | 添加或修改Hash类型的KEY的FIELD值                  |
+| HGT     | HGET \<KEY> \<FIELD>                                    | 获取一个Hash类型的KEY的FIELD值                    |
+| HMSET   | HMSET \<KEY> \<FIELD> \<VALUE> [\<FIELDS> \<VALUES>...] | 批量添加多个Hash类型的KEY的FIELD值                |
+| HMGET   | HMGET \<KEY> \<FIELD> [\<FIELDS>...]                    | 批量获取多个Hash类型的KEY的FIELD值                |
+| HGETALL | HGETALL \<KEY>                                          | 获取一个Hash类型的KEY中的所有FIELD和VALUE         |
+| HKEYS   | HKEYS \<KEY>                                            | 获取一个Hash类型的KEY中的所有FIELD                |
+| HVALS   | HVALS \<KEY>                                            | 获取一个Hash类型的KEY中的所有VALUE                |
+| HINCRBY | HINCRBY \<KEY> \<FIELD> \<INCREMENT>                    | 让一个Hash类型KEY的字段值自增并指定步长           |
+| HSETNX  | HSETNX \<KEY> \<FIELD> \<VALUE>                         | 如果FIELD不存在，则添加一个Hash类型的KEY的FIELD值 |
+
+### List
+
+Redis中的List类型与Java中的LinkedList类似，可以看作是一个双向链表结构，既可以正向索引也可以反向索引。其特征也符合双向链表，有序、元素可以重复、插入和删除速度快、查询速度一般。List类型常用来存储一个有序数据，如点赞列表、评论列表等等
+
+#### 常用命令
+
+| 命令   | 标准语法                             | 说明                                                      |
+| ------ | ------------------------------------ | --------------------------------------------------------- |
+| LPUSH  | LPUSH \<KEY> \<VALUE> [\<VALUES>...] | 向列表左侧插入一个或多个元素                              |
+| LPOP   | LPOP \<KEY>                          | 弹出并返回列表左侧的一个元素，没有则返回nil               |
+| RPUSH  | RPUSH \<KEY> \<VALUE> [\<VALUES>...] | 向列表右侧插入一个或多个元素                              |
+| RPOP   | RPOP \<KEY>                          | 弹出并返回列表右侧的一个元素，没有则返回nil               |
+| LRANGE | LRANGE \<KEY> \<START> \<STOP>       | 返回一段角标范围内的所有元素                              |
+| BLPOP  | BLPOP \<KEY> [\<KEYS>...] \<TIMEOUT> | 与LPOP类似，但是没有元素时等待指定时间，而不是直接返回nil |
+
+### Set
+
+Redis的Set结构与Java中的HashSet类似，可以看作是一个VALUE为null的HashMap，Set结构底层也是一个哈希表。Set具有的特征有无序、元素不可重复、查找快、支持交集、并集、差集等功能
+
+哈希表底层是通过哈希函数计算元素来获取下标，所以可以保证数据不重复，而相同的数据哈希结果相同，因此查询速度也更快
+
+#### 常用命令
+
+| 命令      | 标准语法                              | 说明                      |
+| --------- | ------------------------------------- | ------------------------- |
+| SADD      | SADD \<KEY> \<MEMBER> [\<MEMBERS>...] | 向SET中添加一个或多个元素 |
+| SREM      | SREM \<KEY> \<MEMBER> [\<MEMBERS>...] | 移除SET中的指定元素       |
+| SCARD     | SCARD \<KEY>                          | 返回SET中元素的个数       |
+| SISMEMBER | SISMEMBER \<KEY> \<MEMBER>            | 判断一个元素是否存在SET中 |
+| SMEMBERS  | SMEMBERS \<KEY>                       | 获取SET中的所有元素       |
+| SINTER    | SINTER \<KEY> [\<KEYS>...]            | 求SET集合的交集           |
+| SDIFF     | SDIFF \<KEY> [\<KEYS>...]             | 求SET集合的差集           |
+| SUNION    | SUNION \<KEY> [\<KEYS>...]            | 求SET集合的并集           |
+
+### SortedSet
+
+Redis的SortedSet是一个可排序的Set集合，与Java中的TreeSet类似，但是底层数据结构差别很大。SortedSet中每一个元素都带有一个score属性，可以基于score属性对元素排序，底层实现是一个跳表加哈希表，详情可见[SortedSet](./JavaWebEnhance.md#SortedSet)。SortedSet的特征有可排序、元素不重复、查询速度快
+
+#### 常用命令
+
+| 命令          | 标准语法                                                     | 说明                                               |
+| ------------- | ------------------------------------------------------------ | -------------------------------------------------- |
+| ZADD          | ZADD \<KEY> [NX \| XX] [CH] [INCR] \<SCORE> \<MEMBER> [\<SCORES> \<MEMBERS>...] | 添加一个或多个元素到ZSET，如果已经存在则更新其分数 |
+| ZREM          | ZREM \<KEY> \<MEMBER> [\<MEMBERS>...]                        | 删除ZSET中的一个指定元素                           |
+| ZSCORE        | ZSCORE \<KEY> \<MEMBER>                                      | 获取ZSET指定元素的分数                             |
+| ZRANK         | ZRANK \<KEY> \<MEMBER>                                       | 获取ZSET中指定元素的排名                           |
+| ZCARD         | ZCARD \<KEY>                                                 | 获取ZSET中元素个数                                 |
+| ZCOUNT        | ZCOUNT \<KEY> \<MIN> \<MAX>                                  | 统计分数在指定范围内的所有元素个数                 |
+| ZINCRBY       | ZINCRBY \<KEY> \<INCREMENT> \<MEMBER>                        | 让ZSET指定元素自增                                 |
+| ZRANGE        | ZRANGE \<KEY> \<START> \<STOP> [WITHSCORES]                  | 按照分数排序，然后获取指定排名范围内的元素         |
+| ZRANGEBYSCORE | ZRANGEBYSCORE \<KEY> \<MIN> \<MAX> [WITHSCORES] [LIMIT OFFSET COUNT] | 按照分数排序后，获取指定分数范围内的元素           |
+| ZDIFF         | ZDIFF \<NUMKEYS> \<KEY> [\<KEYS>...] [WITHSCORES]            | 求ZSET的差集                                       |
+| ZINTER        | ZINTER \<NUMKEYS> \<KEY> [\<KEYS>...] [WEIGHTS \<WEIGHT> [\<WEIGHTS>...]] [AGGREGATE SUM \| MIN \| MAX] [WITHSCORES] | 求ZSET的交集                                       |
+| ZUNION        | ZUNION\<NUMKEYS> \<KEY> [\<KEYS>...] [WEIGHTS \<WEIGHT> [\<WEIGHTS>...]] [AGGREGATE SUM | MIN                                                |
+
+*注：ZDIFF、ZINTER、ZUNION都是Redis6.2.0+加入的新命令，如果想要使用，服务端和客户端都需要升级到6.2.0+*
+
+## Redis Java Client
+
+作为Java后端开发人员，我们就需要通过Redis的Java客户端来操作Redis，而Redis官方也罗列了几种Redis的Java客户端供我们选择
+
+| 客户端   | 说明                                                         |
+| -------- | ------------------------------------------------------------ |
+| Jedis    | 以Redis命令作为方法名称，学习成本低，简单实用。但是Jedis实例是线程不安全的，多线程环境下需要基于连接池来使用 |
+| Lettuce  | Lettuce基于Netty实现，支持同步、异步和响应式编程方式，并且是线程安全的，支持Redis哨兵模式、集群模式和管道模式 |
+| Redisson | Redisson是一个基于Redis实现的分布式、可伸缩的Java数据结构集合，包含了诸如Map、Queue、Lock、Semaphor、AtomicLong等强大功能 |
+
+### Jedis
+
+#### 快速入门
+
+Jedis上手非常方便，开发人员可以通过几行代码就快速构建一个可用的Resposiroty。首先引入依赖
+
+```xml
+<!-- Jedis-->
+<dependency>
+    <groupId>redis.clients</groupId>
+    <artifactId>jedis</artifactId>
+    <version>4.3.1</version>
+</dependency>
+```
+
+然后声明一个Jedis实例
+
+```java
+// 声明一个Jedis连接
+Jedis jedis = new Jedis("localhost", 6379);
+// 选择0号数据库
+jedis.select(0);
+```
+
+接下来就可以执行Redis命令了，我们打印Redis服务端信息
+
+```java
+String server = jedis.info("SERVER");
+System.out.println(server);
+```
+
+> ![](javaweb2/308.png)
+
+#### Jedis连接池
+
+Jedis本身是线程不安全的，并且频繁地创建和销毁连接会造成性能损耗，因此更推荐使用Jedis连接池代替Jedis直连。我们创建一个工厂类，工厂类中构建Jedis连接池，然后暴露get方法即可
+
+```java
+package com.itheima.mp.util;
+
+import lombok.Getter;
+import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.JedisPoolConfig;
+
+import java.time.Duration;
+
+public class JedisConnectionFactory {
+
+    @Getter
+    private static final JedisPool jedisPool;
+    private static final String HOST = "localhost";
+    private static final Integer PORT = 6379;
+
+    // 初始化连接池
+    static {
+        // 声明配置对象
+        JedisPoolConfig config = new JedisPoolConfig();
+        // 配置参数
+        config.setMaxTotal(10);
+        config.setMaxIdle(10);
+        config.setMinIdle(2);
+        config.setMaxWait(Duration.ofSeconds(5));
+        // 创建连接池对象
+        jedisPool = new JedisPool(config, HOST, PORT);
+    }
+}
+```
+
+首先定义私有成员JedisPool，然后通过静态代码块来为其进行初始化赋值，JedisPool需要JedisPoolConfig作为配置，因此需要先声明一个JedisPoolConfig，然后填充参数，如最大连接数、最大空闲连接数、最小空闲连接数、连接等待时间等等，然后将配置传入JedisPool的构造器，构造一个连接池，最后为私有成员添加@Getter注解添加getter方法
+
+### Spring Data Redis
+
+Spring Data是Spring中数据操作的模块，包含对各种数据库的集成，其中对Redis的集成模块叫做Spring Data Redis。此外，Spring Data还提供了如Spring Data JDBC、Spring Data JPA、Spring Data REST、Spring Data Elasticsearch等等
+
+Spring Data Redis提供了对不同Redis客户端的整合，如Lettuce和Jedis，支持Redis的发布订阅模型，支持Redis哨兵和Redis集群，支持基于Lettuce的响应式编程模型，支持基于JDK、JSON、字符串、Spring对象的数据序列化及其反序列化，支持基于Redis的JDK Collection实现
+
+Spring Data Redis提供了RedisTemplate统一API来操作Redis，RedisTemplate将不同的数据类型的操作API封装到了不同的类型中
+
+| API                         | 返回值类型      | 说明                  |
+| --------------------------- | --------------- | --------------------- |
+| redisTemplate.opsForValue() | ValueOperations | 操作String类型数据    |
+| redisTemplate.opsForHash()  | HashOperations  | 操作Hash类型数据      |
+| redisTemplate.opsForList()  | ListOperations  | 操作List类型数据      |
+| redisTemplate.opsForSet()   | SetOperations   | 操作Set类型数据       |
+| redisTemplate.opsForZset()  | ZSetOperations  | 操作SortedSet类型数据 |
+| redisTemplate               |                 | 通用命令              |
+
+#### 快速入门
+
+首先引入依赖
+
+```xml
+<!-- spring data redis-->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-redis</artifactId>
+</dependency>
+<!-- apache 连接池-->
+<dependency>
+    <groupId>org.apache.commons</groupId>
+    <artifactId>commons-pool2</artifactId>
+</dependency>
+```
+
+Spring Data Redis的版本号依赖Spring Boot父工程的版本，所以不需要手动指定。而Apache Pool则负责构建连接池
+
+在引入依赖完成后，在配置文件中配置Redis
+
+```yml
+spring:
+  redis:
+    host: localhost
+    port: 6379
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 2
+        max-wait: 1000
+```
+
+然后就按照Spring的标准方式，注入RedisTemplate，获取Redis数据
+
+```java
+@Autowired
+private RedisTemplate redisTemplate;
+
+@Test
+void test() {
+    redisTemplate.opsForValue().set("name", "Ocean");
+    Object name = redisTemplate.opsForValue().get("name");
+    System.out.println(name);
+}
+```
+
+但是当我们尝试通过redis-cli访问name时，却发现name并不存在
+
+> ![](javaweb2/309.png)
+
+查看当前所有KEY，只有一个以name结尾的KEY，\xac\xed\x00\x05t\x00\x04name
+
+> ![](javaweb2/310.png)
+
+#### 序列化器
+
+这源于Spring Data Redis默认选择的序列化器，Spring Data Redis默认选择了JDK的序列化器，而JDK序列化器会将所有的KEY和VALUE直接转换为字节数组，同时加入一些额外的标识符，因此会生成这样的字节数据
+
+如果希望Spring Data Redis直接输出可读的KEY和VALUE，就需要更改其序列化器，默认的序列化器实现其实有很多种
+
+> ![](javaweb2/311.png)
+
+而常用的就是StringRedisSerializer和Jackson2JsonRedisSerializer。修改的方式则是定义一个配置类，主动声明一个Bean返回RedisTemplate，而这个RedisTemplate就是已经修改好序列化器的RedisTemplate
+
+```java
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.RedisSerializer;
+
+@Configuration
+public class RedisConfiguration {
+
+    @Bean
+    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
+        // 创建RedisTemplate对象
+        RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
+        // 设置连接工厂
+        redisTemplate.setConnectionFactory(redisConnectionFactory);
+        // 设置KEY序列化器
+        redisTemplate.setKeySerializer(RedisSerializer.string());
+        redisTemplate.setHashKeySerializer(RedisSerializer.string());
+        // 设置VALUE序列化器
+        redisTemplate.setValueSerializer(RedisSerializer.json());
+        redisTemplate.setHashValueSerializer(RedisSerializer.json());
+        // 返回
+        return redisTemplate;
+    }
+}
+```
+
+需要注意的是这里直接使用了RedisSerializer的string和json方法来快捷获取序列化器实例，就不需要我们手动声明了
+
+```java
+/**
+ * Obtain a {@link RedisSerializer} that can read and write JSON using
+ * <a href="https://github.com/FasterXML/jackson-core">Jackson</a>.
+ *
+ * @return never {@literal null}.
+ * @since 2.1
+ */
+static RedisSerializer<Object> json() {
+    return new GenericJackson2JsonRedisSerializer();
+}
+
+/**
+ * Obtain a simple {@link java.lang.String} to {@literal byte[]} (and back) serializer using
+ * {@link java.nio.charset.StandardCharsets#UTF_8 UTF-8} as the default {@link java.nio.charset.Charset}.
+ *
+ * @return never {@literal null}.
+ * @since 2.1
+ */
+static RedisSerializer<String> string() {
+    return StringRedisSerializer.UTF_8;
+}
+```
+
+然后我们通过redis-cli创建name，值设置为Ki1z，再通过Spring Data Redis读取
+
+> ![](javaweb2/312.png)
+
+> ![](javaweb2/313.png)
+
+可以看到出现了报错，但其实并不是无法读取的报错，而是序列化器无法对其反序列化的报错，我们直接写入的`Ki1z`并不是标准JSON，所以无法进行转换。下面我们更改为标准的`"Ki1z"`
+
+> ![](javaweb2/314.png)
+
+> ![](javaweb2/315.png)
+
+#### StringRedisTemplate
+
+刚才我们尝试了读取String类型，而Jackson2Json还支持直接的对象插入
+
+```java
+@Test
+void test() {
+    User user = new User("Ki1z", "123456");
+    redisTemplate.opsForValue().set("user", user);
+    System.out.println(redisTemplate.opsForValue().get("user"));
+}
+
+@AllArgsConstructor
+@NoArgsConstructor
+@Data
+static class User {
+    private String username;
+    private String password;
+}
+```
+
+> ![](javaweb2/316.png)
+
+然后我们通过DataGrip来观察实际存入Redis的数据
+
+> ![](javaweb2/317.png)
+
+不难发现，Jackson为了保证反序列化的正确性，在JSON插入一了一条类信息，标识该对象所属的实体类。但另一方面，这些多余的数据会造成大量的额外内存占用，如图中的@class字段，占用空间比原本的User还长，所以我们不能使用Jackson的自动反序列化
+
+而作为开发人员，我们知道Redis中存储的数据对应的实体类，因此我们只用进行手动反序列化即可。而在Redis中，只需要保存原本的JSON字符串即可，而JSON字符串的本质是String，所以只需要将Redis的序列化器都设置为StringRedisSerializer。而Spring Data Redis其实已经预先提供好了KEY和VALUE的序列化器都是String的模板，这就是StringRedisTemplate
+
+下面我们利用StringRedisTemplate来传入User对象
+
+```java
+@Autowired
+private StringRedisTemplate redisTemplate;
+
+@Test
+void test() throws JsonProcessingException {
+    User user = new User("Ki1z", "123456");
+    ObjectMapper objectMapper = new ObjectMapper();
+    // 将对象转为JSON字符串
+    String json = objectMapper.writeValueAsString(user);
+
+    redisTemplate.opsForValue().set("user", json);
+    json = (String) redisTemplate.opsForValue().get("user");
+    User user1 = objectMapper.readValue(json, User.class);
+    System.out.println(user1);
+}
+
+@AllArgsConstructor
+@NoArgsConstructor
+@Data
+static class User {
+    private String username;
+    private String password;
+}
+```
+
+注入StringRedisTemplate，然后声明ObjectMapper用于转换JSON，转换完成后传入Redis，最后再通过ObjectMapper反序列化为User
+
+> ![](javaweb2/318.png)
+
+## 黑马点评
+
+下面我们将依据黑马点评项目，通过Redis来学习并解决实际开发中可能遇到的各种问题，如短信登录、点赞列表、点赞排行榜、好友关注、用户签到、UV统计、附近商户、优惠券秒杀、查询缓存等，从实际开发中逐步深入了解Redis
 
