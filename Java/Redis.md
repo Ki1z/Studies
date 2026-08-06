@@ -1,6 +1,6 @@
 # Redis
 
-`更新时间：2026-8-5`
+`更新时间：2026-8-6`
 
 注释解释：
 
@@ -551,4 +551,204 @@ static class User {
 ## 黑马点评
 
 下面我们将依据黑马点评项目，通过Redis来学习并解决实际开发中可能遇到的各种问题，如短信登录、点赞列表、点赞排行榜、好友关注、用户签到、UV统计、附近商户、优惠券秒杀、查询缓存等，从实际开发中逐步深入了解Redis
+
+> ![](javaweb2/319.png)
+
+### 基于Session实现登录
+
+在项目搭建完成后，我们开始逐步实现项目中未完成的功能，首先是基于Session实现登录功能。不过并不是真的只通过Session，而是通过短信登录验证，在发送验证码后，通过Session在服务端保存验证码，并在校验时取出验证，这就是基于Session实现登录
+
+在编写代码之前，我们先来分析一下基于Session实现登录的步骤。基于Session实现登录可以分为三个模块，发送验证码、接收验证码进行登录、校验登录状态。在发送验证码模块中，首先由用户提交手机号，然后后端生成一个验证码，将验证码保存在Session中以供下游调用，然后再向用户发送验证码；在接收验证码模块中，后端获取用户提交的手机号和验证码，然后从Session中取出验证码进行校验，如果校验通过，则从数据库中查询该用户信息，查询通过则保存用户登录信息到Session，而不存在的用户则直接进行快捷注册，然后保存用户信息到Session；在校验登录模块，从Session中获取用户信息，判断用户信息是否合法，再将用户信息保存在ThreadLocal中，供下文直接调用
+
+#### 发送短信验证码
+
+在黑马点评项目中，点击“我的”就会跳转到个人页面，未登录的情况下重定向到登录页面
+
+> ![](javaweb2/320.png)
+
+输入手机号，点击发送验证码，前端就会向后端发送一条请求
+
+> ![](javaweb2/321.png)
+
+然后我们基于这个请求路径来编写业务逻辑
+
+```java
+@PostMapping("code")
+public Result sendCode(@RequestParam("phone") @NotBlank String phone, HttpSession session) {
+    log.debug("发送验证码，手机号：{}", phone);
+    return userService.sendCode(phone, session);
+}
+```
+
+```java
+@Override
+public Result sendCode(String phone, HttpSession session) {
+    // 检查手机号
+    if (RegexUtils.isPhoneInvalid(phone)) {
+        return Result.fail("手机号格式错误");
+    }
+    // 生成验证码
+    String code = RandomUtil.randomNumbers(4);
+    // 保存验证码
+    session.setAttribute("code", code);
+    // 发送验证码
+    log.debug("发送验证码成功，验证码: {}", code);
+    // 返回结果
+    return Result.ok("发送成功，验证码5分钟内有效");
+}
+```
+
+在Service中，首先通过RegexUtils工具类检查手机号格式，然后通过随机数生成器生成一个四位数验证码，再将验证码保存到Session中，发送验证码，并返回结果。如果要发送真实的短信验证码需要调用第三方服务，还会造成短信资费，因此我们选择使用log模拟发送
+
+> ![](javaweb2/322.png)
+
+#### 接收验证码与登录校验
+
+```java
+@PostMapping("/login")
+public Result login(@RequestBody @Valid LoginFormDTO loginForm, HttpSession session){
+    log.debug("登录，参数：{}", loginForm);
+    return userService.login(loginForm, session);
+}
+```
+
+```java
+@Transactional
+@Override
+public Result login(LoginFormDTO loginForm, HttpSession session) {
+    String phone = loginForm.getPhone();
+    if (RegexUtils.isPhoneInvalid(phone)) {
+        return Result.fail("手机号格式错误");
+    }
+    String code = loginForm.getCode();
+    String password = loginForm.getPassword();
+    if (code != null && !code.isEmpty()) {
+        // 验证码登录
+        // 从Session中获取验证码
+        String cacheCode = (String) session.getAttribute("code");
+        // 判断验证码是否一致
+        if (cacheCode == null || !cacheCode.equals(code)) {
+            return Result.fail("验证码错误");
+        }
+        // 验证通过，删除验证码
+        session.removeAttribute("code");
+        // 查询用户
+        User user = query().eq("phone", phone).one();
+        if (user == null) {
+            // 用户不存在，注册用户
+            user = registerByPhone(phone);
+        }
+        // 登录成功，保存用户信息到Session中
+        session.setAttribute("user", user);
+        return Result.ok("登录成功");
+
+    } else if (password != null && !password.isEmpty()) {
+        return Result.fail("密码登录功能未完成");
+    } else {
+        return Result.fail("密码或验证码不能为空");
+    }
+}
+
+@Transactional
+public User registerByPhone(String phone) {
+    User user = User.builder()
+            .id(IdWorker.getId())
+            .phone(phone)
+            .nickName("用户" + RandomUtil.randomString(10))
+            .build();
+    int insert = userMapper.insert(user);
+    if (insert <= 0) {
+        throw new RuntimeException("注册失败");
+    }
+    return user;
+}
+```
+
+由于密码登录与验证码登录使用同一个接口，为了方便开发，这里就只做验证码登录的逻辑。首先验证登录的额表单信息，然后从Session中获取验证码，并判断与用户提交的是否一致，验证成功后，删除验证码，并从数据库中查询用户信息，如果用户不存在，则注册一个新用户，最后将用户信息保存到Session中
+
+#### 校验登录状态
+
+登录状态的校验不能部署在接口处，因为这会导致每个接口占用大量的代码去编写校验逻辑，而Spring中则提供了Interceptor来统一拦截请求，所以我们将登录校验逻辑安排在Interceptor中
+
+```java
+package com.hmdp.interceptor;
+
+import com.hmdp.dto.UserDTO;
+import com.hmdp.entity.User;
+import com.hmdp.utils.UserHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.web.servlet.HandlerInterceptor;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+public class LoginInterceptor implements HandlerInterceptor {
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        // 获取用户信息
+        User user = (User) request.getSession().getAttribute("user");
+        if (user == null) {
+            response.setStatus(401);
+            return false;
+        }
+        // 保存到上下文中
+        UserDTO userDTO = UserDTO.builder()
+                .id(user.getId())
+                .icon(user.getIcon())
+                .nickName(user.getNickName())
+                .build();
+        UserHolder.saveUser(userDTO);
+        // 放行
+        return true;
+    }
+
+    @Override
+    public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
+        // 移除用户
+        UserHolder.removeUser();
+    }
+}
+```
+
+定义LoginInterceptor实现HandlerInterceptor，并实现方法preHandle和afterCompletion，在preHandle中从Session中获取用户信，然后保存到上下文中，而afterCompletion负责在登录校验完成后清除上下文
+
+```java
+package com.hmdp.config;
+
+import com.hmdp.interceptor.LoginInterceptor;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+@Configuration
+public class MvcConfig implements WebMvcConfigurer {
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(new LoginInterceptor())
+                .excludePathPatterns(
+                        "/user/code",
+                        "/user/login",
+                        "/shop/**",
+                        "/voucher/**",
+                        "/blog/hot",
+                        "/shop-type/**",
+                        "/upload/**"
+                );
+    }
+}
+```
+
+然后定义MvcConfig，实现WebMvcConfigurer，拦截器想要生效必须由registry通过addInterceptor方法注册，并指定排除路径。这样就可以实现登录校验了，我们登录一个账号，然后访问个人中心，即可查看个人信息
+
+> ![](javaweb2/323.png)
+
+### 基于Redis实现登录
+
+Session有一个很明显的缺点，不支持分布式或者集群。简单来说，如果部署了多台Tomcat服务器，服务器中运行相同的项目实例，但是每台Tomcat的Session是不共享的，虽然Tomcat支持启用某些功能以共享数据，但是从性能和安全性上来说都不太合适。而登录校验是一项频繁访问的业务，服务器通常需要满足延迟低、高并发等要求，Redis则刚好符合这些要求
+
+简单分析一下基于Redis实现登录的步骤，在发送验证码时，后端直接将验证码与手机号信息保存在Redis中，用户登录时从Redis中获取验证码进行验证，验证通过后，再将用户信息保存在Redis中，供接口调用。但这里会出现一个问题，Redis中用户信息的KEY该如何确定，这个KEY会保存在用户浏览器中，浏览器访问接口时携带这个KEY，拦截器拦截请求后，通过KEY访问并获取用户信息，再填入ThreadLocal中。因此KEY不能包含任何用户信息，KEY也需要保证唯一性，那么一串随机的字符串刚好可以作为KEY，这也让KEY伪造的难度大大提高。而目前主流的随机字符串中，UUID的使用相当广泛
+
+
 
