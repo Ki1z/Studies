@@ -1,6 +1,6 @@
 # Redis
 
-`更新时间：2026-8-6`
+`更新时间：2026-8-7`
 
 注释解释：
 
@@ -750,5 +750,376 @@ Session有一个很明显的缺点，不支持分布式或者集群。简单来�
 
 简单分析一下基于Redis实现登录的步骤，在发送验证码时，后端直接将验证码与手机号信息保存在Redis中，用户登录时从Redis中获取验证码进行验证，验证通过后，再将用户信息保存在Redis中，供接口调用。但这里会出现一个问题，Redis中用户信息的KEY该如何确定，这个KEY会保存在用户浏览器中，浏览器访问接口时携带这个KEY，拦截器拦截请求后，通过KEY访问并获取用户信息，再填入ThreadLocal中。因此KEY不能包含任何用户信息，KEY也需要保证唯一性，那么一串随机的字符串刚好可以作为KEY，这也让KEY伪造的难度大大提高。而目前主流的随机字符串中，UUID的使用相当广泛
 
+#### 代码改造
 
+在改造业务代码之前，我们先定以一个Redis的操作类，Redis属于数据库，所以Redis操作类一般属于DAO层，我们定义为RedisRepository
+
+```java
+package com.hmdp.repository;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Repository;
+
+import java.time.Duration;
+
+@Repository
+@RequiredArgsConstructor
+public class RedisRepository {
+
+    private final StringRedisTemplate stringRedisTemplate;
+
+    public void set(String key, String value, Long timeout) {
+        stringRedisTemplate.opsForValue().set(key, value);
+        stringRedisTemplate.expire(key, Duration.ofSeconds(timeout));
+    }
+
+    public String get(String key) {
+        return stringRedisTemplate.opsForValue().get(key);
+    }
+
+    public void hashSet(String key, String field, String value, Long timeout) {
+        stringRedisTemplate.opsForHash().put(key, field, value);
+        stringRedisTemplate.expire(key, Duration.ofSeconds(timeout));
+    }
+
+    public String hashGet(String key, String field) {
+        return (String) stringRedisTemplate.opsForHash().get(key, field);
+    }
+
+    public void delete(String key) {
+        stringRedisTemplate.delete(key);
+    }
+
+    public void expire(String key, Long timout) {
+        stringRedisTemplate.expire(key, Duration.ofSeconds(timout));
+    }
+}
+```
+
+在RedisRepository中，注入StringRedisTemplate，封装一些常用方法，并同时设置过期时间，避免KEY永远存在Redis中。然后就可以开始改造原始代码了
+
+```java
+@Override
+public Result sendCode(String phone, HttpSession session) {
+    // 检查手机号
+    if (RegexUtils.isPhoneInvalid(phone)) {
+        return Result.fail("手机号格式错误");
+    }
+    // 生成验证码
+    String code = RandomUtil.randomNumbers(4);
+    // 保存验证码
+    redisRepository.set(RedisKeyConstant.LOGIN_CODE_KEY + phone, code, RedisKeyConstant.LOGIN_USER_TTL);
+    // 发送验证码
+    log.debug("发送验证码成功，验证码: {}", code);
+    // 返回结果
+    return Result.ok("发送成功，验证码5分钟内有效");
+}
+```
+
+在发送验证码方法中，原来是将验证码保存在Session中，现在改为通过redisRepository保存在Redis中，以用户手机号为键，TTL规范为一个常量
+
+```java
+package com.hmdp.constants;
+
+import cn.hutool.core.util.RandomUtil;
+
+public class RedisKeyConstant {
+    public static final String LOGIN_CODE_KEY = "login:code:";          // 登录验证码
+    public static final Long LOGIN_USER_TTL = 5 * 60L + RandomUtil.randomLong(0, 60);                  // 登录验证码有效期
+
+    public static final String USER_INFO_KEY = "user:info:";            // 用户信息
+    public static final Long USER_INFO_TTL = 30 * 60L + RandomUtil.randomLong(0, 60);         // 用户信息保存有效期
+}
+```
+
+常量中定义需要的键名和TTL，同时保证TTL包含随机值，避免同一时间失效大量KEY，造成雪崩
+
+```java
+@Transactional
+@Override
+public Result login(LoginFormDTO loginForm, HttpSession session) throws JsonProcessingException {
+    String phone = loginForm.getPhone();
+    if (RegexUtils.isPhoneInvalid(phone)) {
+        return Result.fail("手机号格式错误");
+    }
+    String code = loginForm.getCode();
+    String password = loginForm.getPassword();
+    if (code != null && !code.isEmpty()) {
+        // 验证码登录
+        // 从Redis中获取验证码
+        String cacheCode = redisRepository.get(RedisKeyConstant.LOGIN_CODE_KEY + phone);
+        // 判断验证码是否一致
+        if (cacheCode == null || !cacheCode.equals(code)) {
+            return Result.fail("验证码错误");
+        }
+
+        // 验证通过，删除验证码
+        redisRepository.delete(RedisKeyConstant.LOGIN_CODE_KEY + phone);
+        // 查询用户
+        User user = query().eq("phone", phone).one();
+        if (user == null) {
+            // 用户不存在，注册用户
+            user = registerByPhone(phone);
+        }
+
+        // 登录成功，保存用户信息到Redis中
+        // 生成token
+        String token = UUID.randomUUID().toString().replaceAll("-", "");
+        // 将用户信息转换为JSON
+        UserDTO userDTO = UserDTO.builder()
+                .id(user.getId())
+                .icon(user.getIcon())
+                .nickName(user.getNickName())
+                .build();
+        ObjectMapper objectMapper = new ObjectMapper();
+        String userJson = objectMapper.writeValueAsString(userDTO);
+        // 保存用户信息到Redis中
+        redisRepository.set(RedisKeyConstant.USER_INFO_KEY + token, userJson, RedisKeyConstant.USER_INFO_TTL);
+        // 返回token
+        return Result.ok(token);
+
+    } else if (password != null && !password.isEmpty()) {
+        return Result.fail("密码登录功能未完成");
+    } else {
+        return Result.fail("密码或验证码不能为空");
+    }
+}
+```
+
+然后是登录方法，登录方法中验证通过，删除Redis中的验证码，然后将用户信息保存到Redis中，键为UUID随机数，最后返回token，这个token前端会作为请求头authorization的值，在后续请求中每次携带
+
+> ![](javaweb2/324.png)
+
+```java
+@Override
+public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    // 从请求头中获取token
+    String token = request.getHeader("authorization");
+    if (token == null) {
+        response.setStatus(401);
+        return false;
+    }
+    // 查询用户
+    String userJson = redisRepository.get(RedisKeyConstant.USER_INFO_KEY + token);
+    if (userJson == null) {
+        response.setStatus(401);
+        return false;
+    }
+    UserDTO user = new ObjectMapper().readValue(userJson, UserDTO.class);
+    // 保存到上下文中
+    UserHolder.saveUser(user);
+    // 更新Redis中的用户信息TTL
+    redisRepository.expire(RedisKeyConstant.USER_INFO_KEY + token, RedisKeyConstant.USER_INFO_TTL);
+    // 放行
+    return true;
+}
+```
+
+最后是拦截器，拦截器不再拦截Session，而是获取请求头中的authorization头，通过authorization作为键名访问键值，如果没有则表示authorization过期或者伪造，从而返回401。最后将用户信息反序列化为UserDTO实体，最后放行
+
+### 商户查询缓存
+
+#### 代码改造
+
+在黑马点评项目中，商户信息是一个高频访问的接口，所有的用户在选择商户时肯定都会访问商户信息的页面，因此我们需要为商户信息接口添加缓存
+
+> ![](javaweb2/325.png)
+
+```java
+/**
+ * 根据id查询商铺信息
+ * @param id 商铺id
+ * @return 商铺详情数据
+ */
+@GetMapping("/{id}")
+public Result queryShopById(@PathVariable("id") Long id) {
+    return Result.ok(shopService.getById(id));
+}
+```
+
+追踪到原始代码，可以发现后端是直接调用IServer提供的getById方法，通过数据库返回数据，高并发情况下，这会对数据库服务造成很大的性能影响，因此我们将其改造为Redis缓存架构
+
+首先来分析如何改造，Redis基于内存，拥有强大的高并发读写能力，因此在请求直达数据库之前，可以先在Redis处进行分流，我们将数据库中的数据缓存到Redis中，如果Redis拥有缓存，则直接返回，这就可以避免大量请求直接抵达数据库。即使Redis中没有数据，也可以先放行一个请求到达数据库，然后由后端将数据库中的数据缓存到Redis中，后续的请求在Redis处就可以直接返回
+
+```java
+@Override
+public Result queryById(@NotNull Long id) {
+    // 查询Redis中是否存在缓存
+    String shopJson = redisRepository.get(RedisKeyConstant.CACHE_SHOP_INFO_KEY + id);
+    // 缓存命中
+    if (shopJson != null) {
+        Shop shop = JSONUtil.toBean(shopJson, Shop.class);
+        return Result.ok(shop);
+    }
+    // 缓存未命中，查询数据库
+    Shop shop = this.getById(id);
+    // 数据库中不存在，返回错误
+    if (shop == null) {
+        return Result.fail("店铺不存在");
+    }
+    // 数据库中存在，写入Redis缓存
+    shopJson = JSONUtil.toJsonStr(shop);
+    redisRepository.set(RedisKeyConstant.CACHE_SHOP_INFO_KEY + id, shopJson, RedisKeyConstant.CACHE_SHOP_INFO_TTL);
+    // 返回结果
+    return Result.ok(shop);
+}
+```
+
+改造的代码与我们预先的设计基本相同，首先通过redisRepository获取Redis中对应KEY，如果缓存命中，则直接封装为shop实体然后返回，这里注意不要使用Jackson，该项目自然的Jackson版本可能过于老旧，不对LocalDateTime适配，这会导致序列化的数据中将LocalDateTime识别为一个额外的对象，从而进一步序列化LocalDateTime中的各种属性。缓存未命中，则从数据库中查询，如果数据库中也不存在数据，则认为该店铺不存在，返回错误。最后将数据库中的数据序列化为JSON，写入Redis，然后返回到前端
+
+#### 缓存更新策略
+
+缓存更新策略大致可以分为三种，内存淘汰、超时剔除和主动更新
+
+| 更新策略 | 说明                                                         | 数据一致性 | 维护成本 |
+| -------- | ------------------------------------------------------------ | ---------- | -------- |
+| 内存淘汰 | 不用自己维护，利用Redis的内存淘汰机制，当内存不足时自动淘汰部分数据，下次查询时更新缓存 | 差         | 无       |
+| 超时剔除 | 给缓存数据添加TTL时间，到期后自动删除缓存，下次查询时更新缓存 | 一般       | 低       |
+| 主动更新 | 编写业务逻辑，在修改数据库的同时更新缓存                     | 好         | 高       |
+
+对于低一致性要求的业务，可以使用内存淘汰机制，缓存不一致对业务几乎不产生影响；而对于高一致性要求的业务，则应当根据实际要求制定适当的缓存更新策略
+
+主动更新一般可以分为三类，这在[缓存一致性](./JavaWebEnhance.md#缓存一致性)中也有阐述，这里简单概述一下。主动更新在企业中一般有三种模式，Cache Aside、Read/Write Through和Write Behind，Cache Aside要求开发人员独立完成缓存和数据库业务，而另外两种方式则不需要开发人员兼顾缓存和数据库，Read/Write Through侧重于无感知开发，将数据存储服务独立出来，业务开发人员不需要关心到底是缓存还是数据库，所有的存储细节由存储服务实现；Write Behind侧重于缓存存储，开发人员只操作缓存，数据库的存储由独立线程周期异步执行，强调最终一致性
+
+一般来说，企业通常会选择Cache Aside模式，小部分业务选择Write Behind，而Read/Write Through基本不考虑
+
+```java
+@Override
+@Transactional
+public Result updateByIdWithCache(@NotNull Shop shop) {
+    if (shop == null || shop.getId() == null) {
+        return Result.fail("店铺不存在");
+    }
+    // 更新数据库
+    boolean update = this.updateById(shop);
+    if (!update) {
+        throw new RuntimeException("更新店铺信息失败");
+    }
+    // 删除Redis缓存
+    redisRepository.delete(RedisKeyConstant.CACHE_SHOP_INFO_KEY + shop.getId());
+    return Result.ok();
+}
+```
+
+我们为店铺信息缓存构建更新策略，在更新数据库后立即删除缓存，以保证数据一致性
+
+### 缓存穿透
+
+理论详见[缓存穿透](./JavaWebEnhance.md#缓存穿透)
+
+#### 缓存空对象
+
+对店铺信息缓存建立缓存穿透防御措施，采用缓存空对象方案
+
+```java
+@Override
+public Result queryById(@NotNull Long id) {
+    // 查询Redis中是否存在缓存
+    String shopJson = redisRepository.get(RedisKeyConstant.CACHE_SHOP_INFO_KEY + id);
+    // 缓存命中
+    if (shopJson != null && !StrUtil.isBlank(shopJson)) {
+        Shop shop = JSONUtil.toBean(shopJson, Shop.class);
+        return Result.ok(shop);
+    }
+    // 缓存命中，但为空对象，返回错误
+    if (StrUtil.isBlank(shopJson)) {
+        return Result.fail("店铺不存在");
+    }
+    // 缓存未命中，查询数据库
+    Shop shop = this.getById(id);
+    // 数据库中不存在，建立缓存空对象，并返回
+    if (shop == null) {
+        redisRepository.set(RedisKeyConstant.CACHE_SHOP_INFO_KEY + id, "", RedisKeyConstant.CACHE_NONE_TTL);
+        return Result.fail("店铺不存在");
+    }
+    // 数据库中存在，写入Redis缓存
+    shopJson = JSONUtil.toJsonStr(shop);
+    redisRepository.set(RedisKeyConstant.CACHE_SHOP_INFO_KEY + id, shopJson, RedisKeyConstant.CACHE_SHOP_INFO_TTL);
+    // 返回结果
+    return Result.ok(shop);
+}
+```
+
+先前我们判断缓存是否命中是通过shopJson != null，一旦引入缓存空对象，就必须再判断字符串本身是否是空对象，然后再决定是否拦截。而对于缓存和数据都未命中的数据，先前是直接返回错误，现在需要建立一个该KEY的缓存空对象，TTL设置为空对象特定的短TTL，避免长时间占用内存，然后再返回错误
+
+#### 布隆过滤
+
+这里详细讲解一下布隆过滤，布隆过滤本质上是一种用 位数组 + 多个哈希函数 实现的空间高效、概率型数据结构，用于快速判断元素是否属于某个集合。它的特点是判断不存在绝对准确，判断存在可能有误判，但绝不会出现漏判
+$$
+\begin{array}{l}
+
+\large \textbf{概念} \\
+
+布隆过滤器核心由两部分构成 \\
+
+\bullet \quad 一个二进制，也就是位数组，长度为m，初始值全为0 \\
+
+\bullet \quad k个独立的哈希函数，分别记为h_1，h_2，h_3...，h_k，每个函数都可以将输入映射到[0,m)范围内的某一个位置 \\
+
+\\
+
+\large \textbf{插入} \\
+
+当需要插入元素x时，使用k个哈希函数分别计算h_1(x)，h_2(x)，h_3(x)，...，h_k(x) \\
+
+然后将数组中对应位置全部置为1 \\
+
+例如，插入苹果apple，假设k=3，哈希结果为2，5，8，则bit[2]、bit[5]、bit[8]都置为1 \\
+
+\\
+
+\large \textbf{查询} \\
+
+当查询元素y是否存在时，也按照这个顺序 \\
+
+首先计算h_1(y)，h_2(y)，h_3(y)，...，h_k(y) \\
+
+检查对应位置是否全部为1 \\
+
+\bull \quad 如果任何一个位置为0 \Rightarrow 元素y一定不存在 \\
+
+\bull \quad 如果全部为1 \Rightarrow 元素y可能存在，这些1可能是其他元素造成的碰撞 \\
+
+\\
+
+\large \textbf{关键数学公式} \\
+
+误判率(False \ Positive \ Rate)的近似公式为 \\
+
+\hfill p \approx (1-e^{-kn/m})^{k} \hfill \\ 
+
+其中m为数组长度，n表示已插入的元素数量，k表示哈希函数个数 \\
+
+从这个公式出发，我们可以得到最优哈希函数个数公式 \\
+
+\hfill k = \frac{m}{n}\ln{2} \hfill \\
+
+如果给定误判率p和元素数量n，所需数组长度公式 \\
+
+\hfill m = -\frac{n\ln{p}}{(\ln{2})^2} \hfill
+\end{array}
+$$
+当然，布隆过滤器并不是万能的，也有自己的一些优缺点
+
+优点：布隆过滤器空间效率极高，同样存储一百万条数据仅占用约1.2MiB空间，而Redis的HashSet需要约50MiB；其次，查询速度快，布隆过滤器底层数据结构为数组，布隆过滤器通过数据下标查询元素，k个哈希函数的情况下，每个哈希函数进行一次查找，每个哈希函数的查询时间复杂度为O(1)，总计时间复杂度为O(k)；布隆过滤器可以绝对判定元素不存在，不存在漏判，而且布隆过滤器隐私性好，位数组中不包含任何原始数据
+
+缺点：布隆过滤器存在误判风险，可能把不存在的元素判断为存在，从数学模型中可以知道误判率p随m增大而指数级下降，随n增大指数级上升，核心则取决于比值n/m；布隆过滤器本身不支持删除，因为多个元素的哈希结果可能相同，如果因为某一个元素而删除布隆数组，那么会直接导致其他元素也同样被认为删除；布隆过滤器不支持扩容，位数组长度在创建时就已经确定，元素超出预期会导致误判率大幅提高；哈希强依赖性，布隆过滤器的安全性直接受哈希函数安全性的约束，如果哈希函数本身不安全，生成大量重复结果，就会导致误判率大幅提高
+
+**示例**
+
+那么如何降低布隆过滤器的误判率呢？我们用一个例子来分析。假设Redis中需要存储的KEY最大值为100万个，，要求误判率不超过5%，经过公式可以计算得到最佳的数组长度为
+$$
+m = -\frac{1000000\ln{0.05}}{(\ln{2})^2} \approx 6235035
+$$
+然后计算最佳的哈希函数数量
+$$
+k = \frac{6235035}{1000000}\ln{2} \approx 4.32193
+$$
+也就是说，在误判率不超过5%，KEY最大值为100万的情况下，需要准备6235035位的数组以及5个哈希函数。然后我们将误判率降低到1%，计算得到m约等于9585058，k约等于7。可以看出，误判率的提升伴随着哈希函数与位数组的增长，其中位数组的增长幅度相当大，在误判率降低4%的情况下，位数组的长度需要增长约54%。总结为数学模型为
+$$
+m \approx 1,442,695 \times log_2(\frac{1}{p}) \\ k=log_2(\frac{1}{p})
+$$
+这是一种半衰结构，因此在实际业务中，不能过度追求误判率，需要考虑实际的机器性能与业务需求
 
