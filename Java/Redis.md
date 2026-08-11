@@ -1,6 +1,6 @@
 # Redis
 
-`更新时间：2026-8-10`
+`更新时间：2026-8-11`
 
 注释解释：
 
@@ -1262,7 +1262,7 @@ $$
 
 总桶数量取决于布谷鸟过滤器的负载率
 $$
-m = \frac{n}{b\times\alpha }
+m = \frac{n}{b\times\alpha}
 $$
 其中m表示总桶数量；n表示预期存储的元素数量；b是每个桶的槽位数量；α表示目标负载率。官方给出了几个常用b的推荐最大负载率
 
@@ -1274,4 +1274,309 @@ $$
 | 8       | 98%         |
 
 最大负载率意味着节省最大的内存空间以及最大的插入成功率，假设我们预计存储一百万个元素，桶容量设置为4，使用推荐负载率95%，计算得到m等于262144，向上取2的幂得到$2^{19} = 524288$，数组长度就可以确定为524288；此时选择指纹长度为16bit，那么计算可以得到总共占用内存约4MiB左右，相较于布隆过滤器的0.005%误判率，需要大约2.58MiB的存储空间，以及14个哈希函数。而且布谷鸟过滤器还支持元素删除，可见布谷鸟过滤器可以成为布隆过滤器的一个有力替代
+
+**简单实现**
+
+布谷鸟过滤器的实现相对比较复杂，我们来逐步分析。首先定义桶，每个桶需要包含几个插槽，也就是桶容量，桶容量直接对应了最大负载率，因此在简单实现中我们暂且指定为4
+
+```java
+public class Bucket {
+
+    private static final int BUCKET_SIZE = 4;
+    private final short[] slots = new short[BUCKET_SIZE];
+
+}
+```
+
+桶中的数据类型使用short，slot中需要存储指纹，指纹长度一般在16位以内，如果使用byte可能导致指纹被截断，int太占用内存空间，short占用两个字节刚好16位。然后为每个桶定义插入、删除方法，便利桶中的所有插槽，如果有空位就插入，如果匹配就删除
+
+```java
+public boolean insert(short fingerprint) {
+    for (int i = 0; i < BUCKET_SIZE; i++) {
+        if (slots[i] == 0) {
+            slots[i] = fingerprint;
+            return true;
+        }
+    }
+    return false;
+}
+
+public boolean delete(short fingerprint) {
+    for (int i = 0; i < BUCKET_SIZE; i++) {
+        if (slots[i] == fingerprint) {
+            slots[i] = 0;
+            return true;
+        }
+    }
+    return false;
+}
+```
+
+然后定义包含方法和交换方法，交换方法用于在指纹踢出时，将新指纹与插槽中的某一指纹交换位置
+
+```java
+public boolean contains(short fingerprint) {
+    for (int i = 0; i < BUCKET_SIZE; i++) {
+        if (slots[i] == fingerprint) {
+            return true;
+        }
+    }
+    return false;
+}
+
+public short swap(short fingerprint, int index) {
+    short old = slots[index];
+    slots[index] = fingerprint;
+    return old;
+}
+```
+
+再准备一个哈希函数，在简单实现中，我们利用一个哈希函数直接计算元素指纹及其$i_1$索引位置，哈希函数的实现逻辑这里可以忽略
+
+```java
+public final class MurmurHash64 {
+
+    private static final long C1 = 0x87c37b91114253d5L;
+    private static final long C2 = 0x4cf5ad432745937fL;
+
+    public static long hash(byte[] data, long seed) {
+        long h = seed;
+        int len = data.length;
+        int i = 0;
+
+        for (; i + 7 < len; i += 8) {
+            long k = (((long) data[i] & 0xFF))
+                   | (((long) data[i + 1] & 0xFF) << 8)
+                   | (((long) data[i + 2] & 0xFF) << 16)
+                   | (((long) data[i + 3] & 0xFF) << 24)
+                   | (((long) data[i + 4] & 0xFF) << 32)
+                   | (((long) data[i + 5] & 0xFF) << 40)
+                   | (((long) data[i + 6] & 0xFF) << 48)
+                   | (((long) data[i + 7] & 0xFF) << 56);
+
+            k *= C1;
+            k = Long.rotateLeft(k, 31);
+            k *= C2;
+
+            h ^= k;
+            h = Long.rotateLeft(h, 27);
+            h = h * 5 + 0x52dce729L;
+        }
+
+        long k = 0;
+        switch (len & 7) {
+            case 7: k ^= ((long) data[i + 6] & 0xFF) << 48;
+            case 6: k ^= ((long) data[i + 5] & 0xFF) << 40;
+            case 5: k ^= ((long) data[i + 4] & 0xFF) << 32;
+            case 4: k ^= ((long) data[i + 3] & 0xFF) << 24;
+            case 3: k ^= ((long) data[i + 2] & 0xFF) << 16;
+            case 2: k ^= ((long) data[i + 1] & 0xFF) << 8;
+            case 1: k ^= ((long) data[i] & 0xFF);
+        }
+
+        h ^= k;
+        h *= C1;
+
+        h ^= len;
+        h ^= (h >>> 33);
+        h *= 0xff51afd7ed558ccdL;
+        h ^= (h >>> 33);
+        h *= 0xc4ceb9fe1a85ec53L;
+        h ^= (h >>> 33);
+
+        return h;
+    }
+}
+```
+
+下面就可以开始定义布谷鸟过滤器了，首先是必要的属性，包括桶、总桶数量、指纹长度、桶容量、最大踢出次数、最大负载率。其中桶容量、最大踢出次数、最大负载率由我们事先定义好，如果想要写得比较完善，也可以通过计算得出最大负载率及其桶容量。最大踢出次数在原版论文中默认为500，Redis的布谷鸟过滤器默认为20，为了方便测试，我们也设置为20
+
+```java
+public class SimpleCuckooFilter {
+
+    private Bucket[] buckets;
+    private int BUCKET_NUM;
+    private int FINGERPRINT_LENGTH;
+    private final int BUCKET_SIZE = 4;
+    private final int MAX_KICKS = 20;
+    private final double MAX_LOAD_FACTOR = 0.95;
+
+}
+```
+
+然后是构造器，构造器仅传入两个参数预计插入的元素个数以及最大误判率，通过最大误判率来计算指纹长度，通过预计插入的元素个数来计算总桶数量，公式参考上文，总桶数量需要满足2的幂次方，以保证均匀分布
+
+```java
+public SimpleCuckooFilter(long capacity, double errorRate) {
+    // 计算指纹长度
+    FINGERPRINT_LENGTH = (int) Math.ceil(Math.log(2.0 * BUCKET_SIZE / errorRate) / Math.log(2));
+   System.out.println("Fingerprint length: " + FINGERPRINT_LENGTH);
+    // 计算总桶数量，向上取2的幂
+   int minBuckets = (int) Math.ceil((double) capacity / (BUCKET_SIZE * MAX_LOAD_FACTOR));
+   BUCKET_NUM = Integer.highestOneBit(minBuckets - 1) << 1;
+   System.out.println("Bucket number: " + BUCKET_NUM);
+
+    buckets = new Bucket[BUCKET_NUM];
+    for (int i = 0; i < BUCKET_NUM; i++) {
+        buckets[i] = new Bucket();
+    }
+    System.out.println("Buckets created.");
+}
+```
+
+再定义三个工具方法，计算哈希值及其将长整型转换为字节数组
+
+```java
+private static long hash(byte[] key) {
+    return MurmurHash64.hash(key, 0L);
+}
+
+private static long hash(byte[] key, long seed) {
+    return MurmurHash64.hash(key, seed);
+}
+
+private static byte[] longToBytes(long value) {
+    return ByteBuffer.allocate(8).putLong(value).array();
+}
+```
+
+正式开始编写核心源码
+
+```java
+private short getFingerprint(long hash) {
+    short fingerprint = (short) (hash >>> (64 - FINGERPRINT_LENGTH));
+    if (fingerprint == 0) {
+        fingerprint = 1;
+    }
+    return fingerprint;
+}
+
+private int getBucketIndex(long hash) {
+    return (int) (hash & (BUCKET_NUM - 1));
+}
+
+private long getFingerprintHash(short fingerprint) {
+    return hash(longToBytes(fingerprint), 0xc6a4a7935bd1e995L);
+}
+
+public boolean insert(String key) {
+    long hash = hash(key.getBytes());
+    short fingerprint = getFingerprint(hash);
+    int i1 = getBucketIndex(hash);
+
+    // 尝试直接插入i1
+    if (buckets[i1].insert(fingerprint)) {
+        return true;
+    }
+
+    // 尝试直接插入i2
+    long fpHash = getFingerprintHash(fingerprint);
+    int i2 = i1 ^ getBucketIndex(fpHash);
+    if (buckets[i2].insert(fingerprint)) {
+        return true;
+    }
+
+    // 两个桶都满，需要踢出链
+    // 先备份涉及的桶（初始只有i1和i2）
+    Map<Integer, Bucket> snapshot = new HashMap<>();
+    snapshot.put(i1, buckets[i1].copy());
+    snapshot.put(i2, buckets[i2].copy());
+
+    // 随机选择一个桶，踢出一个元素
+    int kickOutIndex = RandomUtil.randomBoolean() ? i1 : i2;
+    int kickOutSlot = RandomUtil.randomInt(BUCKET_SIZE);
+    short old = buckets[kickOutIndex].swap(fingerprint, kickOutSlot);
+
+    // 执行踢出链
+    boolean success = kickOut(old, 1, kickOutIndex, snapshot);
+
+    if (!success) {
+        // 踢出链失败，回滚所有桶到快照状态
+        for (Map.Entry<Integer, Bucket> entry : snapshot.entrySet()) {
+            buckets[entry.getKey()] = entry.getValue();
+        }
+        return false;
+    }
+    return true;
+}
+```
+
+首先是插入方法。先调用哈希函数，计算得到元素哈希值，哈希值的高位作为指纹，低位作为桶索引。在计算指纹时，将哈希值右移64 - FINGERPRINT_LENGTH的长度，剩下的也就是FINGERPRINT_LENGTH。然后计算索引，这里并没有直接左移，而是计算hash & (BUCKET_NUM - 1)，因为左移还需要得到BUCKET_NUM的幂数，直接与运算更加方便。hash的长度一定大于BUCKET_NUM ，得到的结果一定在BUCKET_NUM范围内，而计算的是索引，因此必须将BUCKET_NUM - 1避免索引越界。得到$i_1$后，获取对应的桶，并尝试插入，如果插入成功则直接返回true，插入失败，再计算$hash(f)$，取$hash(f)$的低位，与$i_1$异或即可得到$i_2$，确保对称性。上文公式中$i_2 = i_1 \oplus hash(f)$的前提是使用了两个哈希函数，$hash(f)$可以直接输出总桶数量范围内的值。得到$i_2$后再次尝试插入，如果插入失败，则进入踢出流程
+
+在踢出流程中，先对两个桶进行备份，方便在踢出链失败时进行回滚。这里简要解释一下踢出链失败，我们在踢出元素时，会直接将新元素指纹与桶中的某一个元素指纹进行交换，被交换的指纹移动到自己的$i_2$桶中，然后再与$i_2$桶中的某个元素交换，递归进行。但是假设踢出链一直在进行，最终到达最大踢出次数，然后失败。此时桶中的元素已经被更改了，却返回false，这严重违反了数据一致性，因此需要利用事务来进行回滚。预先保留两个桶中的快照，在踢出链失败时使用快照覆盖桶即可
+
+Bucket类中也需要添加copy方法，拷贝当前的插槽数据。注意需要建立新对象，避免回滚时引用旧对象。slots被定义为了final，只能使用 System.arraycopy()方法来进行拷贝
+
+```java
+public Bucket copy() {
+    Bucket cloned = new Bucket();
+    System.arraycopy(this.slots, 0, cloned.slots, 0, BUCKET_SIZE);
+    return cloned;
+}
+```
+
+备份完成后，随机选择一个桶和插槽，交换指纹位置，并进入踢出链
+
+```java
+private boolean kickOut(short old, int kicks, int currentBucket, Map<Integer, Bucket> snapshot) {
+    if (kicks >= MAX_KICKS) {
+        return false;
+    }
+
+    // 计算old的另一个候选桶
+    long fpHash = getFingerprintHash(old);
+    int otherBucket = currentBucket ^ getBucketIndex(fpHash);
+
+    // 备份新涉及的桶
+    if (!snapshot.containsKey(otherBucket)) {
+        snapshot.put(otherBucket, buckets[otherBucket].copy());
+    }
+
+    // 尝试插入到另一个桶
+    if (buckets[otherBucket].insert(old)) {
+        return true;
+    }
+
+    // 另一个桶也满，继续踢出
+    int kickOutSlot = RandomUtil.randomInt(BUCKET_SIZE);
+    short old2 = buckets[otherBucket].swap(old, kickOutSlot);
+    return kickOut(old2, kicks + 1, otherBucket, snapshot);
+}
+```
+
+优先判断踢出次数是否达到上限，达到上限后快速失败。然后计算old的另外一个候选桶，备份另一个桶，然后尝试插入，如果另一个桶也满了，从桶中随机挑选一个插槽，继续踢出
+
+在失败时，备份Map中记录了所有涉及的桶，因此遍历备份Map，将所有涉及的桶还原为快照即可。注意该实现不支持多线程并发操作，在并发状态下极有可能出现还原前有其他指纹插入或桶中的指纹被删除，导致插入指纹被覆盖或还原的脏写问题。不过解决方法也比较简单，对插入和删除方法添加synchronized全局锁，仅有一个线程能操作这两个方法，并且插入和删除方法互斥，无法同步进行
+
+然后是删除方法与判断是否存在的方法，这两个方法比较简单，计算两个桶，判断元素是否存在，并删除即可。这里的删除方法并没有调用contains，因为Bucket的delete会自己判断元素是否一致
+
+```java
+public boolean contains(String key) {
+    long hash = hash(key.getBytes());
+    short fingerprint = getFingerprint(hash);
+    int i1 = getBucketIndex(hash);
+
+    if (buckets[i1].contains(fingerprint)) {
+        return true;
+    }
+
+    long fpHash = getFingerprintHash(fingerprint);
+    int i2 = i1 ^ getBucketIndex(fpHash);
+    return buckets[i2].contains(fingerprint);
+}
+
+public boolean delete(String key) {
+    long hash = hash(key.getBytes());
+    short fingerprint = getFingerprint(hash);
+    int i1 = getBucketIndex(hash);
+
+    if (buckets[i1].delete(fingerprint)) {
+        return true;
+    }
+
+    long fpHash = getFingerprintHash(fingerprint);
+    int i2 = i1 ^ getBucketIndex(fpHash);
+    return buckets[i2].delete(fingerprint);
+}
+```
 
