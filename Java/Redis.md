@@ -1,6 +1,6 @@
 # Redis
 
-`更新时间：2026-8-11`
+`更新时间：2026-8-18`
 
 注释解释：
 
@@ -1579,4 +1579,224 @@ public boolean delete(String key) {
     return buckets[i2].delete(fingerprint);
 }
 ```
+
+### 缓存雪崩
+
+理论详见[缓存雪崩](./JavaWebEnhance.md#缓存雪崩)
+
+### 缓存击穿
+
+理论详见[缓存击穿](./JavaWebEnhance.md#缓存击穿)
+
+#### 基于互斥锁解决缓存击穿
+
+互斥锁的基本逻辑是，当热点KEY过期后，大量请求到达后端尝试获取KEY失败，只允许其中一个线程得到互斥锁进行缓存重建，其他线程阻塞等待，并重新尝试获取热点KEY，直到缓存重建完成或者锁被释放
+
+我们对黑马点评的店铺信息缓存制作缓存击穿保护，这里使用基于Redis的互斥锁方案，Redis的String类型中，有一个命令SETNX，仅当KEY不存在时才能够执行成功，如下
+
+> ![](javaweb2/330.png)
+
+某一个线程设置一个锁后，其他线程尝试设置均返回0，即失败，所以可以达到互斥锁的目的
+
+改造原始代码，首先在RedisRepository中定义一个获取锁的方法，以及设置有关锁的常量
+
+```java
+public Boolean setMutex(String key, String value, Long timeout) {
+    return stringRedisTemplate.opsForValue().setIfAbsent(key, value, timeout, TimeUnit.SECONDS);
+}
+```
+
+```java
+public static final String LOCK_SHOP_INFO_KEY = "lock:shop:info:";       // 商品信息互斥锁
+public static final Long LOCK_SHOP_INFO_TTL = 10L;              // 商品信息互斥锁TTL
+```
+
+然后改造业务方法
+
+```java
+@Override
+public Result queryById(@NotNull Long id) {
+    // 查询Redis中是否存在缓存
+    String shopJson = redisRepository.get(RedisKeyConstant.CACHE_SHOP_INFO_KEY + id);
+    // 缓存命中
+    if (shopJson != null && !StrUtil.isBlank(shopJson)) {
+        Shop shop = JSONUtil.toBean(shopJson, Shop.class);
+        return Result.ok(shop);
+    }
+    // 缓存命中，但为空对象，返回错误
+    if (StrUtil.isBlank(shopJson)) {
+        return Result.fail("店铺不存在");
+    }
+
+    // 获取互斥锁，重建缓存
+    String lockKey = RedisKeyConstant.LOCK_SHOP_INFO_KEY + id;
+    Shop shop;
+    try {
+        Boolean lock = redisRepository.setMutex(lockKey, "1", RedisKeyConstant.LOCK_SHOP_INFO_TTL);
+        if (!lock) {
+            // 获取锁失败，休眠
+            Thread.sleep(50);
+            // 重试
+            return queryById(id);
+        }
+
+        // 获取锁成功，查询数据库
+        shop = this.getById(id);
+        // 数据库中不存在，建立缓存空对象，并返回
+        if (shop == null) {
+            redisRepository.set(RedisKeyConstant.CACHE_SHOP_INFO_KEY + id, "", RedisKeyConstant.CACHE_NONE_TTL);
+            return Result.fail("店铺不存在");
+        }
+        // 数据库中存在，写入Redis缓存
+        shopJson = JSONUtil.toJsonStr(shop);
+        redisRepository.set(RedisKeyConstant.CACHE_SHOP_INFO_KEY + id, shopJson, RedisKeyConstant.CACHE_SHOP_INFO_TTL);
+    } catch (InterruptedException e) {
+        log.error("缓存构建失败");
+        throw new RuntimeException(e);
+    } finally {
+        // 释放锁
+        redisRepository.delete(lockKey);
+    }
+    // 返回结果
+    return Result.ok(shop);
+}
+```
+
+在缓存未命中时，先尝试互斥锁，如果互斥锁获取失败，则休眠50ms，并递归重试，直到构建完成或锁被释放。在成功获取互斥锁后，查询数据库获取店铺信息，然后重建Redis缓存。这里使用try-catch-finally以保证锁能够成功释放，避免死锁，最后返回结果
+
+#### 基于逻辑过期解决缓存击穿
+
+基于逻辑过期，就是不指定Redis过期时间，而是为Redis数据体中插入一个过期时间字段，每次查询时判断该字段是否过期，然后再使用独立线程进行缓存重建工作。首先为实体类制定过期时间字段，一般来说有两种方式，第一种是定义Redis数据类，添加过期时间字段，实体类继承Redis数据类即可；第二种则是在Redis数据类中再定义一个数据字段，进行Redis交互时将业务实体封装到Redis数据实体的数据字段即可，这里我们使用第二种，因为第一种会产生一些业务侵入
+
+```java
+import lombok.Builder;
+import lombok.Data;
+import lombok.experimental.Accessors;
+
+@Data
+@Builder
+@Accessors(chain = true)
+public class RedisData<T> {
+
+    private Long expireTime;
+
+    private T data;
+}
+```
+
+```java
+@Override
+public Result queryByIdWithLogicalExpire(@NotNull Long id) {
+    // 获取缓存
+    String shopJson = redisRepository.get(RedisKeyConstant.CACHE_SHOP_INFO_KEY + id);
+    // 缓存未命中，直接返回错误
+    if (shopJson == null) {
+        return Result.fail("店铺不存在");
+    }
+    // 缓存命中，转换为RedisData
+    RedisData redisData = JSONUtil.toBean(shopJson, RedisData.class);
+    Shop shop = JSONUtil.toBean((JSONObject) redisData.getData(), Shop.class);
+    LocalDateTime expireTime = redisData.getExpireTime();
+    // 检查过期时间
+    if (expireTime != null && expireTime.isAfter(LocalDateTime.now())) {
+        // 缓存未过期，直接返回
+        return Result.ok(shop);
+    }
+    // 缓存已过期，重建缓存
+    // 获取互斥锁
+    String lockKey = RedisKeyConstant.LOCK_SHOP_INFO_KEY + id;
+    Boolean lock = redisRepository.setMutex(lockKey, "1", RedisKeyConstant.LOCK_SHOP_INFO_TTL);
+    // 获取锁失败，返回旧数据
+    if (!lock) {
+        return Result.ok(shop);
+    }
+    // 获取锁成功，异步线程重建缓存
+    executor.submit(() -> {
+        try {
+            // 查询数据库
+            Shop newShop = this.getById(id);
+            // 数据库中不存在，删除Redis缓存
+            if (newShop == null) {
+                redisRepository.delete(RedisKeyConstant.CACHE_SHOP_INFO_KEY + id);
+                return;
+            }
+            // 构建RedisData
+            RedisData<Shop> shopRedisData = new RedisData<>();
+            shopRedisData.setData(newShop);
+            shopRedisData.setExpireTime(LocalDateTime.now().plusSeconds(10));
+            // 写入Redis缓存
+            redisRepository.set(RedisKeyConstant.CACHE_SHOP_INFO_KEY + id, JSONUtil.toJsonStr(shopRedisData), 300L);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        } finally {
+            // 释放锁
+            redisRepository.delete(lockKey);
+        }
+    });
+    // 返回结果
+    return Result.ok(shop);
+}
+```
+
+逻辑过期解决方案相较于互斥锁实现差别较大，逻辑过期理论上没有TTL，因此也可以直接避免缓存穿透问题，也就不需要在判断缓存是否命中。这里是为了避免缓存不存在，所以缓存未命中直接返回错误，作为兜底策略。然后将Redis中的数据转换为RedisData，再判断过期时间，如果未过期，直接返回，如果过期，则进入缓存重建流程
+
+在缓存重建流程中，由第一个发现过期的线程获取互斥锁，该线程自己并不进行重建工作，而是交由异步线程执行，并给予锁，然后直接返回旧数据；在异步线程中，再进行查询数据库、构建新RedisData，并写入Redis缓存的操作，最后由异步线程释放锁
+
+### 全局ID生成器
+
+在分布式系统中，某些业务数据量非常庞大，如订单表，每个订单都需要有一个订单id，如果仅使用mysql自增长id，很容易暴露一些业务细节，而且如果使用多个数据表，每个表的自增长是独立的，数据无法进行聚合。因此这里就需要全局ID生成器，用于分布式系统中，对每个业务中生成一个唯一ID，该ID在所有业务实例中不重复
+
+全局ID生成器需要满足唯一性、高可用、高性能、递增性、安全性。唯一性是指ID全局唯一，不允许重复；高可用是指任何时候ID生成器都能够正常生成可用ID；高性能是指在高并发情况下也能快速生成可用ID；递增性是指生成的ID拥有一定的递增属性，让数据库可以创建索引，提高插入效率；安全性是指用户无法通过ID推测出业务细节，规律性不能过于明显
+
+Redis刚好可以用于构建全局ID生成器，Redis本身就拥有高可用与高性能的特性，唯一性、递增性和安全性可以通过我们对ID的设计来解决
+
+#### 全局ID设计
+
+Java中，ID通常使用Long类型来保存，Java中Long的最大值为$2^{63}-1$，Long使用8字节64位存储，第一位是符号位。而对于ID来说，使用其中的32位，即$2^{32}$就已经足够了，约为21亿。为了能够合理使用Long的全部63位，再将高31位设置为一个时间戳，保存ID生成的时间，以秒为单位，$2^{31}$秒约为69年。低32位就作为序列号，允许同一时间生成多个ID
+
+> ![](javaweb2/331.png)
+
+#### 基于Redis实现全局ID生成器
+
+```java
+package com.hmdp.utils;
+
+import com.hmdp.repository.RedisRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+
+@Component
+@RequiredArgsConstructor
+public class GlobalIdGenerator {
+
+    // 2026-01-01 00:00:00.000
+    private static final Long ORIGINAL_TIMESTAMP = 1767225600L;
+    // 序列号长度
+    private static final Byte ID_LENGTH = 32;
+
+    private RedisRepository redisRepository;
+
+    public Long next(String bizKey) {
+        // 获取当前时间戳
+        LocalDateTime now = LocalDateTime.now();
+        long timestamp = now.toEpochSecond(ZoneOffset.UTC) - ORIGINAL_TIMESTAMP;
+        // 生成序列号Key
+        String format = now.format(DateTimeFormatter.ofPattern("yyyy:MM:dd"));
+        String key = "INCREMENT:" + bizKey + ":" + format;
+        // 获取序列号
+        Long increment = redisRepository.increment(key);
+
+        // 组装返回
+        return timestamp << ID_LENGTH | increment;
+    }
+}
+```
+
+实现起来相对比较简单，先定义两个常量，一个是起始时间ORIGINAL_TIMESTAMP，暂定为2026年1月1日0分0秒，所有订单的时间戳都是以当前时间减去ORIGINAL_TIMESTAMP时间得到，最高支持到2095年。然后是序列号长度，如果我们不再使用Long，而是int，或者Bigint，则可以通过ID_LENGTH来更新序列号长度，这里使用Byte，最大值为128，也就是支持128位的序列号长度，而目前Redis的自增长最大也只有64位
+
+然后开始生成id，使用当前时间计算时间戳，然后使用当前日期和业务Key生成一个自增长序列号Key，这样可以在Redis中查看每天生成的Key数量，方便统计。最后通过位运算得到最终ID并返回
 
