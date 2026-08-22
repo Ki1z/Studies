@@ -1,6 +1,6 @@
 # Redis
 
-`更新时间：2026-8-18`
+`更新时间：2026-8-21`
 
 注释解释：
 
@@ -1799,4 +1799,440 @@ public class GlobalIdGenerator {
 实现起来相对比较简单，先定义两个常量，一个是起始时间ORIGINAL_TIMESTAMP，暂定为2026年1月1日0分0秒，所有订单的时间戳都是以当前时间减去ORIGINAL_TIMESTAMP时间得到，最高支持到2095年。然后是序列号长度，如果我们不再使用Long，而是int，或者Bigint，则可以通过ID_LENGTH来更新序列号长度，这里使用Byte，最大值为128，也就是支持128位的序列号长度，而目前Redis的自增长最大也只有64位
 
 然后开始生成id，使用当前时间计算时间戳，然后使用当前日期和业务Key生成一个自增长序列号Key，这样可以在Redis中查看每天生成的Key数量，方便统计。最后通过位运算得到最终ID并返回
+
+### 优惠券秒杀
+
+#### 实现秒杀券下单
+
+```java
+@Service
+@RequiredArgsConstructor
+public class VoucherOrderServiceImpl extends ServiceImpl<VoucherOrderMapper, VoucherOrder> implements IVoucherOrderService {
+
+    private final ISeckillVoucherService seckillVoucherService;
+    private final GlobalIdGenerator idGenerator;
+
+    @Override
+    @Transactional
+    public Result addSeckillVoucher(@NotNull Long voucherId) {
+
+        // 获取用户信息
+        Long userId = UserHolder.getUser().getId();
+        if (userId == null) {
+            return Result.fail("用户未登录");
+        }
+
+        // 查询秒杀券
+        SeckillVoucher voucher = seckillVoucherService.getById(voucherId);
+        if (voucher == null) {
+            return Result.fail("秒杀券不存在");
+        }
+        // 检查过期时间
+        if (voucher.getEndTime().isBefore(LocalDateTime.now())) {
+            return Result.fail("秒杀券已过期");
+        }
+        if (voucher.getBeginTime().isAfter(LocalDateTime.now())) {
+            return Result.fail("秒杀券未开始");
+        }
+        // 检查库存
+        if (voucher.getStock() < 1) {
+            return Result.fail("秒杀券已售罄");
+        }
+        // 扣减库存
+        boolean success = seckillVoucherService.update().setSql("stock = stock - 1")
+                .eq("voucher_id", voucherId).update();
+        if (!success) {
+            return Result.fail("秒杀券已售罄");
+        }
+
+        // 创建订单
+        VoucherOrder order = new VoucherOrder();
+        Long orderId = idGenerator.next("order");
+        order.setId(orderId);
+        order.setVoucherId(voucherId);
+        order.setUserId(userId);
+        // 保存订单
+        save(order);
+        // 返回订单id
+        return Result.ok(orderId);
+    }
+}
+```
+
+ 完成最基础的秒杀券下单功能，对于我们来说没有什么难度，首先查询秒杀券，然后检查过期时间，再检查库存，扣减库存，并创建订单，保存到数据库中。但实际上这个下单逻辑存在诸多问题
+
+#### 超卖问题
+
+上文的代码在高并发情况下极易出现超卖问题，我们可以来测试一下
+
+准备100个秒杀券库存
+
+> ![](javaweb2/332.png)
+
+准备200个线程，在1秒内同时到达，模拟高并发情况
+
+> ![](javaweb2/333.png)
+
+发送请求
+
+> ![](javaweb2/334.png)
+
+最后观察库存数量
+
+> ![](javaweb2/335.png)
+
+可见已经超卖了7个秒杀券，如果是对数量非常敏感的商品，超卖问题造成的损失将会非常大。那么超卖问题是如何造成的呢？观察代码可以得到答案
+
+```java
+// 查询秒杀券
+SeckillVoucher voucher = seckillVoucherService.getById(voucherId);
+if (voucher == null) {
+    return Result.fail("秒杀券不存在");
+}
+// 检查过期时间
+if (voucher.getEndTime().isBefore(LocalDateTime.now())) {
+    return Result.fail("秒杀券已过期");
+}
+if (voucher.getBeginTime().isAfter(LocalDateTime.now())) {
+    return Result.fail("秒杀券未开始");
+}
+// 检查库存
+if (voucher.getStock() < 1) {
+    return Result.fail("秒杀券已售罄");
+}
+// 扣减库存
+boolean success = seckillVoucherService.update().setSql("stock = stock - 1")
+        .eq("voucher_id", voucherId).update();
+if (!success) {
+    return Result.fail("秒杀券已售罄");
+}
+```
+
+在这段代码中，先查询秒杀券，然后再通过查询出的秒杀券获取库存，假设某一时刻秒杀券库存为1，A线程和B线程几乎同一时间查询，都得到库存为1，而两个线程检查库存时，自己的商品实例中都满足库存大于1，因此两个线程都执行扣减库存的逻辑，最终导致库存超卖
+
+这里一种经典的并发安全问题，对于此类问题，一般有悲观锁和乐观锁两种方式
+
+悲观锁和乐观锁并不是指特定的解决方案，而是两种针对并发安全问题的思想。悲观锁是认为线程安全问题一定会发生，因此在操作数据之前先获取锁，确保线程串行执行，如Synchronized、Lock都属于悲观锁，悲观锁为整个方法或者类加锁，同一时间仅有一个线程可以执行相关逻辑，保证线程安全。但悲观锁的串行执行会造成严重的性能损失，在高并发高性能情况下不适用，包括这里的秒杀问题，用户点击下单后，需要等待一段时间才能返回结果，就会对用户的体验造成较大的影响。而乐观锁认为，线程安全问题不一定会发生，因此不直接加锁，而是在更新数据时判断其他线程是否对数据进行了更改，如果没有修改，则认为是线程安全的，然后更新数据；如果已经被其他线程修改了，则抛出异常或重试
+
+#### 乐观锁解决超卖问题
+
+对于一般的乐观锁解决方案，是在更新数据前查询某个特定的数据值是否被更改，例如我们可以设定一个版本号字段，每次数据更新时，当前版本号必须与之前查询到的版本号一致，否则认为数据被更改过。而在超卖问题中，可以直接使用库存字段充当这个版本号，库存在每次卖出后一定会发生变化，同样的库存也只允许变化一次
+
+```java
+// 扣减库存
+boolean success = seckillVoucherService.update().setSql("stock = stock - 1")
+        .eq("voucher_id", voucherId).eq("stock", voucher.getStock()).update();
+```
+
+因此我们在扣减库存的位置添加一个查询条件，必须是查询到的库存等于当前库存时，才认为库存安全，可以扣减
+
+> ![](javaweb2/336.png)
+
+但是这里又出现了一个问题，我们再次发送200个请求，却只卖出了25份，这又是为什么？简单来说，这就是乐观锁的弊端，乐观锁会影响业务的完成度。假设有100个线程同时查询，此时库存为100，因此100个线程中的库存都为100，但乐观锁保证了仅有一个线程能够成功减少一个库存，其余的99个线程都会返回库存售罄。在业务上来说这是非常严重的问题，特别是秒杀情况下，用户因后端错误的返回结果从而认为商品售罄，不再继续尝试，导致用户造成实际损失
+
+那么如何解决这个无法卖出的问题呢？从业务上来看，在库存减少为0之前的超卖，实际上是可以直接忽略的，因为事实层面上，每个用户都抢到了自己的秒杀商品，订单也确实正常下达了。所以其实这里的乐观锁并需要必须保证当前库存等于查询时库存，仅需要当前库存大于0即可。同样假设100个线程同时查询，此时库存为100,100个线程中的库存都为100，每个线程执行扣减库存时，仅检查当前库存是否大于0，如果库存已经等于0，随即返回售罄，并不会导致超卖
+
+```java
+// 扣减库存
+boolean success = seckillVoucherService.update().setSql("stock = stock - 1")
+        .eq("voucher_id", voucherId).gt("stock", 0).update();
+```
+
+> ![](javaweb2/337.png)
+
+#### 一人一单
+
+优惠券秒杀的业务本质上是商家吸引更多的顾客来店中消费，从而进一步带动更多的用户前来购买商品。而秒杀券这样的商品一般是亏本的，如果全部被一个或少数几个顾客买走，就等于完全失去了活动意义。因此秒杀商品一般限制每个用户仅能购买一个
+
+```java
+@Override
+@Transactional
+public Result addSeckillVoucher(@NotNull Long voucherId) {
+
+    // 获取用户信息
+    Long userId = UserHolder.getUser().getId();
+    if (userId == null) {
+        return Result.fail("用户未登录");
+    }
+
+    // 判断用户是否购买过
+    Integer count = query().eq("user_id", userId).eq("voucher_id", voucherId).count();
+    if (count > 0) {
+        return Result.fail("用户已购买过");
+    }
+
+    // 查询秒杀券
+    SeckillVoucher voucher = seckillVoucherService.getById(voucherId);
+    if (voucher == null) {
+        return Result.fail("秒杀券不存在");
+    }
+    // 检查过期时间
+    if (voucher.getEndTime().isBefore(LocalDateTime.now())) {
+        return Result.fail("秒杀券已过期");
+    }
+    if (voucher.getBeginTime().isAfter(LocalDateTime.now())) {
+        return Result.fail("秒杀券未开始");
+    }
+    // 检查库存
+    if (voucher.getStock() < 1) {
+        return Result.fail("秒杀券已售罄");
+    }
+    // 扣减库存
+    boolean success = seckillVoucherService.update().setSql("stock = stock - 1")
+            .eq("voucher_id", voucherId).gt("stock", 0).update();
+    if (!success) {
+        return Result.fail("秒杀券已售罄");
+    }
+
+    // 创建订单
+    VoucherOrder order = new VoucherOrder();
+    Long orderId = idGenerator.next("order");
+    order.setId(orderId);
+    order.setVoucherId(voucherId);
+    order.setUserId(userId);
+    // 保存订单
+    save(order);
+    // 返回订单id
+    return Result.ok(orderId);
+}
+```
+
+实现非常简单，在秒杀之前先查询数据库中是否已经存在该用户制定优惠券的订单，然后我们进行测试
+
+> ![](javaweb2/338.png)
+
+经测试发现，只允许卖出一份，但实际卖出了8份，一人一单并没有实现，这又是为什么？其实和之前的超卖问题一样，从判断购买到实际插入之间存在时间差，一旦多个线程在一个线程插入前执行了查询，那么这些线程就都可以执行插入，最终导致一人多单。但一人一单问题并不能添加乐观锁，虽然Mysql可以间接实现INSERT添加限定条件，但在高并发情况下仍存在一些并发安全问题，如下
+
+```mysql
+INSERT INTO user (name, age, sex, unique_number)
+SELECT '张三', 22, '男', '11001'
+FROM DUAL
+WHERE NOT EXISTS (
+    SELECT 1 FROM user WHERE unique_number = '11001'
+);
+```
+
+WHERE NOT EXISTS限制仅有不存在unique_number为11001的数据时才允许插入，但在Mysql层面，如果有多个线程同时执行WHERE NOT EXISTS，可能同时返回true，Mysql并未对普通SELECT添加排他锁，因此仍可能导致一人多单的超卖问题
+
+所以这里需要使用悲观锁，即Synchronized。但悲观锁应当添加在什么位置呢？如果直接添加到方法上，并发情况下仅有一个线程能够执行方法，并发安全性确实非常好，但是性能相对地也非常差；如果添加到插入逻辑上，多个线程查询时同时满足，仅有一个线程能够插入，其他线程在插入时等待，在前面的线程释放锁后继续插入，完全没有任何意义；所以悲观锁应当锁止从查询开始到插入结束的整个流程，只允许一个线程查询，查询完成后插入，插入完成后再释放锁，此时其他线程继续查询，才能保证从查询到插入间没有其他线程修改数据
+
+还有一个问题，锁应该选择什么？锁应当选择一个所有线程同时拥有的数据，如果选择优惠券id，那么所有相同优惠券id的请求就都会阻塞。但是从业务逻辑上来看，我们编写的是一人一单的逻辑，相同优惠券id的请求会包含不同的用户，两个用户的请求之间并不存在竞争情况。因此我们使用用户id作为锁，同一个用户的所有请求都会阻塞，仅有数量判断通过的线程能够执行插入，其余线程直接返回
+
+```java
+@Override
+@Transactional
+public Result addSeckillVoucher(@NotNull Long voucherId) {
+
+    // 获取用户信息
+    Long userId = UserHolder.getUser().getId();
+    if (userId == null) {
+        return Result.fail("用户未登录");
+    }
+
+    synchronized (userId) {
+        // 判断用户是否购买过
+        Integer count = query().eq("user_id", userId).eq("voucher_id", voucherId).count();
+        if (count > 0) {
+            return Result.fail("用户已购买过");
+        }
+
+        // 查询秒杀券
+        SeckillVoucher voucher = seckillVoucherService.getById(voucherId);
+        if (voucher == null) {
+            return Result.fail("秒杀券不存在");
+        }
+        // 检查过期时间
+        if (voucher.getEndTime().isBefore(LocalDateTime.now())) {
+            return Result.fail("秒杀券已过期");
+        }
+        if (voucher.getBeginTime().isAfter(LocalDateTime.now())) {
+            return Result.fail("秒杀券未开始");
+        }
+        // 检查库存
+        if (voucher.getStock() < 1) {
+            return Result.fail("秒杀券已售罄");
+        }
+        // 扣减库存
+        boolean success = seckillVoucherService.update().setSql("stock = stock - 1")
+                .eq("voucher_id", voucherId).gt("stock", 0).update();
+        if (!success) {
+            return Result.fail("秒杀券已售罄");
+        }
+
+        // 创建订单
+        VoucherOrder order = new VoucherOrder();
+        Long orderId = idGenerator.next("order");
+        order.setId(orderId);
+        order.setVoucherId(voucherId);
+        order.setUserId(userId);
+        // 保存订单
+        save(order);
+        // 返回订单id
+        return Result.ok(orderId);
+    }
+}
+```
+
+这段代码中，我们使用synchronized锁住了从查询到最后返回的所有代码，以保证仅有一个线程能够执行这些步骤。同时使用userId作为锁，保证只能锁止同一个用户的请求，其他用户的请求正常执行
+
+但其实这段代码也有两个很严重的问题。第一，事务引起的锁失效，这里的事务会在锁释放之后再提交，假设A线程创建了订单，释放锁，此时事务并没有提交，B线程获得锁，判断用户是否购买过。此时事务还没有提交，因此B判断通过，执行创建订单的逻辑，又会造成超卖问题；第二，userId本身不能直接作为锁，synchronized是通过对象地址来判断是否是同一个锁，而userId为Long包装类型，多个线程中很可能都是通过new得到的新对象，地址不同，因此synchronized会认为不是同一把锁，从而允许其获取锁，造成超卖问题
+
+对于事务问题，解决方案是提取所有代码为方法，然后为新方法添加事务注解，确保事务在锁释放前提交
+
+```java
+@Override
+public Result addSeckillVoucher(@NotNull Long voucherId) {
+
+    // 获取用户信息
+    Long userId = UserHolder.getUser().getId();
+    if (userId == null) {
+        return Result.fail("用户未登录");
+    }
+
+    synchronized (userId) {
+        return tryToAddSeckillVoucher(voucherId, userId);
+    }
+}
+
+@Transactional
+public Result tryToAddSeckillVoucher(Long voucherId, Long userId) {
+    // 判断用户是否购买过
+    Integer count = query().eq("user_id", userId).eq("voucher_id", voucherId).count();
+    if (count > 0) {
+        return Result.fail("用户已购买过");
+    }
+
+    // 查询秒杀券
+    SeckillVoucher voucher = seckillVoucherService.getById(voucherId);
+    if (voucher == null) {
+        return Result.fail("秒杀券不存在");
+    }
+    // 检查过期时间
+    if (voucher.getEndTime().isBefore(LocalDateTime.now())) {
+        return Result.fail("秒杀券已过期");
+    }
+    if (voucher.getBeginTime().isAfter(LocalDateTime.now())) {
+        return Result.fail("秒杀券未开始");
+    }
+    // 检查库存
+    if (voucher.getStock() < 1) {
+        return Result.fail("秒杀券已售罄");
+    }
+    // 扣减库存
+    boolean success = seckillVoucherService.update().setSql("stock = stock - 1")
+            .eq("voucher_id", voucherId).gt("stock", 0).update();
+    if (!success) {
+        return Result.fail("秒杀券已售罄");
+    }
+
+    // 创建订单
+    VoucherOrder order = new VoucherOrder();
+    Long orderId = idGenerator.next("order");
+    order.setId(orderId);
+    order.setVoucherId(voucherId);
+    order.setUserId(userId);
+    // 保存订单
+    save(order);
+    // 返回订单id
+    return Result.ok(orderId);
+}
+```
+
+不过到此还没有结束，因为这里的return tryToAddSeckillVoucher(voucherId, userId)调用的是VoucherOrderServiceImpl自己的方法，是直接的对象调用，而Spring的事务管理是通过代理对象来调用的，所以tryToAddSeckillVoucher的@Transactional会失效，IDEA也提醒了这一点
+
+> ![](javaweb2/339.png)
+
+解决方案有多种，例如通过AOP获取Service代理类，然后拉取方法tryToAddSeckillVoucher到代理类中，再由代理类执行，这样Spring就能通过动态代理获取到tryToAddSeckillVoucher方法。但是这种方法需要额外引入Aspectj依赖，还有一定的业务侵入，因此我们使用另一种比较简单的方案，在ISeckillVoucherService中定义这个方法，用VoucherOrderServiceImpl注入ISeckillVoucherService，以实现代理
+
+```java
+@Service
+@RequiredArgsConstructor
+public class SeckillVoucherServiceImpl extends ServiceImpl<SeckillVoucherMapper, SeckillVoucher> implements ISeckillVoucherService {
+
+    private final GlobalIdGenerator idGenerator;
+    private final @Lazy IVoucherOrderService voucherOrderService;
+
+    @Transactional
+    @Override
+    public Result tryToAddSeckillVoucher(Long voucherId, Long userId) {
+        // 判断用户是否购买过
+        Integer count = voucherOrderService.query().eq("user_id", userId).eq("voucher_id", voucherId).count();
+        if (count > 0) {
+            return Result.fail("用户已购买过");
+        }
+
+        // 查询秒杀券
+        SeckillVoucher voucher = getById(voucherId);
+        if (voucher == null) {
+            return Result.fail("秒杀券不存在");
+        }
+        // 检查过期时间
+        if (voucher.getEndTime().isBefore(LocalDateTime.now())) {
+            return Result.fail("秒杀券已过期");
+        }
+        if (voucher.getBeginTime().isAfter(LocalDateTime.now())) {
+            return Result.fail("秒杀券未开始");
+        }
+        // 检查库存
+        if (voucher.getStock() < 1) {
+            return Result.fail("秒杀券已售罄");
+        }
+        // 扣减库存
+        boolean success = update().setSql("stock = stock - 1")
+                .eq("voucher_id", voucherId).gt("stock", 0).update();
+        if (!success) {
+            return Result.fail("秒杀券已售罄");
+        }
+
+        // 创建订单
+        VoucherOrder order = new VoucherOrder();
+        Long orderId = idGenerator.next("order");
+        order.setId(orderId);
+        order.setVoucherId(voucherId);
+        order.setUserId(userId);
+        // 保存订单
+        voucherOrderService.save(order);
+        // 返回订单id
+        return Result.ok(orderId);
+    }
+}
+```
+
+然后在VoucherOrderServiceImpl中调用
+
+```java
+@Override
+public Result addSeckillVoucher(@NotNull Long voucherId) {
+
+    // 获取用户信息
+    Long userId = UserHolder.getUser().getId();
+    if (userId == null) {
+        return Result.fail("用户未登录");
+    }
+
+    synchronized (userId) {
+        return seckillVoucherService.tryToAddSeckillVoucher(voucherId, userId);
+    }
+}
+```
+
+然后是userId的问题，根本原因是userId的地址不同，如果userId能有一个相同地址，那么就可以直接使用了。在Java中，String有一个方法intern，可以保证相同字符串获取的地址是相同的，因此我们将userId转换为String，再调用intern
+
+```java
+@Override
+public Result addSeckillVoucher(@NotNull Long voucherId) {
+
+    // 获取用户信息
+    Long userId = UserHolder.getUser().getId();
+    if (userId == null) {
+        return Result.fail("用户未登录");
+    }
+
+    synchronized (userId.toString().intern()) {
+        return seckillVoucherService.tryToAddSeckillVoucher(voucherId, userId);
+    }
+}
+```
+
+> ![](javaweb2/340.png)
 
