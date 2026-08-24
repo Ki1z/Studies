@@ -1,6 +1,6 @@
 # Redis
 
-`更新时间：2026-8-21`
+`更新时间：2026-8-24`
 
 注释解释：
 
@@ -2235,4 +2235,233 @@ public Result addSeckillVoucher(@NotNull Long voucherId) {
 ```
 
 > ![](javaweb2/340.png)
+
+### 分布式锁
+
+上文针对一人一单的解决方案中，我们仅考虑了单机，即单服务实例的情况。但是很多时候，一个服务会部署多台实例，组成一个集群，从而提高服务并发性能，而此时，之前的一人一单解决方案就会出现问题
+
+synchronized锁仅对当前实例有效，如果部署了多个服务实例，并制定了负载均衡的情况下，对于同一用户的同一请求，可能就会被均衡到不同的服务实例中，假设nginx配置了轮询负载均衡模式，后端部署了两个实例，此时同一用户的两个秒杀请求到达，第一个请求进入服务A，另一个请求进入服务B，而两个服务中的请求都能够获取到自己的锁，从而完成下单逻辑
+
+针对这种情况，就需要使用分布式锁来解决问题
+
+分布式锁的基本方案是将各个实例的锁提取为公共锁，所有实例共享一个锁池，所有实例在获取锁时从共享锁池中获取，以保证多个实例间也能互斥。分布式锁要求多进程可见、互斥、高可用、高性能、安全性
+
+以下是常见的三种互斥锁解决方案
+
+| 解决方案  | 互斥性                           | 高可用                           | 高性能 | 安全性                             |
+| --------- | -------------------------------- | -------------------------------- | ------ | ---------------------------------- |
+| MySQL     | 利用mysql本身的事务互斥锁机制    | 支持主从集群                     | 一般   | 断开连接，自动回滚事务，释放互斥锁 |
+| Redis     | 利用SETNX等互斥命令              | 支持主从集群、分片集群、哨兵集群 | 好     | 利用锁TTL，到期自动释放            |
+| Zookeeper | 利用节点的唯一性和有序性实现互斥 | 支持集群                         | 一般   | 临时节点，断开连接后自动释放       |
+
+#### 基于Redis的分布式锁
+
+在之前设计互斥锁解决缓存击穿问题时，其实已经涉及到了一些Redis锁的逻辑。我们利用SETNX命令，确保只有一个线程能获取锁
+
+```redis
+SETNX lock 1
+```
+
+释放锁时，删除锁的KEY即可
+
+```redis
+DEL lock
+```
+
+为了避免服务宕机导致死锁，还需要为锁添加TTL
+
+```redis
+EXPIRE lock 10
+```
+
+这里还存在一种可能，如果服务在SETNX与EXPIRE命令之间宕机，TTL没有正常设置，依然会出现死锁情况。不过Redis其实已经准备好了解决方案，在学习SET命令时，我们知道SET可以拼接很多参数，而这些参数中就包括了EX设置TTL，NX设置互斥
+
+```redis
+SET <KEY> <VALUE> [EX SECONDS | PX MILLISECONDS] [NX | XX]
+```
+
+> ![](javaweb2/341.png)
+
+这样就可以保证命令的原子性，避免出现死锁的情况。分布式锁有阻塞和非阻塞两种形式，这里我们使用非阻塞式，对于优惠券秒杀业务，如果一个线程获取锁失败，则可以认为一定有一个线程抢购成功，正在下达订单，因此可以直接返回，不需要额外的重试
+
+下面我们来设计一个简单的Redis分布式锁解决方案
+
+首先定义一个锁实体类，实体类中存储键名和键值，键名是锁KEY，在声明时传入，而键值设置为线程名，方便在Redis中记录是哪个线程获取了锁。再定义两个方法，一个尝试获取锁，一个释放锁
+
+```java
+package com.hmdp.entity;
+
+import com.hmdp.constants.RedisKeyConstant;
+import com.hmdp.repository.RedisRepository;
+import lombok.AllArgsConstructor;
+
+@AllArgsConstructor
+public class RedisMutexLock {
+
+    private final RedisRepository redisRepository;
+    private final String key;
+    private final String value = Thread.currentThread().getName();
+
+    public boolean tryLock(String id) {
+        Boolean mutex = redisRepository.setMutex(key + id, value, RedisKeyConstant.LOCK_MUTEX_TTL);
+        return Boolean.TRUE.equals(mutex);
+    }
+
+    public void unlock(String id) {
+        redisRepository.delete(key + id);
+    }
+}
+```
+
+然后改造业务代码
+
+```java
+@Override
+public Result addSeckillVoucher(@NotNull Long voucherId) {
+
+    // 获取用户信息
+    Long userId = UserHolder.getUser().getId();
+    if (userId == null) {
+        return Result.fail("用户未登录");
+    }
+
+    // 创建锁对象
+    RedisMutexLock lock = new RedisMutexLock(redisRepository, RedisKeyConstant.LOCK_ORDER_SECKILL_VOUCHER_KEY);
+    // 获取锁
+    boolean isLock = lock.tryLock(voucherId.toString());
+    // 判断锁是否获取成功
+    if (!isLock) {
+        // 获取锁失败，返回错误
+        return Result.fail("不允许重复下单");
+    }
+    // 获取锁成功，创建订单
+    try {
+        return seckillVoucherService.tryToAddSeckillVoucher(voucherId, userId);
+    } finally {
+        // 释放锁
+        lock.unlock(voucherId.toString());
+    }
+}
+```
+
+将之前的JVM互斥锁方案更改为Redis分布式锁方案，首先创建锁对象，注入RedisRepository以操作Redis，然后传入常量KEY。获取锁时，传入用户id，以保证每个用户的锁是独立的，只有同一个用户的请求才互斥。获取锁失败时，直接返回错误；获取锁成功后，交由seckillVoucherService的tryToAddSeckillVoucher下达订单，最后释放锁
+
+#### 分布式锁误删问题
+
+上述的分布式锁方案中存在一个问题，假设在极端情况下，一个线程获取锁之后进入阻塞状态，阻塞时间大于锁的TTL，然后锁过期，此时第二个线程进入，尝试获取锁，但由于线程一的锁过期，所以线程二成功获取锁。在线程二完成之前线程一恢复，删除互斥锁，此时线程三又进入，线程一删除的实际上是线程二的锁，所以线程三也能成功获取锁。以此类推，构成严重的并发安全问题
+
+不过解决方案也比较简单，在删除锁之前先判断当前锁是否属于自己，上文中我们将线程名作为键值存储在了Redis中，每个线程在删除锁时先获取锁对应的值，与自己的值进行比较，如果相同，则表示是自己的锁，才能进行删除。不过这里就不能再使用线程名或者线程id，因为不同JVM中的线程名与线程id可能相同，因此我们可以直接使用UUID或者先前的全局ID生成器来生成一个全局唯一ID
+
+```java
+package com.hmdp.entity;
+
+import com.hmdp.constants.RedisKeyConstant;
+import com.hmdp.repository.RedisRepository;
+import com.hmdp.utils.GlobalIdGenerator;
+import lombok.AllArgsConstructor;
+
+import java.util.Objects;
+
+@AllArgsConstructor
+public class RedisMutexLock {
+
+    private final RedisRepository redisRepository;
+    private final String key;
+    private final GlobalIdGenerator idGenerator;
+    private final String value = idGenerator.next(BIZ_KEY).toString();
+
+    private static final String BIZ_KEY = "mutexLock";
+
+    public boolean tryLock(String id) {
+        Boolean mutex = redisRepository.setMutex(key + id, value, RedisKeyConstant.LOCK_MUTEX_TTL);
+        return Boolean.TRUE.equals(mutex);
+    }
+
+    public void unlock(String id) {
+        // 获取锁的value
+        String lockValue = redisRepository.get(key + id);
+        if (Objects.equals(lockValue, value)) {
+            // 释放锁
+            redisRepository.delete(key + id);
+        }
+    }
+}
+```
+
+这里我们引入了先前制定的GlobalIdGenerator，然后将值更改为了由GlobalIdGenerator生成的唯一ID，这个唯一ID的序列号由Redis统一维护，所以只要保证仅有一个Redis实例或者集群，就可以保证所有业务集群中的ID唯一
+
+#### 分布式锁的原子性问题
+
+不过，即使我们引入了防误删措施，也无法完全保证分布式锁的并发安全问题，因为获取锁与释放锁本质上仍是两次请求，只要有任意一个线程插入到了查询与删除之间，就会导致分布式锁安全问题。一般有两种解决方案
+
+##### WATCH + MULTI
+
+Redis支持事务，但并不是sql那样的ACID事务，而是通过MULTI将多个命令入队，并依次执行，中间无法被其他命令打断。而MULTI在执行EXEC前，会检查被WATCH的KEY的客户端的CLIENT_DIRTY_CAS位，一旦KEY被更改，EXEC就会返回nil，不再执行
+
+**示例**
+
+设置一个测试KEY，键名为test，键值为1
+
+> ![](javaweb2/342.png)
+
+然后对test设置WATCH，尝试直接进行修改
+
+> ![](javaweb2/343.png)
+
+注意，在EXEC结束后，WATCH也自动失效，所以我们再设置WATCH，但并不马上更新，而是通过另一个客户端更新
+
+> ![](javaweb2/344.png)
+
+再在第一客户端中执行MULTI更新
+
+> ![](javaweb2/345.png)
+
+测试可以发现EXEC返回nil，更新失败，test的值最终为第二客户端设置的3
+
+依据这个特性，我们就可以为分布式锁设计一个乐观锁，在查询锁的内容之前，优先设置WATCH，然后再获取锁内容，根据锁内容判断是否是自己的锁，如果不是自己的锁，直接返回；如果是自己的锁，通过MULTI来删除锁KEY，如果此时锁已经被其他线程修改，则删除失败，确保其他线程的锁不会被删除
+
+但WATCH + MULTI本质上是一个乐观锁，从WATCH到EXEC这个窗口中，Redis不会阻止其他线程修改KEY的内容，如果是一致性要求严格的业务，就不应该使用这套方案
+
+##### Lua脚本
+
+Lua的基本教程可以查阅[Lua](https://github.com/Ki1z/Studies/blob/main/Lua/Lua.md)
+
+在Redis中，支持执行Lua脚本来同时运行多个命令，并且Redis客户端会将每个Lua脚本作为原子命令执行，中间不允许有其他命令。而分布式锁误删问题的根本，就是查询和删除两个命令不满足原子性，中间存在窗口。目前Lua脚本方案是解决Redis分布式锁误删问题的最佳方案
+
+Redis官方为Lua设计了一个简易方法redis.call()，可以执行任意Redis命令并返回对应的返回值，然后通过Redis客户端的EVAL命令执行脚本即可使用。EVAL命令在执行时可以传递参数，EVAL原型如下
+
+```Redis
+EVAL <script> <numkeys> [key1, key2,...] [arg1, arg2,...]
+```
+
+numkeys即为需要传递的KEY参数个数，例如我们传递3个参数，其中1个参数为KEY
+
+```redis
+EVAL <script> 1 key arg1 arg2
+```
+
+Redis将KEY类型参数存储到了Lua的KEYS数组，arg类型参数存储到了ARGV数组，来Lua中通过这两个数组来获取传入的参数，如下
+
+```redis
+EVAL "return redis.call('SET', KEYS[1], ARGV[1])" 1 name kiiz
+```
+
+*注：Lua的下标从1开始*
+
+下面我们就来编写这个Lua脚本，脚本需要完成的是获取锁KEY值，比较Redis值与线程自己的值，然后选择是否释放锁
+
+```lua
+-- 分布式锁KEY
+key = KEYS[1]
+-- 线程id
+localId = ARGV[1]
+-- 获取Redis中的KEY值
+id = redis.call('GET', key)
+-- 比较id是否一致
+if (localId == id) then
+    -- id一致，释放锁
+    return redis.call('DEL', key)
+end
+return 0
+```
 
