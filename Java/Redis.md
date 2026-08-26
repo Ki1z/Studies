@@ -1,6 +1,6 @@
 # Redis
 
-`更新时间：2026-8-24`
+`更新时间：2026-8-26`
 
 注释解释：
 
@@ -2464,4 +2464,511 @@ if (localId == id) then
 end
 return 0
 ```
+
+在Spring Data Redis中，通过execute方法来调用Lua脚本
+
+```java
+@Override
+public <T> T execute(RedisScript<T> script, List<K> keys, Object... args) {
+    return scriptExecutor.execute(script, keys, args)
+}
+```
+
+借助这个api，我们来改造原始代码。在RedisRepository中定义一个方法，用于执行脚本
+
+```java
+private static final DefaultRedisScript SCRIPT = new DefaultRedisScript<>();
+
+public <R> R executeScript(String script, Class<R> returnType, List<String> keys, Object... args) {
+    // 设置脚本
+    SCRIPT.setLocation(new ClassPathResource(script));
+    // 设置返回类型
+    SCRIPT.setResultType(returnType);
+    // 执行脚本
+    Object execute = stringRedisTemplate.execute(SCRIPT, keys, args);
+    return (R) execute;
+}
+```
+
+executeScript的核心是调用stringRedisTemplate的execute方法，execute方法有三个参数，脚本、键以及其他参数，脚本类型为RedisScript接口，仅有一个实现类DefaultRedisScript，所以我们直接在RedisRepository中预先准备好一个DefaultRedisScript实例，然后通过SCRIPT的setLocation来指定脚本具体位置。setLocation接收一个Resource，我们将脚本放置在了resources/lua/unlock.lua，在程序运行时的位置则是ClassPath/lua/unlock.lua，所以直接声明一个ClassPathResource，并传入脚本的相对位置。然后通过setResultType设置脚本返回值类型，因为executeScript方法的目标是能够执行任意脚本，不能硬编码返回值类型，这里使用了泛型R，方法返回值类型也为R，均通过returnType参数来指定，以确保调用者能够获取到正确的返回值。下面就直接调用stringRedisTemplate的execute，然后返回即可
+
+*注：Redis为了应对漏洞CVE-2022-24735以及CVE-2022-24736，从6.2.7和7.0开始将Lua的全局表设置为了只读，如果在运行时报错Attempt to modify a readonly table script，极大可能是在脚本中定义了全局变量，为变量添加local关键字即可*
+
+```lua
+-- 分布式锁KEY
+local key = KEYS[1]
+-- 线程id
+local localId = ARGV[1]
+-- 获取Redis中的KEY值
+local id = redis.call('GET', key)
+```
+
+### Redisson
+
+Redisson是一个在Redis的基础上实现的Java驻内存数据网格（In-Memory Data Grid）。它不仅提供了一系列的分布式的Java常用对象，还提供了许多分布式服务。其中包括(BitSet, Set, Multimap, SortedSet, Map, List, Queue, BlockingQueue, Deque, BlockingDeque, Semaphore, Lock, AtomicLong, CountDownLatch, Publish / Subscribe, Bloom filter, Remote service, Spring cache, Executor service, Live Object service, Scheduler service) Redisson提供了使用Redis的最简单和最便捷的方法。Redisson的宗旨是促进使用者对Redis的关注分离（Separation of Concern），从而让使用者能够将精力更集中地放在处理业务逻辑上
+#### 快速入门
+
+- 引入依赖
+
+```xml
+<!--redisson-->
+<dependency>
+    <groupId>org.redisson</groupId>
+    <artifactId>redisson</artifactId>
+    <version>3.17.5</version>
+</dependency>
+```
+
+- 添加配置
+
+```java
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
+import org.redisson.config.Config;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class RedisConfig {
+
+    @Bean
+    public RedissonClient redissonClient() {
+        // 声明配置类
+        Config config = new Config();
+        // 添加单节点
+        config.useSingleServer()
+                .setAddress("redis://localhost:6379");
+        // 创建RedissonClient对象
+        return Redisson.create(config);
+    }
+}
+```
+
+- 改造代码
+
+Redisson的api和我们先前定义的几乎相同，在获取锁时，仅需注入RedissonClient，然后调用getLock
+
+```java
+// 创建锁对象
+RLock lock = redissonClient.getLock(RedisKeyConstant.LOCK_ORDER_SECKILL_VOUCHER_KEY + voucherId);
+// 获取锁
+boolean isLock = lock.tryLock();
+// 判断锁是否获取成功
+if (!isLock) {
+    // 获取锁失败，返回错误
+    return Result.fail("不允许重复下单");
+}
+// 获取锁成功，创建订单
+try {
+    return seckillVoucherService.tryToAddSeckillVoucher(voucherId, userId);
+} finally {
+    // 释放锁
+    lock.unlock();
+}
+```
+
+#### 可重入锁原理
+
+我们使用Redisson的核心原因就是Redisson支持可重入锁、锁重试等等机制，这些机制实现起来非常困难和复杂，而Redisson已经实现好了这些功能，并且相当完善
+
+可重入锁是指允许同一线程多次获取同一把锁，假设线程执行方法A，在方法A中获取了一把锁用于执行方法B，但是在方法B中需要再获取一次锁，如果这里锁无法重入，则会导致线程原地等待方法A释放锁，但方法B没有执行完，所以方法A无法释放锁，形成死锁
+
+在我们定义的互斥锁方案中，Redis的数据结构我们选择了String类型，互斥命令为SETNX，如果直接使用String实现可重入锁，SETNX会直接返回0，导致获取锁失败。而如果仅使用SET，虽然可以在一定程度上实现重入，但是锁自身无法记录被获取的次数，锁必须在所有方法执行完成后再一并释放，这会导致锁边界模糊，重入锁仅仅是形式锁
+
+因此我们需要在锁中添加一个记录重入次数的字段，也就是计数器，每次重入时计数器加一，释放时计数器减一，当计数器为零时，则认为锁被释放，可以执行DEL。Redis中的Hash类型刚好可以存储三个字段，但Hash中并没有SETNX这样的互斥命令，所以我们需要手写互斥逻辑。互斥逻辑要求必须原子性，因此我们在lua脚本中编写
+
+```lua
+-- 锁KEY
+local key = KEYS[1]
+-- 线程ID
+local id = ARGV[1]
+-- 锁TTL
+local ttl = ARGB[2]
+
+-- 互斥判断
+if (redis.call('EXISTS', key) == 0) then
+    -- 不存在锁，则可以获取锁
+    redis.call('HSET', key, id, '1')
+    -- 设置TTL
+    redis.call('EXPIRE', key, ttl)
+    -- 返回获取成功
+    return 1
+end
+
+-- 锁存在，则判断是否重入
+if (redis.call('HEXISTS', key, id) == 1) then
+    -- 存在锁，则重入
+    redis.call('HINCRBY', key, id, '1')
+    -- 重置TTL
+    redis.call('EXPIRE', key, ttl)
+    -- 返回获取成功
+    return 1
+end
+-- 存在锁，但不是自己的，则返回获取失败
+return 0
+```
+
+下面我们查阅源码，看看Redisson是如何实现的，从lock的tryLock方法入手，类型是一个java.util.concurrent.locks.Lock
+
+> ![](javaweb2/346.png)
+
+找到实现类RedissonLock
+
+> ![](javaweb2/347.png)
+
+```java
+@Override
+public boolean tryLock() {
+    return get(tryLockAsync());
+}
+```
+
+调用了tryLockAsync方法
+
+```java
+@Override
+public RFuture<Boolean> tryLockAsync() {
+    return tryLockAsync(Thread.currentThread().getId());
+}
+```
+
+tryLockAsync方法中调用了tryLockAsync的重载方法，并传入了当前线程id
+
+```java
+@Override
+public RFuture<Boolean> tryLockAsync(long threadId) {
+    return tryAcquireOnceAsync(-1, -1, null, threadId);
+}
+```
+
+这里调用了tryAcquireOnceAsync方法
+
+```java
+private RFuture<Boolean> tryAcquireOnceAsync(long waitTime, long leaseTime, TimeUnit unit, long threadId) {
+    RFuture<Boolean> acquiredFuture;
+    if (leaseTime > 0) {
+        acquiredFuture = tryLockInnerAsync(waitTime, leaseTime, unit, threadId, RedisCommands.EVAL_NULL_BOOLEAN);
+    } else {
+        acquiredFuture = tryLockInnerAsync(waitTime, internalLockLeaseTime,
+                TimeUnit.MILLISECONDS, threadId, RedisCommands.EVAL_NULL_BOOLEAN);
+    }
+
+    CompletionStage<Boolean> f = acquiredFuture.thenApply(acquired -> {
+        // lock acquired
+        if (acquired) {
+            if (leaseTime > 0) {
+                internalLockLeaseTime = unit.toMillis(leaseTime);
+            } else {
+                scheduleExpirationRenewal(threadId);
+            }
+        }
+        return acquired;
+    });
+    return new CompletableFutureWrapper<>(f);
+}
+```
+
+tryAcquireOnceAsync中首先判断leaseTime是否大于0，默认是-1，执行tryLockInnerAsync方法
+
+```java
+<T> RFuture<T> tryLockInnerAsync(long waitTime, long leaseTime, TimeUnit unit, long threadId, RedisStrictCommand<T> command) {
+    return evalWriteAsync(getRawName(), LongCodec.INSTANCE, command,
+            "if (redis.call('exists', KEYS[1]) == 0) then " +
+                    "redis.call('hincrby', KEYS[1], ARGV[2], 1); " +
+                    "redis.call('pexpire', KEYS[1], ARGV[1]); " +
+                    "return nil; " +
+                    "end; " +
+                    "if (redis.call('hexists', KEYS[1], ARGV[2]) == 1) then " +
+                    "redis.call('hincrby', KEYS[1], ARGV[2], 1); " +
+                    "redis.call('pexpire', KEYS[1], ARGV[1]); " +
+                    "return nil; " +
+                    "end; " +
+                    "return redis.call('pttl', KEYS[1]);",
+            Collections.singletonList(getRawName()), unit.toMillis(leaseTime), getLockName(threadId));
+}
+```
+
+这里就出现了Redisson的lua脚本，不过是通过硬编码方式编写的，这样可以避免脚本被修改。这段lua脚本的逻辑实际上与我们编写的相同，首先判断KEY是否存在，不存在则添加一个锁，然后设置过期时间；如果存在，则判断值是否相同，相同则将value加一，最后返回
+
+同样地，我们再查阅释放锁的lua脚本
+
+```java
+protected RFuture<Boolean> unlockInnerAsync(long threadId) {
+    return evalWriteAsync(getRawName(), LongCodec.INSTANCE, RedisCommands.EVAL_BOOLEAN,
+            "if (redis.call('hexists', KEYS[1], ARGV[3]) == 0) then " +
+                    "return nil;" +
+                    "end; " +
+                    "local counter = redis.call('hincrby', KEYS[1], ARGV[3], -1); " +
+                    "if (counter > 0) then " +
+                    "redis.call('pexpire', KEYS[1], ARGV[2]); " +
+                    "return 0; " +
+                    "else " +
+                    "redis.call('del', KEYS[1]); " +
+                    "redis.call('publish', KEYS[2], ARGV[1]); " +
+                    "return 1; " +
+                    "end; " +
+                    "return nil;",
+            Arrays.asList(getRawName(), getChannelName()), LockPubSub.UNLOCK_MESSAGE, internalLockLeaseTime, getLockName(threadId));
+}
+```
+
+首先判断锁是否存在，如果不存在则直接返回；然后将锁计数器减一，判断计数器是否大于0，如果大于0，重置TTL，如果小于0，直接删除KEY，释放锁，最后返回
+
+#### 锁重试原理
+
+上文提到的lua脚本中，互斥锁在获取失败后也直接返回了失败，但是很多业务要求不能直接返回失败，而是在指定时间内重试，直到重试最大时长才返回失败。Redisson的tryLock方法的第一参数就是waitTime最大等待时长
+
+我们将源代码中添加最大等待时长，规定为两秒钟
+
+```java
+// 获取锁
+boolean isLock = lock.tryLock(RedisKeyConstant.LOCK_MUTEX_WAIT_TIME, TimeUnit.SECONDS);
+```
+
+然后继续跟踪源码
+
+```java
+@Override
+public boolean tryLock(long waitTime, TimeUnit unit) throws InterruptedException {
+    return tryLock(waitTime, -1, unit);
+}
+```
+
+调用了tryLock重载方法
+
+```java
+@Override
+public boolean tryLock(long waitTime, long leaseTime, TimeUnit unit) throws InterruptedException {
+    long time = unit.toMillis(waitTime);
+    long current = System.currentTimeMillis();
+    long threadId = Thread.currentThread().getId();
+    Long ttl = tryAcquire(waitTime, leaseTime, unit, threadId);
+    // lock acquired
+    if (ttl == null) {
+        return true;
+    }
+
+    time -= System.currentTimeMillis() - current;
+    if (time <= 0) {
+        acquireFailed(waitTime, unit, threadId);
+        return false;
+    }
+
+    current = System.currentTimeMillis();
+    CompletableFuture<RedissonLockEntry> subscribeFuture = subscribe(threadId);
+    try {
+        subscribeFuture.get(time, TimeUnit.MILLISECONDS);
+    } catch (TimeoutException e) {
+        if (!subscribeFuture.cancel(false)) {
+            subscribeFuture.whenComplete((res, ex) -> {
+                if (ex == null) {
+                    unsubscribe(res, threadId);
+                }
+            });
+        }
+        acquireFailed(waitTime, unit, threadId);
+        return false;
+    } catch (ExecutionException e) {
+        acquireFailed(waitTime, unit, threadId);
+        return false;
+    }
+
+    try {
+        time -= System.currentTimeMillis() - current;
+        if (time <= 0) {
+            acquireFailed(waitTime, unit, threadId);
+            return false;
+        }
+
+        while (true) {
+            long currentTime = System.currentTimeMillis();
+            ttl = tryAcquire(waitTime, leaseTime, unit, threadId);
+            // lock acquired
+            if (ttl == null) {
+                return true;
+            }
+
+            time -= System.currentTimeMillis() - currentTime;
+            if (time <= 0) {
+                acquireFailed(waitTime, unit, threadId);
+                return false;
+            }
+
+            // waiting for message
+            currentTime = System.currentTimeMillis();
+            if (ttl >= 0 && ttl < time) {
+                commandExecutor.getNow(subscribeFuture).getLatch().tryAcquire(ttl, TimeUnit.MILLISECONDS);
+            } else {
+                commandExecutor.getNow(subscribeFuture).getLatch().tryAcquire(time, TimeUnit.MILLISECONDS);
+            }
+
+            time -= System.currentTimeMillis() - currentTime;
+            if (time <= 0) {
+                acquireFailed(waitTime, unit, threadId);
+                return false;
+            }
+        }
+    } finally {
+        unsubscribe(commandExecutor.getNow(subscribeFuture), threadId);
+    }
+//        return get(tryLockAsync(waitTime, leaseTime, unit));
+}
+```
+
+tryLock看着很长，但是获取锁的方法就在Long ttl = tryAcquire(waitTime, leaseTime, unit, threadId)，继续跟入
+
+```java
+private Long tryAcquire(long waitTime, long leaseTime, TimeUnit unit, long threadId) {
+    return get(tryAcquireAsync(waitTime, leaseTime, unit, threadId));
+}
+```
+
+调用了tryAcquireAsync
+
+```java
+private <T> RFuture<Long> tryAcquireAsync(long waitTime, long leaseTime, TimeUnit unit, long threadId) {
+    RFuture<Long> ttlRemainingFuture;
+    if (leaseTime > 0) {
+        ttlRemainingFuture = tryLockInnerAsync(waitTime, leaseTime, unit, threadId, RedisCommands.EVAL_LONG);
+    } else {
+        ttlRemainingFuture = tryLockInnerAsync(waitTime, internalLockLeaseTime,
+                TimeUnit.MILLISECONDS, threadId, RedisCommands.EVAL_LONG);
+    }
+    CompletionStage<Long> f = ttlRemainingFuture.thenApply(ttlRemaining -> {
+        // lock acquired
+        if (ttlRemaining == null) {
+            if (leaseTime > 0) {
+                internalLockLeaseTime = unit.toMillis(leaseTime);
+            } else {
+                scheduleExpirationRenewal(threadId);
+            }
+        }
+        return ttlRemaining;
+    });
+    return new CompletableFutureWrapper<>(f);
+}
+```
+
+这里调用tryLockInnerAsync
+
+```java
+<T> RFuture<T> tryLockInnerAsync(long waitTime, long leaseTime, TimeUnit unit, long threadId, RedisStrictCommand<T> command) {
+    return evalWriteAsync(getRawName(), LongCodec.INSTANCE, command,
+            "if (redis.call('exists', KEYS[1]) == 0) then " +
+                    "redis.call('hincrby', KEYS[1], ARGV[2], 1); " +
+                    "redis.call('pexpire', KEYS[1], ARGV[1]); " +
+                    "return nil; " +
+                    "end; " +
+                    "if (redis.call('hexists', KEYS[1], ARGV[2]) == 1) then " +
+                    "redis.call('hincrby', KEYS[1], ARGV[2], 1); " +
+                    "redis.call('pexpire', KEYS[1], ARGV[1]); " +
+                    "return nil; " +
+                    "end; " +
+                    "return redis.call('pttl', KEYS[1]);",
+            Collections.singletonList(getRawName()), unit.toMillis(leaseTime), getLockName(threadId));
+}
+```
+
+可以看到tryLockInnerAsync就是在重入锁原理中看到的逻辑，这里我们观察lua脚本的返回值，获取锁成功时返回了nil，失败则返回锁ttl，有些奇怪，因为一般来说成功后应当直接返回true，nil在java中相当于null，即false
+
+回到tryLock方法
+
+```java
+Long ttl = tryAcquire(waitTime, leaseTime, unit, threadId);
+```
+
+这个方法的返回值最后被赋值给了ttl属性，那么ttl记录的就是当前锁的ttl
+
+```java
+// lock acquired
+if (ttl == null) {
+    return true;
+}
+
+time -= System.currentTimeMillis() - current;
+if (time <= 0) {
+    acquireFailed(waitTime, unit, threadId);
+    return false;
+}
+```
+
+然后程序判断ttl是否为null，如果为null，则说明获取锁成功，返回true；如果不是null，则说明锁已经被获取，然后使用当前毫秒减去方法开始执行时的毫秒，得到第一次尝试获取锁得到的时长，再用最大等待时长减去第一次尝试获取锁的时长，如果为负数，则已经超过了最大等待时长，不再重试，直接返回失败
+
+```java
+current = System.currentTimeMillis();
+CompletableFuture<RedissonLockEntry> subscribeFuture = subscribe(threadId);
+try {
+    subscribeFuture.get(time, TimeUnit.MILLISECONDS);
+} catch (TimeoutException e) {
+    if (!subscribeFuture.cancel(false)) {
+        subscribeFuture.whenComplete((res, ex) -> {
+            if (ex == null) {
+                unsubscribe(res, threadId);
+            }
+        });
+    }
+    acquireFailed(waitTime, unit, threadId);
+    return false;
+} catch (ExecutionException e) {
+    acquireFailed(waitTime, unit, threadId);
+    return false;
+}
+```
+
+然后进入重试逻辑，首先记录了当前毫秒，然后并没有立即重试，而是调用了subscribe方法，参数为threadId。不立即重试是因为在获取锁失败后，立即重试失败的可能性很大，所以需要等待一段时间，以确保获取锁的线程能够执行完所有业务；subscribe方法实际上是订阅了threadId的通知，在先前释放锁逻辑中，执行DEL之后还执行了一个命令PUBLISH，最后才返回1
+
+```java
+"redis.call('del', KEYS[1]); " +
+"redis.call('publish', KEYS[2], ARGV[1]); " +
+"return 1; "
+```
+
+PUBLISH就是发布一个Redis通知，所有订阅该KEY的服务都可以获取到该通知。然后调用subscribeFuture的get方法来尝试获取通知，通知的最大等待时长即为刚才已经减去第一次尝试获取后的最大等待时长。中间如果发生异常或者通知超时，直接返回失败
+
+```java
+try {
+    time -= System.currentTimeMillis() - current;
+    if (time <= 0) {
+        acquireFailed(waitTime, unit, threadId);
+        return false;
+    }
+
+    while (true) {
+        long currentTime = System.currentTimeMillis();
+        ttl = tryAcquire(waitTime, leaseTime, unit, threadId);
+        // lock acquired
+        if (ttl == null) {
+            return true;
+        }
+
+        time -= System.currentTimeMillis() - currentTime;
+        if (time <= 0) {
+            acquireFailed(waitTime, unit, threadId);
+            return false;
+        }
+
+        // waiting for message
+        currentTime = System.currentTimeMillis();
+        if (ttl >= 0 && ttl < time) {
+            commandExecutor.getNow(subscribeFuture).getLatch().tryAcquire(ttl, TimeUnit.MILLISECONDS);
+        } else {
+            commandExecutor.getNow(subscribeFuture).getLatch().tryAcquire(time, TimeUnit.MILLISECONDS);
+        }
+
+        time -= System.currentTimeMillis() - currentTime;
+        if (time <= 0) {
+            acquireFailed(waitTime, unit, threadId);
+            return false;
+        }
+    }
+} finally {
+    unsubscribe(commandExecutor.getNow(subscribeFuture), threadId);
+}
+```
+
+如果获取通知成功，则进入重试逻辑。重试逻辑中仍然先判断当前是否超时，然后再进行重试，每次重试时，记录当前毫秒时间，然后尝试获取锁，如果获取成功，直接返回true，获取失败后判断是否超时，再等待消息。不过这里等待消息使用了信号量机制，通知针对ttl设计了不同等待时长，当ttl大于0，即锁仍被占用，并且在最大等待时间内锁可能被释放时，则等待ttl时间，确保在锁释放后才重试；如果ttl小于0，即锁已经被释放，那么直接等待最大等待时长
+
+如果中途有消息发布，那么立即计算剩余时长，如果等待超时，则返回失败；如果仍然剩余最大等待时长，则继续重试
+
+这里需要注意，subscribeFuture.get(time, TimeUnit.MILLISECONDS)和commandExecutor.getNow(subscribeFuture).getLatch().tryAcquire(time, TimeUnit.MILLISECONDS)设置的等待时长均为最大等待时长，是因为两个方法并不直接获取锁，两个方法只负责接收消息并唤醒。当锁被释放时，需要线程执行获取锁的逻辑，并不保证一定能获取到锁。因此设置为最大等待时长，如果超时锁仍未被释放，直接失败；如果锁被释放，则立即尝试获取锁，获取失败后再进行尝试，确保cpu的最佳利用率
 
