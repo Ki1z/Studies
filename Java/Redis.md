@@ -1,6 +1,6 @@
 # Redis
 
-`更新时间：2026-8-26`
+`更新时间：2026-9-16`
 
 注释解释：
 
@@ -26,7 +26,7 @@ NoSQL目前没有官方的名称，一般认为是非结构化查询语言，这
 
 常见的NoSQL数据结构有键值对型，如Redis中通过键确定每一条数据值；还有文档型，如ES中，每条数据由文档构成，多个文档构成一个索引；还有如图表型，将每条数据及其数据间的关系以节点的形式来表示，构成复杂的关系网络
 
-而且SQL具有强事务性，SQL数据库必须满足事务的ACID特性，而NoSQL一般不作要求，进满足BASE理论即可，即基本可用、软状态、最终一致性。对于存储方式来说，SQL大多采用磁盘存储，保证数据结构稳定及其数据安全性，避免数据丢失；而NoSQL大多采用内存存储，虽然会使用磁盘作为持久化手段，但是核心数据通常是存储在内存中，一旦服务宕机，很可能造成数据丢失
+而且SQL具有强事务性，SQL数据库必须满足事务的ACID特性，而NoSQL一般不作要求，仅满足BASE理论即可，即基本可用、软状态、最终一致性。对于存储方式来说，SQL大多采用磁盘存储，保证数据结构稳定及其数据安全性，避免数据丢失；而NoSQL大多采用内存存储，虽然会使用磁盘作为持久化手段，但是核心数据通常是存储在内存中，一旦服务宕机，很可能造成数据丢失
 
 ## Redis
 
@@ -134,7 +134,7 @@ String类型，也就是字符串类型，是Redis中最简单的存储类型，
 - int：整数类型，可以进行自增自减操作
 - float：浮点类型，也可以进行自增自减操作
 
-String底层通过字节数组存储，但是不同的String类型的编码方式不同。String类型的最大空间不能超过512M
+String底层通过字节数组存储，但是不同的String类型的编码方式不同。String类型的最大存储空间不能超过512M
 
 #### 常用命令
 
@@ -253,7 +253,7 @@ Redis的SortedSet是一个可排序的Set集合，与Java中的TreeSet类似，�
 | ZINTER        | ZINTER \<NUMKEYS> \<KEY> [\<KEYS>...] [WEIGHTS \<WEIGHT> [\<WEIGHTS>...]] [AGGREGATE SUM \| MIN \| MAX] [WITHSCORES] | 求ZSET的交集                                       |
 | ZUNION        | ZUNION\<NUMKEYS> \<KEY> [\<KEYS>...] [WEIGHTS \<WEIGHT> [\<WEIGHTS>...]] [AGGREGATE SUM | MIN                                                |
 
-*注：ZDIFF、ZINTER、ZUNION都是Redis6.2.0+加入的新命令，如果想要使用，服务端和客户端都需要升级到6.2.0+*
+*注：ZDIFF、ZINTER、ZUNION都是Redis6.2.0加入的新命令，如果想要使用，服务端和客户端都需要升级到6.2.0+*
 
 ## Redis Java Client
 
@@ -333,7 +333,7 @@ public class JedisConnectionFactory {
 }
 ```
 
-首先定义私有成员JedisPool，然后通过静态代码块来为其进行初始化赋值，JedisPool需要JedisPoolConfig作为配置，因此需要先声明一个JedisPoolConfig，然后填充参数，如最大连接数、最大空闲连接数、最小空闲连接数、连接等待时间等等，然后将配置传入JedisPool的构造器，构造一个连接池，最后为私有成员添加@Getter注解添加getter方法
+首先定义私有成员JedisPool，然后通过静态代码块来为其进行初始化赋值，JedisPool需要JedisPoolConfig作为配置，因此需要先声明一个JedisPoolConfig，然后填充参数，如最大连接数、最大空闲连接数、最小空闲连接数、连接等待时间等等，然后将配置传入JedisPool的构造器，构造一个连接池，最后为私有成员添加@Getter注解提供ffgetter方法
 
 ### Spring Data Redis
 
@@ -512,7 +512,7 @@ static class User {
 
 > ![](javaweb2/317.png)
 
-不难发现，Jackson为了保证反序列化的正确性，在JSON插入一了一条类信息，标识该对象所属的实体类。但另一方面，这些多余的数据会造成大量的额外内存占用，如图中的@class字段，占用空间比原本的User还长，所以我们不能使用Jackson的自动反序列化
+不难发现，Jackson为了保证反序列化的正确性，在JSON插入了一条类信息，标识该对象所属的实体类。但另一方面，这些多余的数据会造成大量的额外内存占用，如图中的@class字段，占用空间比原本的User还长，所以我们不能使用Jackson的自动反序列化
 
 而作为开发人员，我们知道Redis中存储的数据对应的实体类，因此我们只用进行手动反序列化即可。而在Redis中，只需要保存原本的JSON字符串即可，而JSON字符串的本质是String，所以只需要将Redis的序列化器都设置为StringRedisSerializer。而Spring Data Redis其实已经预先提供好了KEY和VALUE的序列化器都是String的模板，这就是StringRedisTemplate
 
@@ -711,7 +711,7 @@ public class LoginInterceptor implements HandlerInterceptor {
 }
 ```
 
-定义LoginInterceptor实现HandlerInterceptor，并实现方法preHandle和afterCompletion，在preHandle中从Session中获取用户信，然后保存到上下文中，而afterCompletion负责在登录校验完成后清除上下文
+定义LoginInterceptor实现HandlerInterceptor，并实现方法preHandle和afterCompletion，在preHandle中从Session中获取用户信息，然后保存到上下文中，而afterCompletion负责在登录校验完成后清除上下文
 
 ```java
 package com.hmdp.config;
@@ -967,7 +967,7 @@ public Result queryById(@NotNull Long id) {
 }
 ```
 
-改造的代码与我们预先的设计基本相同，首先通过redisRepository获取Redis中对应KEY，如果缓存命中，则直接封装为shop实体然后返回，这里注意不要使用Jackson，该项目自然的Jackson版本可能过于老旧，不对LocalDateTime适配，这会导致序列化的数据中将LocalDateTime识别为一个额外的对象，从而进一步序列化LocalDateTime中的各种属性。缓存未命中，则从数据库中查询，如果数据库中也不存在数据，则认为该店铺不存在，返回错误。最后将数据库中的数据序列化为JSON，写入Redis，然后返回到前端
+改造的代码与我们预先的设计基本相同，首先通过redisRepository获取Redis中对应KEY，如果缓存命中，则直接封装为shop实体然后返回，这里注意不要使用Jackson，该项目自带的Jackson版本可能过于老旧，不对LocalDateTime适配，这会导致序列化的数据中将LocalDateTime识别为一个额外的对象，从而进一步序列化LocalDateTime中的各种属性。缓存未命中，则从数据库中查询，如果数据库中也不存在数据，则认为该店铺不存在，返回错误。最后将数据库中的数据序列化为JSON，写入Redis，然后返回到前端
 
 #### 缓存更新策略
 
@@ -1103,7 +1103,7 @@ $$
 $$
 当然，布隆过滤器并不是万能的，也有自己的一些优缺点
 
-优点：布隆过滤器空间效率极高，同样存储一百万条数据仅占用约1.2MiB空间，而Redis的HashSet需要约50MiB；其次，查询速度快，布隆过滤器底层数据结构为数组，布隆过滤器通过数据下标查询元素，k个哈希函数的情况下，每个哈希函数进行一次查找，每个哈希函数的查询时间复杂度为O(1)，总计时间复杂度为O(k)；布隆过滤器可以绝对判定元素不存在，不存在漏判，而且布隆过滤器隐私性好，位数组中不包含任何原始数据
+优点：布隆过滤器空间效率极高，存储一百万条数据仅占用约1.2MiB空间，而Redis的HashSet需要约50MiB；其次，查询速度快，布隆过滤器底层数据结构为数组，布隆过滤器通过数据下标查询元素，k个哈希函数的情况下，每个哈希函数进行一次查找，每个哈希函数的查询时间复杂度为O(1)，总计时间复杂度为O(k)；布隆过滤器可以绝对判定元素不存在，不存在漏判，而且布隆过滤器隐私性好，位数组中不包含任何原始数据
 
 缺点：布隆过滤器存在误判风险，可能把不存在的元素判断为存在，从数学模型中可以知道误判率p随m增大而指数级下降，随n增大指数级上升，核心则取决于比值n/m；布隆过滤器本身不支持删除，因为多个元素的哈希结果可能相同，如果因为某一个元素而删除布隆数组，那么会直接导致其他元素也同样被认为删除；布隆过滤器不支持扩容，位数组长度在创建时就已经确定，元素超出预期会导致误判率大幅提高；哈希强依赖性，布隆过滤器的安全性直接受哈希函数安全性的约束，如果哈希函数本身不安全，生成大量重复结果，就会导致误判率大幅提高
 
@@ -1115,7 +1115,7 @@ $$
 $$
 k = \frac{6235035}{1000000}\ln{2} \approx 4.32193
 $$
-也就是说，在误判率不超过5%，KEY最大值为100万的情况下，需要准备6235035位的数组以及5个哈希函数。然后我们将误判率降低到1%，计算得到m约等于9585058，k约等于7。可以看出，误判率的提升伴随着哈希函数与位数组的增长，其中位数组的增长幅度相当大，在误判率降低4%的情况下，位数组的长度需要增长约54%。总结为数学模型为
+也就是说，在误判率不超过5%，KEY最大值为100万的情况下，需要准备6235035位的数组以及5个哈希函数。然后我们将误判率降低到1%，计算得到m约等于9585058，k约等于7。可以看出，误判率的提升伴随着哈希函数与位数组的增长，其中位数组的增长幅度相当大，在误判率降低4%的情况下，位数组的长度需要增长约54%。总结数学模型为
 $$
 m \approx 1,442,695 \times log_2(\frac{1}{p}) \\ k=log_2(\frac{1}{p})
 $$
@@ -1199,11 +1199,11 @@ public class SimpleBloomFilter {
 
 布隆过滤器无法删除元素的最大问题是，位数组中的每个元素都只能为0和1，包含的信息量太少了，而如果我们将位数组更换为整型数组，一个元素能够包含的信息量不就更大了吗。假设现在定义一个每位4bit的数组，能够表示的最大值为15，每次添加元素时，将对应位置的值加1，查询时，判断对应位置的元素是否大于0即可。这里不能判断每个位置的元素是否一致，假设添加了元素apple，下标为0,2,4，由添加了元素paper，下标为1,2,4，此时数组为11202，如果比较元素值一致，查询apple时，查询下标0,2,4，结果分别为1,2,2，结果不一致，就会导致apple被认为不存在
 
-计数布隆过滤器的误判率几乎与布隆过滤器相当，因为计数布隆过滤器判断元素存在的依据是计数器大于0，在数学上来说可以等同于传统布隆过滤器的位数组对应位为1，而计数布隆过滤器最大的问题是计数器溢出与误删。计数器溢出是指，当使用不恰当的哈希函数时，数组下标分布并不均匀，一些下标偏向于某些值，从而进一步导致计数器增长速度比其他下标更快，从而引起计数器超出最大限制的问题。计数器溢出的根本原因在于计数器本身的长度限制，而计数器也不能无脑增大容量。误删是指，删除元素时，计数布隆过滤器会将数组对应下标的元素减1，如果我们给出一个不存在的元素，但这个元素在数组中所有的位置刚好都大于0，那么计数布隆过滤器就会认为这个元素存在，从而删除这个元素。误删元素会严重影响布隆过滤器的数据安全性，一旦误删某一个元素，很可能导致很多正常的元素无法访问，误删的问题属于计数布隆过滤器的底层逻辑问题
+计数布隆过滤器的误判率几乎与布隆过滤器相当，因为计数布隆过滤器判断元素存在的依据是计数器大于0，在数学上来说可以等同于传统布隆过滤器的位数组对应位为1，而计数布隆过滤器最大的问题是计数器溢出与误删。计数器溢出是指，当使用不恰当的哈希函数时，数组下标分布并不均匀，一些下标偏向于某些值，进一步导致计数器增长速度比其他下标更快，从而引起计数器超出最大限制的问题。计数器溢出的根本原因在于计数器本身的长度限制，而计数器也不能无脑增大容量。误删是指，删除元素时，计数布隆过滤器会将数组对应下标的元素减1，如果我们给出一个不存在的元素，但这个元素在数组中所有的位置刚好都大于0，那么计数布隆过滤器就会认为这个元素存在，从而删除这个元素。误删元素会严重影响布隆过滤器的数据安全性，一旦误删某一个元素，很可能导致很多正常的元素无法访问，误删的问题属于计数布隆过滤器的底层逻辑问题
 
 #### 布谷鸟过滤器
 
-大杜鹃，俗称布谷鸟，是鹃形目杜鹃科杜鹃属的一种中型攀禽，是一种典型的种间巢寄生鸟类，简单来说，不自己营巢和孵卵，而是通常将卵寄生在雀形目鸟类巢中，由寄主父母对幼鸟进行照顾
+大杜鹃，俗称布谷鸟，鹃形目杜鹃科杜鹃属的一种中型攀禽，是一种典型的种间巢寄生鸟类，简单来说，不自己营巢和孵卵，而是通常将卵寄生在雀形目鸟类巢中，由寄主父母对幼鸟进行照顾
 
 布谷鸟过滤器是一种概率型数据结构，用于高效判断元素是否属于某个集合。它在功能上类似于布隆过滤器，但在空间效率和实用性上有显著改进。布谷鸟过滤器借鉴了布谷鸟哈希的思想：
 
@@ -1240,7 +1240,7 @@ $$
 
 > ![](javaweb2/329.png)
 
-你可能会好奇，为什么不优先踢出$i_1$呢？在插入时，布谷鸟过滤器会优先选择插入$i_1$，只有当$i_1$满的时候才会插入$i_2$，所以总体来看，对于$i_2$的元素，我们可以认为，其对应的$i_1$满的概率相当高，只有在删除时，才可能会出现$i_1$空闲的状态。此时如果删除$i_2$的元素，元素对应$i_1$空闲的概率就非常低，很可能导致元素踢出到$i_1$后，$i_1$还需要一次踢出，才能找到空闲的$i_2$。显然，如果踢出$i_2$的元素，就很可能导致一次无意义的踢出行为，但是，这种行为却是特意设计的
+你可能会好奇，为什么不优先踢出$i_1$呢？在插入时，布谷鸟过滤器会优先选择插入$i_1$，只有当$i_1$满的时候才会插入$i_2$，所以总体来看，对于$i_2$的元素，我们可以认为，其对应的$i_1$满的概率相当高，只有在删除时，才可能会出现$i_1$空闲的状态。此时如果踢出$i_2$的元素，元素对应$i_1$空闲的概率就非常低，很可能导致元素踢出到$i_1$后，$i_1$还需要一次踢出，才能找到空闲的$i_2$。显然，如果踢出$i_2$的元素，就很可能导致一次无意义的踢出行为，但是，这种行为却是特意设计的
 
 布谷过滤器的设计利用率在95%左右，也就意味着其中约95%的桶是已经存满的桶，桶中的元素极有可能构成一个个的小型环。假设插入一个元素，该元素的两个桶都满了，选择踢出了元素A，元素A到达另一个桶，也满了，踢出元素B，元素B到达的桶也满了，踢出元素C，元素C回到新元素的桶，此时桶已经满了，踢出新元素，新元素到达元素A所在桶，踢出元素A，元素A到达元素C所在桶，踢出元素C，元素C到达元素B所在桶，踢出元素B，元素B到达新元素所在桶，踢出新元素。以此类推，形成了无限循环的踢出逻辑，这就被称为环。如果踢出时只踢出$i_1$中的元素，这种单向传递的逻辑就极有可能导致环的形成，如果选择随机踢出，就可以在一定程度上减少环出现的概率，在踢出$i_2$的元素中时，就有概率拆解一个或多个环，增加插入成功率
 
@@ -1288,7 +1288,7 @@ public class Bucket {
 }
 ```
 
-桶中的数据类型使用short，slot中需要存储指纹，指纹长度一般在16位以内，如果使用byte可能导致指纹被截断，int太占用内存空间，short占用两个字节刚好16位。然后为每个桶定义插入、删除方法，便利桶中的所有插槽，如果有空位就插入，如果匹配就删除
+桶中的数据类型使用short，slot中需要存储指纹，指纹长度一般在16位以内，如果使用byte可能导致指纹被截断，int太占用内存空间，short占用两个字节刚好16位。然后为每个桶定义插入、删除方法，遍历桶中的所有插槽，如果有空位就插入，如果匹配就删除
 
 ```java
 public boolean insert(short fingerprint) {
@@ -1930,7 +1930,7 @@ boolean success = seckillVoucherService.update().setSql("stock = stock - 1")
 
 但是这里又出现了一个问题，我们再次发送200个请求，却只卖出了25份，这又是为什么？简单来说，这就是乐观锁的弊端，乐观锁会影响业务的完成度。假设有100个线程同时查询，此时库存为100，因此100个线程中的库存都为100，但乐观锁保证了仅有一个线程能够成功减少一个库存，其余的99个线程都会返回库存售罄。在业务上来说这是非常严重的问题，特别是秒杀情况下，用户因后端错误的返回结果从而认为商品售罄，不再继续尝试，导致用户造成实际损失
 
-那么如何解决这个无法卖出的问题呢？从业务上来看，在库存减少为0之前的超卖，实际上是可以直接忽略的，因为事实层面上，每个用户都抢到了自己的秒杀商品，订单也确实正常下达了。所以其实这里的乐观锁并需要必须保证当前库存等于查询时库存，仅需要当前库存大于0即可。同样假设100个线程同时查询，此时库存为100,100个线程中的库存都为100，每个线程执行扣减库存时，仅检查当前库存是否大于0，如果库存已经等于0，随即返回售罄，并不会导致超卖
+那么如何解决这个无法卖出的问题呢？从业务上来看，在库存减少为0之前的超卖，实际上是可以直接忽略的，因为事实层面上，每个用户都抢到了自己的秒杀商品，订单也确实正常下达了。所以其实这里的乐观锁并不需要必须保证当前库存等于查询时库存，仅需要当前库存大于0即可。同样假设100个线程同时查询，此时库存为100,100个线程中的库存都为100，每个线程执行扣减库存时，仅检查当前库存是否大于0，如果库存已经等于0，随即返回售罄，并不会导致超卖
 
 ```java
 // 扣减库存
@@ -2971,4 +2971,349 @@ try {
 如果中途有消息发布，那么立即计算剩余时长，如果等待超时，则返回失败；如果仍然剩余最大等待时长，则继续重试
 
 这里需要注意，subscribeFuture.get(time, TimeUnit.MILLISECONDS)和commandExecutor.getNow(subscribeFuture).getLatch().tryAcquire(time, TimeUnit.MILLISECONDS)设置的等待时长均为最大等待时长，是因为两个方法并不直接获取锁，两个方法只负责接收消息并唤醒。当锁被释放时，需要线程执行获取锁的逻辑，并不保证一定能获取到锁。因此设置为最大等待时长，如果超时锁仍未被释放，直接失败；如果锁被释放，则立即尝试获取锁，获取失败后再进行尝试，确保cpu的最佳利用率
+
+#### 可重入锁续约原理
+
+假设定义了一个可重入锁，当线程执行或者等待时，锁因为超时自动释放，其他线程获取到分布式锁，就会造成严重的业务安全问题。因此可重入锁必须保证，每次锁重入时，TTL必须续约，保证锁不会因为业务阻塞时自动释放
+
+```java
+private <T> RFuture<Long> tryAcquireAsync(long waitTime, long leaseTime, TimeUnit unit, long threadId) {
+    RFuture<Long> ttlRemainingFuture;
+    if (leaseTime > 0) {
+        ttlRemainingFuture = tryLockInnerAsync(waitTime, leaseTime, unit, threadId, RedisCommands.EVAL_LONG);
+    } else {
+        ttlRemainingFuture = tryLockInnerAsync(waitTime, internalLockLeaseTime,
+                TimeUnit.MILLISECONDS, threadId, RedisCommands.EVAL_LONG);
+    }
+    CompletionStage<Long> f = ttlRemainingFuture.thenApply(ttlRemaining -> {
+        // lock acquired
+        if (ttlRemaining == null) {
+            if (leaseTime > 0) {
+                internalLockLeaseTime = unit.toMillis(leaseTime);
+            } else {
+                scheduleExpirationRenewal(threadId);
+            }
+        }
+        return ttlRemaining;
+    });
+    return new CompletableFutureWrapper<>(f);
+}
+```
+
+定位到tryAcquireAsync方法，在执行完成tryLockInnerAsync方法后，ttlRemainingFuture会执行一个类似回调函数的thenApply方法，在thenApply方法中，首先判断获取锁是否成功，当ttlRemaining为null，即表示锁获取成功。然后判断当前剩余时间，如果剩余时间大于0，则将剩余时间转换为毫秒；如果没有剩余时间，则表示需要续约，执行scheduleExpirationRenewal方法。剩余时间小于0表示没有设置TTL，使用watchdog机制自动续期
+
+```java
+protected void scheduleExpirationRenewal(long threadId) {
+    ExpirationEntry entry = new ExpirationEntry();
+    ExpirationEntry oldEntry = EXPIRATION_RENEWAL_MAP.putIfAbsent(getEntryName(), entry);
+    if (oldEntry != null) {
+        oldEntry.addThreadId(threadId);
+    } else {
+        entry.addThreadId(threadId);
+        try {
+            renewExpiration();
+        } finally {
+            if (Thread.currentThread().isInterrupted()) {
+                cancelExpirationRenewal(threadId);
+            }
+        }
+    }
+}
+```
+
+scheduleExpirationRenewal中定义了一个ExpirationEntry，然后将entry存入了EXPIRATION_RENEWAL_MAP，EXPIRATION_RENEWAL_MAP是一个ConcurrentHashMap，key是entry的名称，值为entry本身；entryName大致上可以认为是锁自己的名称。putIfAbsent方法可以避免锁重入时获取不同的entry实例，putIfAbsent在同一entryName时只会返回第一次插入时的entry，保证锁永远是同一实例。然后将线程id添加到entry中。entry会维护一个threadIds字段，数据类型为LinkedHashMap，每次添加一个线程id，都会在threadIds中查询这个id，如果不存在，则插入，如果存在，则计数器加一，因此addThreadId方法也实现了重入功能。如果是新锁，会执行一次renewExpiration续约方法
+
+```java
+private void renewExpiration() {
+    ExpirationEntry ee = EXPIRATION_RENEWAL_MAP.get(getEntryName());
+    if (ee == null) {
+        return;
+    }
+    
+    Timeout task = commandExecutor.getConnectionManager().newTimeout(new TimerTask() {
+        @Override
+        public void run(Timeout timeout) throws Exception {
+            ExpirationEntry ent = EXPIRATION_RENEWAL_MAP.get(getEntryName());
+            if (ent == null) {
+                return;
+            }
+            Long threadId = ent.getFirstThreadId();
+            if (threadId == null) {
+                return;
+            }
+            
+            CompletionStage<Boolean> future = renewExpirationAsync(threadId);
+            future.whenComplete((res, e) -> {
+                if (e != null) {
+                    log.error("Can't update lock " + getRawName() + " expiration", e);
+                    EXPIRATION_RENEWAL_MAP.remove(getEntryName());
+                    return;
+                }
+                
+                if (res) {
+                    // reschedule itself
+                    renewExpiration();
+                } else {
+                    cancelExpirationRenewal(null);
+                }
+            });
+        }
+    }, internalLockLeaseTime / 3, TimeUnit.MILLISECONDS);
+    
+    ee.setTimeout(task);
+}
+```
+
+在renewExpiration中，首先从Map中获取entry，即锁，然后定义了一个延时任务Timeout，任务延时时间设置为了internalLockLeaseTime的三分之一，internalLockLeaseTime在没有设置TTL的情况下默认为30秒，所以延时任务默认为10秒。而任务本身的内容为，首先取出entry，然后尝试获取线程id，如果不存在任何线程id，则认为全部线程工作已经完成，可以释放锁。否则调用renewExpirationAsync续约
+
+```java
+protected CompletionStage<Boolean> renewExpirationAsync(long threadId) {
+    return evalWriteAsync(getRawName(), LongCodec.INSTANCE, RedisCommands.EVAL_BOOLEAN,
+            "if (redis.call('hexists', KEYS[1], ARGV[2]) == 1) then " +
+                    "redis.call('pexpire', KEYS[1], ARGV[1]); " +
+                    "return 1; " +
+                    "end; " +
+                    "return 0;",
+            Collections.singletonList(getRawName()),
+            internalLockLeaseTime, getLockName(threadId));
+}
+```
+
+renewExpirationAsync中则直接执行了PEXIRE命令，所以刷新了Redis的TTL，从而达成续约。renewExpirationAsync执行完成后，又会调用renewExpiration进行递归，知道线程id为空。这样每十秒就会刷新一次有效期，保证锁永远不会过期，而entry中保存的就是线程id与定时任务，当新线程加入时，就不需要床见新的续约任务，共享一个任务即可
+
+而锁释放的逻辑，即是取消续约任务。定位到cancelExpirationRenewal
+
+```java
+protected void cancelExpirationRenewal(Long threadId) {
+    ExpirationEntry task = EXPIRATION_RENEWAL_MAP.get(getEntryName());
+    if (task == null) {
+        return;
+    }
+    
+    if (threadId != null) {
+        task.removeThreadId(threadId);
+    }
+
+    if (threadId == null || task.hasNoThreads()) {
+        Timeout timeout = task.getTimeout();
+        if (timeout != null) {
+            timeout.cancel();
+        }
+        EXPIRATION_RENEWAL_MAP.remove(getEntryName());
+    }
+}
+```
+
+在cancelExpirationRenewal中，先删除线程id，然后获取Timeout延时任务，调用cancel方法取消，最后从Map中移除entry
+
+#### MultiLock
+
+实际的Redis部署中，很多企业或者公司都会选择部署Redis主从集群，以提高Redis性能，同时部署Redis哨兵集群，保证Redis的高可用性，但是Redis主从集群也可能会导致互斥锁出现异常。对于Redis主从集群，主节点与从节点之间一定会存在一个数据同步时间间隔，在这个时间段内数据无法保证一致性，假设某一线程在主节点申请了一把互斥锁，主节点开始向从节点同步数据，但是此时主节点突然宕机，导致互斥锁没有成功同步到从节点上。哨兵集群此时在从节点中选出了新的主节点，其他线程由向新的主节点申请互斥锁，由于互斥锁没有同步到新的主节点上，就会导致两个线程都获取到了互斥锁，造成严重的安全问题
+
+而Redission解决这个问题的方案也非常简单，Redisson的MultiLock会向多个主节点申请互斥锁，只有当所有节点互斥锁获取成功时，才认为互斥锁获取成功。换句话说，也就是支持Redis的分片集群
+
+```java
+final List<RLock> locks = new ArrayList<>();
+
+/**
+ * Creates instance with multiple {@link RLock} objects.
+ * Each RLock object could be created by own Redisson instance.
+ *
+ * @param locks - array of locks
+ */
+public RedissonMultiLock(RLock... locks) {
+    if (locks.length == 0) {
+        throw new IllegalArgumentException("Lock objects are not defined");
+    }
+    this.locks.addAll(Arrays.asList(locks));
+}
+```
+
+RedissonMultiLock中维护了一个locks字段，用于保存获取到的所有单独的互斥锁，然后根据这些互斥锁来构建一个联锁。下面我们来分析RedissonMultiLock的tryLock获取锁方法
+
+```java
+@Override
+public boolean tryLock(long waitTime, long leaseTime, TimeUnit unit) throws InterruptedException {
+//        try {
+//            return tryLockAsync(waitTime, leaseTime, unit).get();
+//        } catch (ExecutionException e) {
+//            throw new IllegalStateException(e);
+//        }
+    long newLeaseTime = -1;
+    if (leaseTime > 0) {
+        if (waitTime > 0) {
+            newLeaseTime = unit.toMillis(waitTime)*2;
+        } else {
+            newLeaseTime = unit.toMillis(leaseTime);
+        }
+    }
+
+    long time = System.currentTimeMillis();
+    long remainTime = -1;
+    if (waitTime > 0) {
+        remainTime = unit.toMillis(waitTime);
+    }
+    long lockWaitTime = calcLockWaitTime(remainTime);
+
+    int failedLocksLimit = failedLocksLimit();
+    List<RLock> acquiredLocks = new ArrayList<>(locks.size());
+    for (ListIterator<RLock> iterator = locks.listIterator(); iterator.hasNext();) {
+        RLock lock = iterator.next();
+        boolean lockAcquired;
+        try {
+            if (waitTime <= 0 && leaseTime <= 0) {
+                lockAcquired = lock.tryLock();
+            } else {
+                long awaitTime = Math.min(lockWaitTime, remainTime);
+                lockAcquired = lock.tryLock(awaitTime, newLeaseTime, TimeUnit.MILLISECONDS);
+            }
+        } catch (RedisResponseTimeoutException e) {
+            unlockInner(Arrays.asList(lock));
+            lockAcquired = false;
+        } catch (Exception e) {
+            lockAcquired = false;
+        }
+
+        if (lockAcquired) {
+            acquiredLocks.add(lock);
+        } else {
+            if (locks.size() - acquiredLocks.size() == failedLocksLimit()) {
+                break;
+            }
+
+            if (failedLocksLimit == 0) {
+                unlockInner(acquiredLocks);
+                if (waitTime <= 0) {
+                    return false;
+                }
+                failedLocksLimit = failedLocksLimit();
+                acquiredLocks.clear();
+                // reset iterator
+                while (iterator.hasPrevious()) {
+                    iterator.previous();
+                }
+            } else {
+                failedLocksLimit--;
+            }
+        }
+
+        if (remainTime > 0) {
+            remainTime -= System.currentTimeMillis() - time;
+            time = System.currentTimeMillis();
+            if (remainTime <= 0) {
+                unlockInner(acquiredLocks);
+                return false;
+            }
+        }
+    }
+
+    if (leaseTime > 0) {
+        acquiredLocks.stream()
+                .map(l -> (RedissonBaseLock) l)
+                .map(l -> l.expireAsync(unit.toMillis(leaseTime), TimeUnit.MILLISECONDS))
+                .forEach(f -> f.toCompletableFuture().join());
+    }
+
+    return true;
+}
+```
+
+代码段较长，我们分段来进行解析
+
+```java
+long newLeaseTime = -1;
+if (leaseTime > 0) {
+    if (waitTime > 0) {
+        newLeaseTime = unit.toMillis(waitTime)*2;
+    } else {
+        newLeaseTime = unit.toMillis(leaseTime);
+    }
+}
+
+long time = System.currentTimeMillis();
+long remainTime = -1;
+if (waitTime > 0) {
+    remainTime = unit.toMillis(waitTime);
+}
+long lockWaitTime = calcLockWaitTime(remainTime);
+```
+
+首先判断锁剩余时间是否大于0，如果大于0，则说明用户主动设置了剩余时间，然后再判断是否设置了重试时间，如果设置了重试时间，则将剩余时间设置为重试时间的两倍。这是为了保证至少重试一次，如果锁TTL小于重试时间的二倍，根本没有时间再次重试
+
+然后记录了当前系统时间，以及声明了一个remainTime，判断是否设置了重试时间，如果设置了重试时间，则将remainTime设置为重试时间，再声明了一个lockWaitTime，通过calcLockWaitTime获取，而calcLockWaitTime本身其实直接返回了remainTime，所以lockWaitTime直接等于remainTime
+
+```java
+int failedLocksLimit = failedLocksLimit();
+List<RLock> acquiredLocks = new ArrayList<>(locks.size());
+for (ListIterator<RLock> iterator = locks.listIterator(); iterator.hasNext();) {
+    RLock lock = iterator.next();
+    boolean lockAcquired;
+    try {
+        if (waitTime <= 0 && leaseTime <= 0) {
+            lockAcquired = lock.tryLock();
+        } else {
+            long awaitTime = Math.min(lockWaitTime, remainTime);
+            lockAcquired = lock.tryLock(awaitTime, newLeaseTime, TimeUnit.MILLISECONDS);
+        }
+    } catch (RedisResponseTimeoutException e) {
+        unlockInner(Arrays.asList(lock));
+        lockAcquired = false;
+    } catch (Exception e) {
+        lockAcquired = false;
+    }
+    
+    if (lockAcquired) {
+        acquiredLocks.add(lock);
+    } else {
+        if (locks.size() - acquiredLocks.size() == failedLocksLimit()) {
+            break;
+        }
+
+        if (failedLocksLimit == 0) {
+            unlockInner(acquiredLocks);
+            if (waitTime <= 0) {
+                return false;
+            }
+            failedLocksLimit = failedLocksLimit();
+            acquiredLocks.clear();
+            // reset iterator
+            while (iterator.hasPrevious()) {
+                iterator.previous();
+            }
+        } else {
+            failedLocksLimit--;
+        }
+    }
+    
+    if (remainTime > 0) {
+        remainTime -= System.currentTimeMillis() - time;
+        time = System.currentTimeMillis();
+        if (remainTime <= 0) {
+            unlockInner(acquiredLocks);
+            return false;
+        }
+    }
+}
+```
+
+然后声明了一个failedLocksLimit，默认为0，并声明了一个数组acquiredLocks，用于保存获取到的锁。下面就开始遍历传入的锁实例，依次尝试获取每一把锁。如果锁获取成功，则将锁添加到acquiredLocks数组中；如果获取锁失败，先判断是否已经获取到了所有锁，locks是需要获取的锁，acquiredLocks是已经获取的锁，failedLocksLimit为0，所以当locks等于acquiredLocks时，才会执行break，也就是成功获取到了所有锁。如果没有获取到所有锁，则判断failedLocksLimit是否为0，failedLocksLimit默认为0，因此继续向下执行unlockInner方法，unlockInner会释放已经获取到的所有锁，因为Redisson规定只有当所有锁获取成功时才能认为MultiLock获取成功，因此持续持有其他锁是没有任何必要的，当其中任意一把锁获取失败后，应当立即释放所有锁，让其他线程有机会能够获取到锁。释放完所有锁后，检查是否还有重试时间，如果没有重试时间，则直接失败；否则重置failedLocksLimit、acquiredLocks以及迭代器，从第一个锁开始重新尝试获取
+
+然后检查锁TTL是否过期，如果没有过期，则将锁TTL减去尝试消耗的时间，再判断是否超时，超时则进行释放
+
+```java
+if (leaseTime > 0) {
+    acquiredLocks.stream()
+            .map(l -> (RedissonBaseLock) l)
+            .map(l -> l.expireAsync(unit.toMillis(leaseTime), TimeUnit.MILLISECONDS))
+            .forEach(f -> f.toCompletableFuture().join());
+}
+
+return true;
+```
+
+上述代码执行完成后，就已经成功获取到所有锁了，因此MultiLock也可以认为已经成功获取。但是在返回true之前，Redisson还执行了一步操作，在设置了TTL的情况下，为每个已经获取的锁重置了TTL，因为从第一把锁获取成功到最后一把锁获取成功之间一定存在一个时间差，第一把锁的TTL一定小于最后一把锁，因此需要重新重置TTL来保证锁同时释放。对于没有设置TTL的锁，watchdog机制会自动进行续约
+
+### Redis秒杀优化
+
+
 
