@@ -3315,5 +3315,34 @@ return true;
 
 ### Redis秒杀优化
 
+先前的秒杀业务中，我们将购买资格判断与下单整合到了一个接口中，并且还设置了分布式锁来保证并发安全，但这种模式也会对接口性能产生一定的影响。在秒杀接口中，我们集成了查询优惠券、判断优惠券库存、查询订单、校验一人一单、扣减库存以及创建订单的逻辑，相当复杂。实际上这个接口可以进行拆分，从业务流程来看，判断用户购买资格与下达订单可以拆分为两个模块
 
+对于判断用户购买资格的模块，这是接口的入口，因此必须要求高并发高可用，需要快速判断用户是否拥有购买资格，对于没有购买资格的用户快速失败，从而过滤掉大量的无效请求。而对于下达订单模块，模块本身的逻辑耗时就比较长，还需要使用分布式锁以确保并发安全，会进一步降低接口性能。如果将判断模块与下单模块聚合在一个接口中，下单模块就会拖慢判断模块的性能，因此两者必须拆分为逻辑上的两个接口，接口之间的调用必须是异步的，保证接口之前互不响应。而对于判断模块，其实也不需要订单模块的返回值，在判断完成后，就可以继续接收下次请求。因此我们选择使用消息队列方案来进行改造，在判断模块判断完成后，向订单模块发送一条消息，而订单模块根据消息完成下单业务即可。同时，针对判断模块，对其进行缓存改造，为优惠券库存和一人一单添加缓存，提高并发能力
+
+#### 判断模块优化
+
+对于库存，使用String类型即可；对于一人一单缓存，需要保存多个用户信息，并且每个用户信息需要确保唯一，因此使用Set类型。对于判断用户资格的逻辑，首先判断库存是否充足，然后判断用户是否已经下单，并扣减库存，这三者之间不允许有其他线程插入，假设A线程和B线程几乎同时访问接口，此时优惠券剩余1张，如果三者不满足原子性，很可能造成两个线程的库存判断均成功，从而造成超售问题。如果使用分布式锁或者乐观锁方案，性能会有一定的损失，因此我们直接利用Redis的Lua脚本，将判断模块全部编写到Lua脚本中，Java通过脚本返回值来判断用户是否拥有购买资格
+
+首先实现优惠券库存缓存，在新增优惠券时同步Redis缓存
+
+```java
+@Override
+@Transactional
+public void addSeckillVoucher(Voucher voucher) {
+    // 保存优惠券
+    save(voucher);
+    // 保存秒杀信息
+    SeckillVoucher seckillVoucher = new SeckillVoucher();
+    seckillVoucher.setVoucherId(voucher.getId());
+    seckillVoucher.setStock(voucher.getStock());
+    seckillVoucher.setBeginTime(voucher.getBeginTime());
+    seckillVoucher.setEndTime(voucher.getEndTime());
+    boolean save = seckillVoucherService.save(seckillVoucher);
+    if (save) {
+        // 保存秒杀库存到Redis
+        redisRepository.set(RedisKeyConstant.CACHE_SECKILL_VOUCHER_STOCK_KEY + voucher.getId(),
+                voucher.getStock().toString());
+    }
+}
+```
 
