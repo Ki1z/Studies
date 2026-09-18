@@ -1,6 +1,6 @@
 # Redis
 
-`更新时间：2026-9-16`
+`更新时间：2026-9-18`
 
 注释解释：
 
@@ -3339,10 +3339,123 @@ public void addSeckillVoucher(Voucher voucher) {
     seckillVoucher.setEndTime(voucher.getEndTime());
     boolean save = seckillVoucherService.save(seckillVoucher);
     if (save) {
-        // 保存秒杀库存到Redis
-        redisRepository.set(RedisKeyConstant.CACHE_SECKILL_VOUCHER_STOCK_KEY + voucher.getId(),
-                voucher.getStock().toString());
+        // 保存秒券信息到Redis
+        Map<String, String> map = new HashMap<>();
+        map.put(SeckillVoucher.ID_COLUMN, voucher.getId().toString());
+        map.put(SeckillVoucher.STOCK_COLUMN, voucher.getStock().toString());
+        map.put(SeckillVoucher.BEGIN_TIME_COLUMN, voucher.getBeginTime().toString());
+        map.put(SeckillVoucher.END_TIME_COLUMN, voucher.getEndTime().toString());
+        redisRepository.hashMultiSet(RedisKeyConstant.CACHE_SECKILL_VOUCHER_INFO_KEY + voucher.getId(), map);
     }
 }
 ```
+
+在addSeckillVoucher方法中，通过seckillVoucherService的save方法插入一条数据，返回值类型为boolean，表示数据库更新的记录数是否大于等于1，所以其实返回值可以在一定程度上代表插入是否成功。只有在插入成功时，才对其添加Redis缓存，因为Redis无法进行事务控制回滚
+
+下一步是判断用户是否有资格购买优惠券，在上文提到，购买资格判断分为库存判断、一人一单判断和最后扣减库存三个步骤，步骤之间不允许有其他线程插入，必须保证原子性，因此我们利用Lua脚本来编写这个逻辑
+
+```lua
+-- 秒杀优惠券
+local voucherInfoKey = KEYS[1]
+-- 已购买用户集合
+local userSetKey = KEYS[2]
+-- 当前用户id
+local userId = ARGV[1]
+-- 当前系统时间
+local now = tonumber(redis.call('TIME')[1])
+
+-- 判断优惠券是否存在
+if redis.call('EXISTS', voucherInfoKey) == 0 then
+    return -1
+end
+
+-- 判断优惠券是否过期
+local beginTimeField = ARGV[2]
+local endTimeField = ARGV[3]
+local beginTime = tonumber(redis.call('HGET', voucherInfoKey, beginTimeField))
+local endTime = tonumber(redis.call('HGET', voucherInfoKey, endTimeField))
+if now < beginTime or now > endTime then
+    return 1
+end
+
+-- 判断库存是否充足
+local stockField = ARGV[4]
+local stock = tonumber(redis.call('HGET', voucherInfoKey, stockField))
+if stock <= 0 then
+    return 2
+end
+
+-- 判断用户是否已经购买
+if redis.call('SISMEMBER', userSetKey, userId) == 1 then
+    return 3
+end
+
+-- 扣减库存
+redis.call('HINCRBY', voucherInfoKey, stockField, -1)
+-- 添加已购买用户
+redis.call('SADD', userSetKey, userId)
+return 0
+```
+
+在这个脚本中，我们添加了针对优惠券有效期的判断，通过KEYS传入所有需要的键及其字段。先判断优惠券是否过期，这里我们将优惠券缓存数据类型更改为了hash，因为需要存储多个字段。需要注意的是，如果需要Lua中操作实体类，一般不选择直接缓存JSON字符串，虽然Redis Lua支持JSON，但是相对更加复杂，而Redis原生的Hash类型正好可以对应Java实体，因此Hash是更推荐的选择
+
+然后判断库存是否充足，这里和上文判断优惠券过期都使用了tonumber方法，因为Redis返回到Lua的数据类型为字符串，Lua不支持字符串与数值类型进行比较，所以需要tonumber将字符串转换为数值。然后判断一人一单，最后的就是拥有购买资格的用户，随即扣减库存，将用户添加到用户集合中，最后返回0
+
+在这个Lua脚本中，我们还使用了不同的返回值来标识不同的错误类型，1表示优惠券过期，2表示库存不足，3表示用户已经购买，后端可以通过不同的返回值返回不同的错误内容，优化用户体验
+
+```java
+@Override
+public Result addSeckillVoucher(@NotNull Long voucherId) {
+    // 获取用户信息
+    Long userId = UserHolder.getUser().getId();
+    if (userId == null) {
+        return Result.fail("用户未登录");
+    }
+
+    // 判断购买资格
+    // 封装Key
+    List<String> keys = new ArrayList<>();
+    // 优惠券信息key
+    keys.add(RedisKeyConstant.CACHE_SECKILL_VOUCHER_INFO_KEY + voucherId);
+    // 优惠券购买用户集合key
+    keys.add(RedisKeyConstant.SET_SECKILL_VOUCHER_USER_KEY + voucherId);
+    // 执行Lua脚本
+    Long code = redisRepository.executeScript(
+            LuaScriptConstant.SECKILL_VOUCHER_PURCHASE_ELIGIBILITY_DETERMINATION_SCRIPT,
+            Long.class,
+            keys,
+            userId.toString(),
+            SeckillVoucher.BEGIN_TIME_COLUMN,
+            SeckillVoucher.END_TIME_COLUMN,
+            SeckillVoucher.STOCK_COLUMN
+    );
+
+    // 根据返回值判断结果
+    // 返回值不等于0，没有秒杀资格
+    if (!Objects.equals(code, 0L)) {
+        if (code == 1L) {
+            return Result.fail("未在活动时间内");
+        } else if (code == 2L) {
+            return Result.fail("库存不足");
+        } else if (code == 3L) {
+            return Result.fail("禁止重复下单");
+        } else if (code == -1L) {
+            return Result.fail("优惠券不存在");
+        } else {
+            return Result.fail("未知错误");
+        }
+    }
+    // 返回值等于0，开始创建订单
+    // 生成订单id
+    Long orderId = idGenerator.next("order");
+    // TODO 发送创建订单消息
+
+    // 返回订单id
+    return Result.ok(orderId);
+}
+```
+
+下面就来改造抢购接口，依然优先判断用户是否登录，然后直接调用脚本判断用户购买资格。这里需要额外注意的是Redis Lua返回的数值类型对应Java的Long，而不是Integer，如果传入Integer.class会抛出Luttence的类型转换异常。接着就根据返回值判断结果，注意返回值类型为Long，最后使用全局id生成器生成订单id，发送消息并返回订单id
+
+#### 下单模块优化
 
