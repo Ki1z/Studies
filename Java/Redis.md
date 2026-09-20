@@ -1,6 +1,6 @@
 # Redis
 
-`更新时间：2026-9-18`
+`更新时间：2026-9-20`
 
 注释解释：
 
@@ -3459,3 +3459,97 @@ public Result addSeckillVoucher(@NotNull Long voucherId) {
 
 #### 下单模块优化
 
+##### 基于阻塞队列实现秒杀异步下单
+
+Java中，可以通过BlockingQueue来构建阻塞队列，阻塞队列是指，当队列中有任务时，从队列中取出任务并执行，当队列为空时，队列阻塞，CPU可以继续执行其他任务，以提高CPU利用率
+
+BlockingQueue本身只是一个存储任务的容器，没有执行功能，所以需要额外定义线程或者线程池，在线程中添加执行任务来从队列中获取数据
+
+```java
+private BlockingQueue<VoucherOrder> orderQueue = new ArrayBlockingQueue<>(1024 * 1024);
+private static final ExecutorService ORDER_EXECUTOR = Executors.newSingleThreadExecutor();
+
+@PostConstruct
+public void init() {
+    ORDER_EXECUTOR.submit(new VoucherOrderTask());
+}
+
+private class VoucherOrderTask implements Runnable {
+    @Override
+    public void run() {
+        while (true) {
+
+        }
+    }
+}
+```
+
+在下单接口中，新增一个BlockingQueue，泛型为VoucherOrder，存储需要创建的订单数据，然后定义一个单线程池newSingleThreadExecutor，因为订单下达是异步执行的，不需要考虑性能，使用单线程可以保证判断模块的性能更佳。接着是一个内部类VoucherOrderTask，实现了Runnable，用于获取阻塞队列中的数据，并执行下单逻辑。但是Runnable不能自己执行，需要调用线程池的submit提交任务，而且任务开始时机应当早于秒杀时机，避免阻塞队列中已经存在数据，但是任务还没开始，从而影响业务性能。这里使用了@PostConstruct注解，在类加载后立即执行init方法，也就是将任务提交到线程池，这样类加载后，VoucherOrderTask任务就能立即执行，一旦orderQueue中新增了一个数据，VoucherOrderTask就能立即取出并完成订单逻辑
+
+```java
+private class VoucherOrderTask implements Runnable {
+    @Override
+    public void run() {
+        while (true) {
+            try {
+                // 获取队列中的订单信息
+                VoucherOrder voucherOrder = orderQueue.take();
+                // 创建订单
+                seckillVoucherService.tryToAddSeckillVoucher(voucherOrder);
+            } catch (Exception e) {
+                log.error("处理订单异常：", e);
+            }
+        }
+    }
+}
+```
+
+```java
+@Transactional
+@Override
+public void tryToAddSeckillVoucher(VoucherOrder voucherOrder) {
+    // 扣减库存
+    boolean success = update().setSql("stock = stock - 1")
+            .eq("voucher_id", voucherOrder.getVoucherId()).gt("stock", 0).update();
+    // 保存订单
+    voucherOrderService.save(voucherOrder);
+}
+```
+
+然后补充下单逻辑，通过take方法获取数据，然后调用seckillVoucherService的tryToAddSeckillVoucher方法创建订单。调用额外的服务是为了保证事务控制可用，而且这里没有加锁，因为ArrayBlockingQueue是线程安全的，即使有多个线程同时插入数据，newSingleThreadExecutor保证了同一时间只有一个线程能够获取数据，并串行执行创建订单的逻辑，满足原子性
+
+### Redis消息队列
+
+上文提到的阻塞队列方案中，其实存在一些安全问题，例如阻塞队列BlockingQueue会占用额外的系统内存，对于内存敏感型业务实施就相当困难，而且阻塞队列容量存在上限，一旦请求过多，超出队列长度上限，多余的请求就会被直接丢弃，造成数据丢失。或者当请求入队后，服务突然宕机，阻塞队列的数据也会因为存储在内容中从而导致丢失，引发业务问题
+
+消息队列在[JavaWebExpert](./JavaWebExpert.md#消息队列)中已经初步认识，这里作简要概述
+
+消息队列Message Queue，简称 MQ，是一种跨进程、异步的通信机制，核心是在不同应用/服务之间传递消息，实现解耦、异步、削峰。消息队列有三个核心角色，生产者Producer，发送消息的一方；消息服务器Broker，存储和转发消息；消费者Consumer，接收并处理消息的一方。消息队列不仅要存储消息，还需要保证消息的安全性，一旦消息服务发生宕机，消息服务必须对消息进行持久化，保证数据不会丢失。而且消费者在接受消息后需要向消息队列发送一次确认，如果没有确认，消息队列应重新向消费者发送消息，以确保消息至少被消费一次，提高服务可用性
+
+先前我们了解过RabbitMQ消息队列，对于某些小型公司或者企业，使用额外的技术可能造成额外的维护开销，因此可以利用现成的Redis来搭建一套消息队列服务，而Redis自身的List、PubSub、Stream也刚好适用于搭建完善的消息队列模型
+
+#### 基于List实现消息队列
+
+Redis List底层使用了双向链表的数据结构，如果使用List实现消息队列，就需要保证先进先出，入口和出口不是同一个方向。而List提供了LPUSH、RPUSH、LPOP、RPOP就可以帮助我们构建这个队列。不过LPOP和RPOP默认是不支持阻塞的，所以需要使用BLPOP或者BRPOP
+
+我们利用两个Redis客户端来模拟消息队列，一个客户端先尝试接收消息，但由于目前没有消息，所以阻塞等待
+
+> ![](img4/8.png)
+
+然后向消息队列中发送消息
+
+> ![](img4/9.png)
+
+可以看到，在61秒后，接收端接收到了消息，消息队列基本实现。但通过List实现的消息队列也存在一些问题，例如无法进行消息重发，如果消费者在接收消息后发生异常，需要重发消息，此时消息队列中也没有消息备份，就会造成消息丢失。以及List只支持单消费者模式，多个客户端操作同一个Key时，操作的是同一个数据实例，任意一个消费者接收消息后，其他消费者就不能再次获取该消息
+
+#### 基于PubSub实现消息队列
+
+PubSub，发布订阅模型，是Redis2.0版本引入的消息传递模型，是Publish和Subscribe的缩写。消费者可以订阅一个或者多个channel，生产者向对应channel发送消息后，所有订阅者都能够接收到相关消息
+
+| 命令                               | 说明                            |
+| ---------------------------------- | ------------------------------- |
+| SUBSCRIBE \<channel\> [channel...] | 订阅一个或者多个频道            |
+| PUBLISH \<channel\> \<msg\>        | 向一个频道发送消息              |
+| PSUBSCRIBE \<pattern> [pattern...] | 订阅与pattern格式匹配的所有频道 |
+
+这里的pattern与先前的KEYS命令的PATTERN相似，例如?表示单字符匹配，\*表示多字符匹配，\[ae]表示指定范围内匹配
