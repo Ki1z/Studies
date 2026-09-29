@@ -1,6 +1,6 @@
 # Redis
 
-`更新时间：2026-9-20`
+`更新时间：2026-9-29`
 
 注释解释：
 
@@ -3553,3 +3553,295 @@ PubSub，发布订阅模型，是Redis2.0版本引入的消息传递模型，是
 | PSUBSCRIBE \<pattern> [pattern...] | 订阅与pattern格式匹配的所有频道 |
 
 这里的pattern与先前的KEYS命令的PATTERN相似，例如?表示单字符匹配，\*表示多字符匹配，\[ae]表示指定范围内匹配
+
+下面我们使用PubSub模型发送两条消息，分别使用两个消费者接收消息
+
+> ![](img4/10.png)
+
+PubSub模型相较于List仅仅实现了多生产，多消费的功能，但从真正的消息队列角度上来说，仍不支持数据持久化，无法避免消息丢失，不支持消息确定，消息重发，而且RedisPubSub队列有消息上限，超出上限后数据会丢失
+
+#### 基于Stream的消息队列
+
+Stream是Redis 5.0中引入的一种新的数据类型，可以实现一个非常完善的消息队列。不过在Redis中，相关命令为XADD
+
+**标准语法**
+
+```redis
+XADD <key> [NOMKSTREAM] [MAXLEN | MINID [= | ~] threshold [LIMIT count]] <* | id> <field> <value> [field value...]
+```
+
+`[NOMKSTREAM]`表示队列不存在时，是否自动创建队列，默认自动创建；`[MAXLEN | MINID [= | ~] threshold [LIMIT count]]`控制消息队列的最大消息数量，这里暂不作介绍；`<* | id>`表示如何生成id，Redis会为每一条消息配置一个独立的id，设置为`*`表示自动生成，格式为`时间戳-自增id`；`<field> <value> [field value...]`为消息体，格式为键值对
+
+例如我们向users队列发送一条消息，Redis会返回消息id
+
+```redis
+XADD users * name jack age 21
+```
+
+> ![](img4/11.png)
+
+##### 单消费者
+
+接收消息的相关命令为XREAD
+
+**标准语法**
+
+```Redis
+XREAD [COUNT count] [BLOCK milliseconds] STREAMS <key> [key...] <id> [id...]
+```
+
+COUNT表示读取的最大消息数量，BLOCK可以设置等待阻塞，单位为毫秒，如果不设置等待阻塞，没有消息时则会返回空；STREAM KEY表示需要获取消息的队列，可以设置多个队列；id表示获取消息的起始id，在队列中存在多条消息的情况下，可以根据匹配符来选择从哪个方向读取；0表示从第一条消息，也就是最早的一条消息，\$表示从最新一条，也就是最后一条消息开始
+
+当BLOCK设置为0时，表示永久阻塞，直到有新消息发送，一般配合\$使用，\$在没有设置BLOCK的情况下一般只会返回nil
+
+现在我们来读取刚才向users发送的一条消息
+
+```redis
+XREAD COUNT 1 STREAMS users 0
+```
+
+> ![](img4/12.png)
+
+Stream的消息默认是永久存储在队列中的，所以可以进行重复读取
+
+> ![](img4/13.png)
+
+XREAD存在漏读风险，假设我们利用BLOCK和\$构造了一个消费者，持续监听消息，如果同时有多个消息到来，消费者只能接收其中一条消息，然后进行消费，消费完成后，其他消息就不属于最新消息了，所以就无法再进行读取消费，造成消息漏读
+
+##### 消费者组
+
+为了解决单消费者模式存在的一些问题，Redis提供了消费者组，消费者组可以进行消息分流，将队列中的消息分发给不同的消费者，避免消息重复消费，加快消息处理速度；同时消费者组会维护一个消息标识，会记录最后一个被处理的消息，即使消费者宕机，消费者重启后，也只会从消息标识处继续获取消息，避免消息漏读；消费者组还支持消息确认，消息被消费者接收后，会进入pending状态，存入一个pending-list，当消费者消费消息后，需要向消费者组发送一个XACK确认信息，消息才能从pending-list中移除，以保证消息不会因为消费者宕机而丢失
+
+消费者组有关命令为XGROUP，XGROUP不是一个命令，而是一个命令组，其中包含多个子命令
+
+**创建消费者组**
+
+```redis
+XGROUP CREATE <key> <groupName> <id> [MKSTREAM]
+```
+
+key表示队列名称，消费者组需要依据队列创建，groupName是消费者组名称，id表示消息起始id标识，与XREAD相同，0表示队列中第一条消息，\$表示队列中最后一条消息；MKSTREAM表示如果队列不存在，则自动创建队列。如果不指定MKSTREAM，当队列不存在时，消费者组也不会创建
+
+此外，还有一些常用的命令
+
+```redis
+# 删除指定的消费者组
+XGROUP DESTORY <key> <groupName>
+
+# 给指定的消费者组添加消费者
+XGROUP CREATECONSUMER <key> <groupName> <consumerName>
+
+# 删除消费者组中指定的消费者
+XGROUP DELCONSUMER <key> <groupName> <consumerName>
+```
+
+*注：一般情况下不需要手动创建消费者，因为在监听消息时，如果消费者不存在，会自动创建对应消费者*
+
+下面我们为users队列创建组，组名称也设置为users
+
+> ![](img4/14.png)
+
+**消费者组接收消息**
+
+通过消费者组接收消息使用XREADGROUP命令
+
+```redis
+XREADGROUP GROUP <groupName> <consumer> [COUNT count] [BLOCK milliseconds] [NOACK] STREAMS <key> [key...] <id> [id...] 
+```
+
+XREADGROUP与XREAD高度相似，只是额外需要指定消费者组与消费者名称，同时XREADGROUP可以通过NOACK设置消费者确认机制是否启用，在非启用状态下，消息在投递给消费者后就会自动确认，不再等待消费者自己确认；这里的id与XREAD不同，因为消费者组投递消息时基于pending-list，此处0表示pending-list中的第一个消息，而不是消息队列中的第一个，此外，XREADGROUP的id不支持\$，而是\>，表示从下一个未消费的消息开始
+
+下面我们尝试消费users队列中的消息，目前users队列中仅有一条消息
+
+> ![](img4/15.png)
+
+可以看到，在第二次消费时返回了nil，说明消费者组将第一条消息标记为了已消费，不再继续投递，但是此时还没有进行确认，因此仍可以将id设置为0来重复获取
+
+> ![](img4/16.png)
+
+或者也可以查看当前的pending-list，pending-list相关命令为XPENDING
+
+```redis
+XPENDING <key> <group> [[IDLE min-idle-time] start end count [consumer]]
+```
+
+IDLE表示最短待确认时间，即从消息投递成功开始到执行命令之间的时间间隔，或者是存在于pending-list中的时间；start和end指定需要查看的id范围，可以使用-和+表示全部范围；count指定查看的数量，同时可以通过consumer指定某个消费者；消费者组的每个消费者都有自己独立的pending-list
+
+> ![](img4/17.png)
+
+消息确认使用XACK命令
+
+```redis
+XACK <key> <group> <id> [id...]
+```
+
+消息确认后，就会从pending-list中移除对应消息的id
+
+> ![](img4/18.png)
+
+**综合比较**
+
+| 实现方式 | 消息持久化 | 阻塞读取 | 消息堆积处理                                           | 消息确认机制 | 消息回溯 |
+| -------- | ---------- | -------- | ------------------------------------------------------ | ------------ | -------- |
+| List     | 支持       | 支持     | 受限于内存空间，可以利用多消费者加快处理               | 不支持       | 不支持   |
+| PubSub   | 不支持     | 支持     | 受限于消费者缓冲区                                     | 不支持       | 不支持   |
+| Stream   | 支持       | 支持     | 受限于队列长度，可以利用消费者组提高消费速度，减少堆积 | 支持         | 支持     |
+
+#### 基于Stream消息队列实现异步秒杀下单
+
+首先创建一个消息队列，这里我们直接基于消费者组来快捷创建，使用MKSTREAM关键字
+
+> ![](img4/19.png)
+
+然后构建一个监听器配置。不同于传统MQ，Spring Data Redis并没有为Redis Stream提供开箱即用的监听器，所以需要开发人员手动定义一个，这里我们使用Spring提供的StreamMessageListenerContainer
+
+```java
+@Bean
+public StreamMessageListenerContainer<String, ObjectRecord<String, String>> streamMessageListenerContainer(RedisConnectionFactory redisConnectionFactory) {
+    StreamMessageListenerContainer.StreamMessageListenerContainerOptions<String, ObjectRecord<String, String>> options =
+            StreamMessageListenerContainer.StreamMessageListenerContainerOptions.builder()
+                    .pollTimeout(Duration.ofSeconds(2))
+                    .batchSize(10)
+                    .executor(Executors.newSingleThreadExecutor())
+                    .targetType(String.class)
+                    .build();
+    return StreamMessageListenerContainer.create(redisConnectionFactory, options);
+}
+```
+
+在RedisConfig中生命一个Bean，传入RedisConnectionFactory，然后定义一个StreamMessageListenerContainerOptions类，定义一些配置，如轮询超时、批处理数量、异步执行器、返回值类型等
+
+然后编写监听逻辑，在VoucherOrderServiceImpl中注入StreamMessageListenerContainer，通过@PostConstruct注解为其初始化并启动
+
+```java
+private final StreamMessageListenerContainer<String, ObjectRecord<String, String>> container;
+
+@PostConstruct
+public void listener() {
+    // 创建监听任务
+    var readQuest = StreamMessageListenerContainer.StreamReadRequest
+            // 设置消息读取规则
+            .builder(StreamOffset.create(RedisMQConstant.QUEUE_SECKILL_VOUCHER_KEY, ReadOffset.lastConsumed()))
+            // 设置消费者
+            .consumer(Consumer.from(RedisMQConstant.QUEUE_SECKILL_VOUCHER_GROUP, "c1"))
+            // 取消自动确认
+            .autoAcknowledge(false)
+            .build();
+
+    // 注册监听器
+    container.register(readQuest, (message) -> {
+        // 处理消息
+        try {
+            String voucher = message.getValue();
+            log.debug("收到消息：{}", voucher);
+
+            // 创建订单
+            VoucherOrder voucherOrder = JSONUtil.toBean(voucher, VoucherOrder.class);
+            createVoucherOrder(voucherOrder);
+
+            // 确认消息
+            redisRepository.xack(RedisMQConstant.QUEUE_SECKILL_VOUCHER_KEY, RedisMQConstant.QUEUE_SECKILL_VOUCHER_GROUP, message.getId().getValue());
+        } catch (Exception e) {
+            handleError(0, e);
+        }
+    });
+
+    // 启动监听器
+    container.start();
+}
+```
+
+var是lombok中的注解，用于简化变量声明，var可以自动识别变量类型。先创建一个监听任务，配置消息读取规则，也就是消息偏移，对应CLI中的id字段；然后设置消费者，并取消自动确认。完成后通过register方法注册监听器开始监听，需要传入监听任务和一个回调函数，用于处理获取到的消息。在回调函数中，通过message.getValue来获取消息体，这里我们决定将消息类型统一设置为json，方便与实体类进行转换。然后转换为VoucherOrder实体，调用createVoucherOrder方法创建订单，最后确认消息
+
+如果消费中途抛出异常，则进入handleError重试
+
+```java
+private void createVoucherOrder(VoucherOrder voucherOrder) {
+    // 保存订单
+    save(voucherOrder);
+    // 扣减库存
+    seckillVoucherService.update()
+            .setSql("stock = stock - 1")
+            .eq("voucher_id", voucherOrder.getVoucherId())
+            .gt("stock", 0)
+            .update();
+}
+
+private void handleError(int i, Exception e) {
+    log.error("优惠券秒杀订单创建异常，第{}次重试：", i + 1, e);
+    if (i >= 3) {
+        log.error("优惠券秒杀订单创建异常，重试失败：", e);
+        return;
+    }
+
+    List<ObjectRecord<String, String>> records = redisRepository.xreadgroup(
+            RedisMQConstant.QUEUE_SECKILL_VOUCHER_KEY,
+            RedisMQConstant.QUEUE_SECKILL_VOUCHER_GROUP,
+            "c1",
+            1,
+            ReadOffset.from("0")
+    );
+
+    if (records == null || records.isEmpty())
+        handleError(i + 1, e);
+    else {
+        try {
+            ObjectRecord<String, String> record = records.get(0);
+            String json = record.getValue();
+            VoucherOrder voucherOrder = JSONUtil.toBean(json, VoucherOrder.class);
+            createVoucherOrder(voucherOrder);
+            // 确认消息
+            redisRepository.xack(RedisMQConstant.QUEUE_SECKILL_VOUCHER_KEY, RedisMQConstant.QUEUE_SECKILL_VOUCHER_GROUP, record.getId().getValue());
+        } catch (Exception ex) {
+            handleError(i + 1, ex);
+        }
+    }
+}
+```
+
+在createVoucherOrder中只需要执行两个步骤，保存订单到voucher\_order以及扣减seckill\_voucher中的库存。这里我们没有进一步进行事务控制，如果任意步骤失败，则仍会出现数据不一致的情况
+
+在handleError中，传入了计数器i和错误日志e，每次失败，现打印失败日志，然后进入重试流程，最大重试次数为3次。在重试流程中，不再通过StreamMessageListenerContainer获取消息，因为我们为StreamMessageListenerContainer配置了阻塞时间，重试时不希望进行等待。这里我们直接通过redisRepository的xreadgroup方法
+
+```java
+public List<ObjectRecord<String, String>> xReadGroup(String queue, String group, String consumer, Integer count, ReadOffset offset) {
+    return stringRedisTemplate.opsForStream().read(
+            String.class,
+            Consumer.from(group, consumer),
+            StreamReadOptions.empty().count(count),
+            StreamOffset.create(queue, offset)
+    );
+}
+```
+
+xReadGroup调用的是stringRedisTemplate.opsForStream的read方法，接收多个参数。第一个参数为targetType返回值类型，主要是为了能够返回List\<ObjectRecord\<String, String\>\>，而不是List\<MapRecord\<String, String\>\>；第二参数指定消费者，通过外部传入，第三个参数指定读取配置，如阻塞时间，读取数量等，由外部传入；第四个参数指定偏移模式，由外部决定，对应CLI中XREADGROUP中的id字段，这里我们使用0表示pending-list中的消息
+
+回到handleError中，在接收消息后，判断消息是否存在，如果不存在，则递归读取。如果消息存在，从List中获取第一条消息，因为我们只读取了一条，所以不用担心漏读。然后转换为实体类，并调用createVoucherOrder插入，插入完成后调用redisRepository进行消息确认，如果出现异常，则继续递归执行，直到上限
+
+下面是消息生产者逻辑
+
+```java
+// 返回值等于0，开始创建订单
+// 生成订单id
+Long orderId = idGenerator.next("order");
+// 封装订单
+Map<String, String> order = new HashMap<>();
+order.put("id", orderId.toString());
+order.put("voucherId", voucherId.toString());
+order.put("userId", userId.toString());
+// 发送消息
+ObjectRecord<String, String> record = StreamRecords.newRecord()
+        .in(RedisMQConstant.QUEUE_SECKILL_VOUCHER_KEY)
+        .ofObject(JSONUtil.toJsonStr(order));
+redisRepository.xAdd(record);
+```
+
+在将订单封装为Map后，进一步转换为ObjectRecord类型，因为redisRepository.xAdd直接支持ObjectRecord
+
+```java
+public void xAdd(ObjectRecord<String, String> record) {
+    stringRedisTemplate.opsForStream().add(record);
+}
+```
+
+redisRepository.xAdd本质就是调用stringRedisTemplate.opsForStream的add方法，add方法本身可以接收多种数据类型，如Record、MapRecord、Map，这里因为我们将数据封装为了json，应避免继续使用Map这样的键值对结构，直接使用ObjectRecord转入String即可
