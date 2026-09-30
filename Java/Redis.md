@@ -1,6 +1,6 @@
 # Redis
 
-`更新时间：2026-9-29`
+`更新时间：2026-9-30`
 
 注释解释：
 
@@ -3845,3 +3845,236 @@ public void xAdd(ObjectRecord<String, String> record) {
 ```
 
 redisRepository.xAdd本质就是调用stringRedisTemplate.opsForStream的add方法，add方法本身可以接收多种数据类型，如Record、MapRecord、Map，这里因为我们将数据封装为了json，应避免继续使用Map这样的键值对结构，直接使用ObjectRecord转入String即可
+
+### 达人探店
+
+#### 发布与查看探店笔记
+
+黑马点评项目中，用户可以针对某个店铺进行评价，发布一篇名为“探店笔记”的评价，探店笔记允许用户发布图文内容；同时，探店笔记还包含其他用户对探店笔记的评价或者评论内容
+
+这个接口中的一些内容并不需要我们自己来实现，因为都是一些简单的CRUD内容，所以现来快捷认识一下已经实现的内容，首先是图片上传功能
+
+```java
+@PostMapping("blog")
+public Result uploadImage(@RequestParam("file") MultipartFile image) {
+    try {
+        // 获取原始文件名称
+        String originalFilename = image.getOriginalFilename();
+        // 生成新文件名
+        String fileName = createNewFileName(originalFilename);
+        // 保存文件
+        image.transferTo(new File(SystemConstants.IMAGE_UPLOAD_DIR, fileName));
+        // 返回结果
+        log.debug("文件上传成功，{}", fileName);
+        return Result.ok(fileName);
+    } catch (IOException e) {
+        throw new RuntimeException("文件上传失败", e);
+    }
+}
+
+private String createNewFileName(String originalFilename) {
+    // 获取后缀
+    String suffix = StrUtil.subAfter(originalFilename, ".", true);
+    // 生成目录
+    String name = UUID.randomUUID().toString();
+    int hash = name.hashCode();
+    int d1 = hash & 0xF;
+    int d2 = (hash >> 4) & 0xF;
+    // 判断目录是否存在
+    File dir = new File(SystemConstants.IMAGE_UPLOAD_DIR, StrUtil.format("/blogs/{}/{}", d1, d2));
+    if (!dir.exists()) {
+        dir.mkdirs();
+    }
+    // 生成文件名
+    return StrUtil.format("/blogs/{}/{}/{}.{}", d1, d2, name, suffix);
+}
+```
+
+在Controller中利用SpringMVC，传入MultipartFile文件参数，然后生成新的文件名，这一步是为了避免文件名中出现一些攻击载荷，然后将文件重命名，并保存至专属的文件上传目录中，实际开发应当选择存储在OSS中
+
+然后是提交笔记的接口
+
+```java
+@PostMapping
+public Result saveBlog(@RequestBody Blog blog) {
+    // 获取登录用户
+    UserDTO user = UserHolder.getUser();
+    blog.setUserId(user.getId());
+    // 保存探店博文
+    blogService.save(blog);
+    // 返回id
+    return Result.ok(blog.getId());
+}
+```
+
+逻辑非常地简单，获取登录用户，然后将博文数据保存在数据库中，下面我们发布一个探店笔记示例
+
+> ![](img4/20.png)
+
+查看探店笔记的功能暂且没有实现，需要我们手动实现一下，逻辑非常简单，不属于Redis内容，这里跳过
+
+```java
+@Override
+public Result queryBlogById(@NotNull Long id) {
+    UserDTO user = UserHolder.getUser();
+    if (user == null || user.getId() == null)
+        return Result.fail("用户未登录");
+
+    // 查询blog
+    Blog blog = getById(id);
+    if (blog == null)
+        return Result.fail("博客不存在");
+    // 查询对应用户信息
+    Long userId = blog.getUserId();
+    User publisher = userService.getById(userId);
+    if (publisher == null)
+        return Result.fail("无法找到发布者");
+    blog.setIcon(publisher.getIcon());
+    blog.setName(publisher.getNickName());
+
+    return Result.ok(blog);
+}
+```
+
+#### 点赞功能
+
+下面我们来改造点赞功能，目前黑马点评项目中的点赞功能属于仅可用的状态，对于相同用户，可以进行无限次的点赞，这属于点评类项目的严重业务问题，点评类项目依靠用户点赞来区分不同商家的级别
+
+> ![](img4/21.png)
+
+因此我们需要对其进行完善，同一个用户对用一篇文章只允许点赞一次，再次点赞则视为取消点赞；如果用户已经点赞，前端则将其高亮显示，后端传入isLike字段来控制；在存储方面，我们使用Redis，在判断一人一单业务中，就使用了Set数据结构来构建相似逻辑
+
+```java
+@Override
+public Result likeBlog(@NotNull Long id) {
+    // 获取用户信息
+    UserDTO user = UserHolder.getUser();
+    if (user == null || user.getId() == null)
+        return Result.fail("用户未登录");
+    Long userId = user.getId();
+
+    // 判断用户是否点赞
+    Long liked = redisRepository.executeScript(
+            LuaScriptConstant.BLOG_USER_LIKE_DETERMINATION_SCRIPT,
+            Long.class,
+            ListUtil.toList(RedisKeyConstant.SET_BLOG_LIKE_USER_KEY + id.toString()),
+            userId.toString()
+    );
+
+    if (liked == 0L) {
+        // 0表示未点赞，可以点赞
+        boolean success = update().setSql("liked = liked + 1").eq("id", id).update();
+        if (!success) {
+            // 点赞失败，回滚
+            redisRepository.sRemove(RedisKeyConstant.SET_BLOG_LIKE_USER_KEY + id, userId.toString());
+        }
+    } else if (liked == 1L) {
+        // 1表示已经点赞，可以取消点赞
+        boolean success = update().setSql("liked = liked - 1").eq("id", id).update();
+        if (!success) {
+            // 取消点赞失败，回滚
+            redisRepository.sAdd(RedisKeyConstant.SET_BLOG_LIKE_USER_KEY + id, userId.toString());
+        }
+    }
+    return Result.ok();
+}
+```
+
+首先获取用户信息，然后判断用户是否点赞，这里我们使用了Lua脚本的形式，将判断是否点赞与插入删除用户id到集合中集成到了一个Lua脚本中，这样是为了避免并发异常。数据库的更新应该依赖于Redis集合更新后的状态，而不是仅在更新前判断Redis集合中是否存在用户id，如下
+
+```lua
+local key = KEYS[1]
+local userId = ARGV[1]
+-- 判断当前用户是否在集合中
+local isMember = redis.call('SISMEMBER', key, userId)
+
+if (isMember == 1) then
+    -- 删除集合中的用户
+    redis.call('SREM', key, userId)
+    return 1
+else
+    -- 添加用户到集合
+    redis.call('SADD', key, userId)
+    return 0
+end
+```
+
+如果在判断完成后先更新数据库，再更新Redis，判断用户存在与更新Redis之间存在并发窗口，很有可能多个线程同时满足判断，而还没有线程触发Redis更新，造成重复点赞或重复取消的问题
+
+在数据库更新失败后，还需要进行手动回滚，保证数据一致性。不过这里的数据回滚也可能会失败，所以更推荐使用消息队列，将回滚消息推送到消息队列中，保证回滚不会丢失
+
+#### 点赞排行榜
+
+在探店笔记的详情页，需要把给该笔记点赞的人显示出来，默认应当显示最早点赞的五位用户头像，形成点赞排行榜
+
+> ![](img4/22.png)
+
+在上文中，我们将用户点赞信息存储到了Redis的Set集合中，但是这里就出现了一个问题，Redis的Set集合不支持排序功能，我们无法得知哪些用户是最早点赞的五位用户。因此我们需要更改其数据结构，而Redis中正好有一个能够排序的集合结构SortedSet
+
+不过需要注意的是，ZSet没有ISMEMBER这样的命令，需要使用ZSCORE间接来判断元素是否存在，如果对ZSCORE输入不存在的元素，则返回nil。我们先对原有的Set进行改造，升级为ZSet。主要是更新Lua脚本的内容，以及在RedisRepository中新增SortedSet相关方法
+
+```lua
+local key = KEYS[1]
+local userId = ARGV[1]
+-- 判断当前用户是否在集合中
+local isMember = redis.call('ZSCORE', key, userId)
+-- 获取当前时间戳
+local now = redis.call('TIME')[1]
+
+if (isMember) then
+    -- 删除集合中的用户
+    redis.call('ZREM', key, userId)
+    return 1
+else
+    -- 添加用户到集合
+    redis.call('ZADD', key, now, userId)
+    return 0
+end
+```
+
+我们利用时间戳作为分数，在排序时升序排序，就可以快捷获取最早点赞的用户
+
+```java
+@Override
+public Result queryBlogLikes(Long id) {
+    UserDTO user = UserHolder.getUser();
+    if (user == null || user.getId() == null)
+        return Result.fail("用户未登录");
+
+    // 查询点赞的前五位
+    Set<String> userIds = redisRepository.zRange(RedisKeyConstant.ZSET_BLOG_LIKE_USER_KEY + id, 0, 4);
+    if (userIds == null || userIds.isEmpty())
+        return Result.ok();
+
+    // 查询用户详细信息
+    List<User> users = userService.listByIds(userIds);
+    // 转换为DTO
+    List<UserDTO> userDTOS = users.stream()
+            .map(likedUser -> BeanUtil.copyProperties(likedUser, UserDTO.class))
+            .collect(Collectors.toList());
+    return Result.ok(userDTOS);
+}
+```
+
+这里直接将userIds传入userService.listByIds中，因为mybatis-plus的listByIds可以接收Colletion\<? extends Serializable>，而Set实现了Serializable，同时mybatis-plus支持在查询时将String转换位Long或者Integer
+
+> ![](img4/23.png)
+
+这里还存在一个小问题，用户排列的顺序并不完全匹配点赞顺序。这并不是由Set\<String>导致，虽然Set在Java中无序，但是通过Redis返回的Set其实是排序后的，Java的无序是指在Java中运算时无序。真正的乱序来源是数据库的in关键字，我们使用了listByIds方法，底层构建了`WHERE id IN (x,x,x)`，Mysql在返回时，默认会按照主键进行排序，并不会按照in的顺序排序
+
+> ![](img4/24.png)
+
+如果需要按照指定顺序继续排列，需要使用ORDER BY FIELD，并指定字段与顺序
+
+> ![](img4/25.png)
+
+而在mybatis-plus中，并不支持ORBER BY FIELD，所以需要手动构建SQL语句
+
+```java
+String ids = StrUtil.join(",", userIds);
+// 查询用户详细信息
+List<User> users = userService.query()
+        .in("id", userIds)
+        .last("ORDER BY FIELD (id, " + ids + ")")
+        .list();
+```
