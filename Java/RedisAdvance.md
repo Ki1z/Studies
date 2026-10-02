@@ -1,6 +1,6 @@
 # Redis Advance
 
-`更新时间：2026-10-01`
+`更新时间：2026-10-02`
 
 注释解释：
 
@@ -544,3 +544,253 @@ Redis的Hash运算相较常规运算有些不同，当key中包含大括号`{}`�
 如果此时想要获取用户名GET user，又得跳转到7002，这样就显得非常麻烦，因此可以使用大括号来为key添加一个前缀，例如{user}:name设置用户名，{user}:age设置用户年龄，以保证用户信息存储在一个节点中
 
 > ![](javaweb2/227.png)
+
+#### 故障转移
+
+Redis分片集群不需要哨兵集群，自己就能完成整个故障转移过程。从逻辑上来看，分片集群每个主节点其实就可以担任一个哨兵职位，当发现某一个主节点下线时，其他的主节点位于同一个集群中，就可以立即发现下线节点，然后通过故障转移步骤选举出新的主节点，保证集群的高可用性
+
+##### 数据迁移
+
+Redis分片集群也支持手动故障转移，这又被称为数据迁移，因为这是可控的。数据迁移利用CLUSTER FAILOVER命令，让节点中的某个master节点宕机，然后Redis分片集群会自动将其slave节点提升为master，并完成数据迁移，大致步骤如下
+
+> ![](img4/29.png)
+
+数据迁移有三种模式
+
+- 缺省：默认流程，即上图中的六个步骤
+- force：忽略对offset的校验
+- takeover：直接将自己标记为master，忽略数据一致性，忽略master状态和其他master意见
+
+## 多级缓存
+
+传统缓存结构中，我们部署的缓存仅有Redis，请求到达Tomcat，先查询Redis，如果未命中则查询数据库，最后返回。而这里其实有个问题，Tomcat本身的并发能力还不如Redis，换句话说，Tomcat并不能发挥出Redis的最佳利用率。而且Redis的Key存在TTL，当缓存过期时，大量请求会直接到达数据库，对数据库造成影响
+
+因此我们需要额外建立多级缓存，在请求的每个环节都添加对应的缓存，减轻Tomcat压力，以及防止请求直达数据库
+
+在一般的开发中，我们会建立如下的缓存结构
+
+> ![](img4/30.png)
+
+首先是浏览器缓存，浏览器可以缓存静态网页资源，而在网页浏览中，几乎绝大多数的资源都是静态资源，因此浏览器缓存可以大幅提升用户体验；而动态资源，如后端请求，浏览器就无法建立缓存，需要通过NGINX反向代理获取数据。而NGINX本身其实支持编程，可以建立NGINX本地缓存，如果用户的请求在NGINX中有缓存，那么就可以直接返回前端，请求根本无法到达后端。对于NGINX本地缓存未命中，就需要在Redis中查询缓存，不过这里就不直接通过Tomcat查询Redis，而是NGINX直接查询Redis，因为NGINX支持直接编程查询Redis，而且Tomcat性能不如Redis，而NGINX性能优于Redis，以保证Web服务器不会影响缓存查询性能。如果Redis缓存未命中，则进入Tomcat后端业务，不过这里仍未直接查询数据库，而是查询Tomcat自己的进程缓存，如果进程缓存中存在对应数据，就直接返回，最后再查询数据库。总的来说，多级缓存就是尽最大可能，在请求路径上每一个可能的节点添加缓存，以避免请求到达数据库
+
+### JVM缓存
+
+缓存在日常开发中起着至关重要的作用，由于是存储在内存中，数据的读取速度非常快，能大量减少对数据库的访问，减少数据库的压力。按照部署位置，我们一般将缓存分为两类
+
+- 分布式缓存：如Redis，优点是存储容量大，可靠性更好，可以在集群间共享缓存；缺点是访问缓存需要网络开销，如果网络异常，缓存直接无法使用；适用场景为缓存数据量较大，可靠性要求较高，需要在集群间共享
+- 进程本地缓存：如HashMap、GuavaCache等，优点是读取本地内存，没有网络开销，读取更快；缺点也很明显，存储容量非常有限，可靠性较低，服务异常则缓存异常，无法共享；适用场景为对性能要求较高，缓存数据量较小
+
+#### Caffeine
+
+Caffeine是一款基于Java8开发的，提供了近乎最佳命中率的开源高性能本地缓存解决方案，目前Spring内部的缓存就是基于Caffeine
+
+##### 快速入门
+
+我们利用Caffeine来建立一个本地JVM缓存，实际使用非常简单
+
+```java
+@Test
+public void test() {
+    // 创建缓存对象
+    Cache<String, String> cache = Caffeine.newBuilder().build();
+    // 存储一个数据
+    cache.put("name", "jack");
+    // 获取数据，不存在则返回null
+    String value = cache.getIfPresent("name");
+    System.out.println("value = " + value);
+    // 获取数据，不存在则执行数据库查询
+    String value2 = cache.get("name1", k -> {
+        System.out.println("从数据库查询数据");
+        return "tom";
+    });
+    System.out.println("value2 = " + value2);
+}
+```
+
+首先创建一个Caffeine缓存对象，然后向缓存对象中插入数据，查询时使用get或者getIfPresent方法尝试获取，不同的是get在获取失败后会执行一个回调方法，而getIfPresent直接返回null
+
+> ![](img4/31.png)
+
+#### 缓存驱逐策略
+
+如同Redis的Key淘汰策略一样，为了减少内存开销，Caffeine也需要有缓存淘汰策略来提供更加的内存利用率，Caffeine默认提供了三种缓存驱逐策略
+
+- 基于容量：设置缓存数量上限，超过缓存数量上限时，前一个缓存会被驱逐
+- 基于时间：类似Redis的TTL，为每一个缓存设置一个有效期，有效期截止后不会马上驱逐，而是在下一次读写操作，或者在空间时间完成驱逐
+- 基于引用：设置缓存为软引用或者弱引用，利用JVM的GC垃圾回收机制来回收内存，一般不使用
+
+下面是一个基于时间过期驱逐策略的示例
+
+```java
+/* 基于时间过期的缓存 */
+@Test
+public void test2() throws InterruptedException {
+    Cache<String, String> cache = Caffeine.newBuilder()
+            .expireAfterWrite(Duration.ofSeconds(2)) // 设置写入后过期时间
+            .build();
+
+    cache.put("name", "jack");
+    // 立即获取缓存
+    System.out.println(cache.getIfPresent("name"));
+    // 等待2秒再获取缓存
+    Thread.sleep(2000);
+    System.out.println(cache.getIfPresent("name"));
+}
+```
+
+> ![](img4/32.png)
+
+基于容量过期的api也相似，在创建缓存对象时调用maximumSize，并传入最大缓存数量即可
+
+#### 实现商品查询的本地进程缓存
+
+利用Caffeine实现一个本地缓存功能，给根据id查询商品及商品库存的业务添加缓存，缓存未命中时查询数据库。缓存初始大小设置为100，缓存上限为10000
+
+```java
+package com.heima.item.config;
+
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import com.heima.item.pojo.Item;
+import com.heima.item.pojo.ItemStock;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+public class CaffeineConfig {
+
+    @Bean
+    public Cache<Long, Item> itemCache() {
+        return Caffeine.newBuilder()
+                .initialCapacity(100)
+                .maximumSize(10_000)
+                .build();
+    }
+
+    @Bean
+    public Cache<Long, ItemStock> stockCache() {
+        return Caffeine.newBuilder()
+                .initialCapacity(100)
+                .maximumSize(10_000)
+                .build();
+    }
+}
+```
+
+定义一个CaffeineConfig，声明两个Bean，返回两个缓存对象，一个用于缓存商品信息，一个用户缓存商品库存
+
+```java
+@Override
+public Item findById(Long id) {
+    return itemCache.get(id, this::getById);
+}
+```
+
+然后在Service中直接调用缓存对象的get方法，回调方法设置为IService的getById即可。这里不需要手动设置缓存逻辑，Caffeine会自动对没有缓存的数据建立缓存
+
+### NGINX本地缓存
+
+NGINX中可以使用Lua语言来建立本地缓存。NGINX由C语言编写，所以有强大的高并发能力，而Lua语言也源自C，所以NGINX开放了对于Lua的脚本功能，使其实现一些业务功能
+
+有关Lua教程可以参考[Lua](../Lua/Lua.md)
+
+#### OpenResty
+
+OpenResty是一个基于NGINX的高性能Web平台，用于方便地搭建能够处理超高并发、扩展性极强的动态Web应用、Web服务以及动态网关，其具备NGINX的完整功能，基于Lua语言进行扩展，集成了大量的Lua库，第三方模块，并且允许使用Lua自定义业务逻辑，自定义库
+
+##### 快速入门
+
+在原版NGINX中，进行反向代理的语法如下
+
+```conf
+location /api {
+    proxy_pass http://backend;
+}
+```
+
+通过location关键字，拦截路径为/api的所有url，并转发到http://backend。但是OpenResty需要通过Lua执行脚本，因此需要改用关键字content_by_lua_file，并指定一个Lua脚本，同时设定响应类型
+
+```conf
+# 代理/api/item
+location /api/item {
+    # 设置响应类型，即MIME类型
+    default_type application/json;
+    # 设置Lua脚本
+    content_by_lua_file lua/item.lua;
+}
+```
+
+lua脚本的返回值即是请求的响应内容，换句话说，NGINX仅仅执行了反向代理，而OpenResty是搭建了一个基于Lua的轻量级后端。不过在此之前，还需要在http块中引入依赖
+
+```conf
+# 引入lua模块
+lua_package_path "<lualibPath>\?.lua;;";
+# 引入c模块
+lua_package_cpath "<lualibPath>\?.so;;";
+```
+
+*注：这里的\<lualibPath>表示你的lualib目录的位置*
+
+然后就可以开始编写业务逻辑了，这里我们编写一个商品详情页的查询逻辑，先不查询真实数据，而是返回一段测试数据，验证OpenResty是否可用。在Lua中，通过ngx.say()函数返回页面响应，格式为json
+
+```lua
+ngx.say([[{
+    "id": 10001,
+    "name": "SALSA AIR TEST",
+    "title": "RIMOWA 21寸托运箱拉杆箱 SALSA AIR TEST系列果绿色 820.70.36.4",
+    "price": 99900,
+    "image": "https://m.360buyimg.com/mobilecms/s720x720_jfs/t6934/364/1195375010/84676/e9f2c55f/597ece38N0ddcbc77.jpg!q70.jpg.webp",
+    "category": "拉杆箱",
+    "brand": "RIMOWA",
+    "spec": "{\"颜色\": \"红色\", \"尺码\": \"26寸\"}",
+    "status": 1,
+    "createTime": "2019-04-30T16:00:00.000+00:00",
+    "updateTime": "2019-04-30T16:00:00.000+00:00",
+    "stock": null,
+    "sold": null
+}]])
+```
+
+我们将10001商品中更改几个数据，例如将价格改为999，然后访问localhost查看内容
+
+> ![](img4/33.png)
+
+
+
+可以看到价格更改成功，商品名也新增了TEST字样。总的来说，从JavaWeb的视角来看，OpenResty就是Controller，而Lua脚本就是Service，后面的内容就是通过Lua脚本来访问Redis或者发起远程调用访问Java后端
+
+#### 获取请求参数
+
+OpenResty提供了多个api来获取不同类型的请求参数，下面提供几种常用的参数类型
+
+| 参数         | 示例         | API说明                                                      |
+| ------------ | ------------ | ------------------------------------------------------------ |
+| 路径占位符   | /item/1001   | 在nginx.conf中利用正则表达式匹配占位符，然后通过ngx.var数组获取 |
+| 请求头       | id: 1001     | ngx.req.get_headers()获取所有请求头，返回值类型为table       |
+| GET请求参数  | ?id=1001     | ngx.req.get_uri_args()获取GET类型参数，返回值类型为table     |
+| POST表单参数 | id=1001      | 首先通过ngx.req.read_body()读取请求体，然后通过ngx.req.get_post_args()获取所有POST表单数据，返回值类型为table |
+| JSON请求体   | {"id": 1001} | 首先通过ngx.req.read_body()读取请求体，然后通过ngx.req.get_body_data()获取请求体中的数据，返回值类型为string |
+
+**示例**
+
+路径占位符首先需要在nginx.conf中定义对应的反向代理，使用location \~表示路径中存在正则表达式
+
+```conf
+# 反向代理/api/item
+location ~ /api/item/(\d+) {
+    # 设置响应类型，即MIME类型
+    default_type application/json;
+    # 设置Lua脚本
+    content_by_lua_file lua/item.lua;
+}
+```
+
+```lua
+local id = ngx.var[1]
+ngx.say(id)
+```
+
+然后通过Postman测试一下
+
+> ![](img4/34.png)
+

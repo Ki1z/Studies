@@ -130,7 +130,9 @@ print(b)
 
 > <img src="./IMG/Screenshot 2024-06-18 185205.png">
 
-*这里为什么有个func()呢？*
+> [!NOTE]
+>
+> *这里为什么有个func()呢？*
 
 ## 循环
 
