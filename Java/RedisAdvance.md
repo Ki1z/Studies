@@ -1,6 +1,6 @@
 # Redis Advance
 
-`更新时间：2026-10-02`
+`更新时间：2026-10-03`
 
 注释解释：
 
@@ -793,4 +793,459 @@ ngx.say(id)
 然后通过Postman测试一下
 
 > ![](img4/34.png)
+
+#### 通过OpenResty发起远程调用
+
+在建立NGINX本地缓存之前，OpenResty需要拥有数据才能进行缓存，因此我们需要向Tomcat发起远程调用，获取对应的缓存数据。因此，我们需要获取请求参数中的id，根据id向Tomcat服务发送请求查询商品信息和库存信息，并组装商品信息、库存信息，序列化为JSON格式并返回前端
+
+在OpenResty中，远程调用通过ngx.location.capture，传入两个参数，第一参数为请求路径，参数类型为string，第二个参数为请求内容，参数类型为table
+
+```lua
+local res = ngx.location.capture("/path", {
+    method = ngx.HTTP_GET,
+    args = {
+        a = 1,
+        b = 2
+    },
+    body = "a=1&b=2"
+})
+```
+
+args负责URL传参，body负责请求体传参，两者仅能同时存在一个，返回值res包含三个属性，status响应码、header请求头，类型为table、body响应体。这里需要注意的是，请求的路径仅填写path，而不包含IP以及端口。OpenResty的请求会被自己的NGINX监听，通过NGINX反向代理到Tomcat
+
+```conf
+# 反向代理到Tomcat
+location /item {
+    proxy_pass http://localhost:8081;
+}
+```
+
+为了方便使用，我们可以将ngx.location.capture再封装为单独的函数，配置在OpenResty的函数库中。床见openresty/lualib/common.lua文件，在common.lua中编写代码
+
+```lua
+-- get请求
+local function http_get(path, params)
+
+    if not path or path == "" then
+        ngx.log(ngx.ERROR, "请求路径为空")
+        ngx.exit(400)
+    end
+
+    -- 发起请求
+    local res = ngx.location.capture(path, {
+        method = ngx.HTTP_GET,
+        args = params
+    })
+
+    -- 获取响应
+    if not res then
+        ngx.log(ngx.ERROR, "请求路径不存在")
+        ngx.exit(404)
+    end
+    return res.body
+end
+
+local _M = {
+    http_get = http_get
+}
+
+return _M
+```
+
+然后在业务lua中调用common库
+
+```lua
+-- 导入common.lua
+local common = require("common")
+
+-- 获取路径参数
+local id = ngx.var[1]
+
+if not id then
+    ngx.say()
+end
+
+-- 查询商品信息
+local item = common.http_get("/item/" .. id, nil)
+local stock = common.http_get("/item/stock/" .. id, nil)
+```
+
+这里通过http_get查询到的是JSON格式的字符串，但前端要求我们返回一条JSON，而lua本身并不能直接操作JSON，因此需要使用cjson库，将JSON转换为lua的table，然后进行组装。cjson文件位于openresty/lualib/cjson.so，是一个C编写的库，通过C接口来让lua能够访问
+
+```lua
+-- 导入common.lua
+local common = require("common")
+-- 导入cjson
+local cjson = require("cjson")
+
+-- 获取路径参数
+local id = ngx.var[1]
+
+if not id then
+    ngx.say()
+end
+
+-- 查询商品信息
+local itemJSON = common.http_get("/item/" .. id, nil)
+local stockJSON = common.http_get("/item/stock/" .. id, nil)
+-- 转换为table
+local item = cjson.decode(itemJSON)
+local stock = cjson.decode(stockJSON)
+-- 组装数据
+item.stock = stock.stock
+item.sold = stock.sold
+-- 返回结果
+ngx.say(cjson.encode(item))
+```
+
+> ![](img4/35.png)
+
+#### 基于哈希进行负载均衡
+
+如果我们部署了多台Tomcat，形成了一个集群，在轮询负载均衡模式下，对于同一件商品，可能需要所有的Tomcat同时拥有该商品缓存，用户端才能有较好的缓存体验，但对于服务器内存资源来说这就是一种浪费。所以我们可以借鉴Redis的散列插槽的模式，对每个请求参数执行一次哈希运算，相同哈希结果的请求发送到同一台服务器中，保证缓存的最佳利用率
+
+而NGINX其实自带这个哈希负载均衡算法，只需要在upstream集群中设置hash \$request_uri即可
+
+```conf
+upstream tomcat-cluster {
+	hash $request_uri;
+	server http://tomcat1:8080;
+	server http://tomcat2:8080;
+}
+```
+
+#### 通过OpenResty查询Redis缓存
+
+##### Redis缓存预热
+
+在实际开发中，项目上线前，为了避免大量用户请求直接到达数据库，会通过大数据统计手段对热点数据进行缓存，这一步被称为缓存预热，在该项目中，我们也模拟一次缓存预热，因为数据量很小，所以我们缓存全部数据
+
+在Spring中，可以通过实现InitializingBean来定义一个初始化类
+
+```java
+package com.heima.item.config;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Component;
+
+@Component
+@RequiredArgsConstructor
+public class RedisHandler implements InitializingBean {
+
+    private final StringRedisTemplate redisTemplate;
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        
+    }
+}
+```
+
+在afterPropertiesSet方法中完成缓存的预热工作，即查询数据库中所有商品与库存信息，然后在Redis中进行缓存
+
+```java
+package com.heima.item.config;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.heima.item.pojo.Item;
+import com.heima.item.pojo.ItemStock;
+import com.heima.item.service.IItemService;
+import com.heima.item.service.IItemStockService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Component;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@Component
+@RequiredArgsConstructor
+public class RedisHandler implements InitializingBean {
+
+    private final StringRedisTemplate redisTemplate;
+    private final IItemService itemService;
+    private final IItemStockService itemStockService;
+
+    private static final ObjectMapper objectMapper = new ObjectMapper();
+
+    private static final String ITEM_INFO_KEY_PREFIX = "item:info:";
+    private static final String ITEM_STOCK_KEY_PREFIX = "item:stock:";
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        // 查询商品信息
+        List<Item> itemList = itemService.list();
+
+        if (itemList == null || itemList.isEmpty())
+            return;
+
+        Map<String, String> itemJsonMap = new HashMap<>(itemList.size());
+        for (Item item : itemList) {
+            Long id = item.getId();
+            String json = objectMapper.writeValueAsString(item);
+            itemJsonMap.put(ITEM_INFO_KEY_PREFIX + id, json);
+        }
+        // 存入Redis
+        redisTemplate.opsForValue().multiSet(itemJsonMap);
+
+        // 查询商品库存信息
+        List<ItemStock> stockList = itemStockService.list();
+
+        if (stockList == null || stockList.isEmpty())
+            return;
+
+        Map<String, String> itemStockJsonMap = new HashMap<>(stockList.size());
+        for (ItemStock itemStock : stockList) {
+            Long id = itemStock.getId();
+            String json = objectMapper.writeValueAsString(itemStock);
+            itemStockJsonMap.put(ITEM_STOCK_KEY_PREFIX + id, json);
+        }
+        // 存入Redis
+        redisTemplate.opsForValue().multiSet(itemStockJsonMap);
+    }
+}
+```
+
+实现逻辑非常简单，通过Service查询到所有商品数据，然后通过for循环遍历数据，将每个实例转换为JSON，保存在Map中，最后通过MSET缓存到Redis中，使用MSET可以减少网络往返次数，提高预热性能
+
+> ![](img4/36.png)
+
+##### OpenResty查询Redis缓存
+
+类似远程调用，OpenResty也提供了专门针对于Redis的请求API，名为resty.redis，位于openresty/lualib/resty/redis.lua
+
+操作Redis更加复杂，需要先创建lua对象，然后设置超时时间，释放连接池等等
+
+```lua
+-- 引入Redis
+local redis = require("resty.redis")
+-- 创建Redis对象
+local r = redis:new()
+-- 设置Redis超时时间
+r:set_timeouts(1000, 1000, 1000)
+
+-- 释放连接到连接池
+local function close_conn(r)
+    -- 连接空闲时间，单位ms
+    local pool_max_idle_time = 10000
+    -- 连接池大小
+    local pool_size = 100
+    local ok, err = r:set_keepalive(pool_max_idle_time, pool_size)
+    
+    if not ok then
+        ngx.log(ngx.ERR, "创建连接池出错", err)
+    end
+end
+```
+
+初始化完成后，再封装一个读取数据的函数
+
+```lua
+local function redis_get(ip, port, key)
+    -- 建立连接
+    local ok, err = r:connect(ip, port)
+    if not ok then
+        ngx.log(ngx.ERR, "连接Redis失败", err)
+        return nil
+    end
+    
+    -- 执行GET查询
+    local res, err = r:get(key)
+    -- 释放连接并返回
+    close_conn(r)
+    return res
+end
+```
+
+在common.lua中粘贴这些代码，然后暴露redis_get供其他脚本调用
+
+```lua
+local _M = {
+    http_get = http_get,
+    redis_get = redis_get
+}
+```
+
+然后修改itemInfo.lua中有关查询的逻辑，应该先查询Redis，Redis查询失败后再请求Tomcat
+
+```lua
+-- 导入common.lua
+local common = require("common")
+-- 导入cjson
+local cjson = require("cjson")
+
+-- 获取路径参数
+local id = ngx.var[1]
+
+if not id then
+    ngx.say()
+end
+
+local ITEM_INFO_KEY_PREFIX = "cache:item:info:"
+local ITEM_STOCK_KEY_PREFIX = "cache:item:stock:"
+
+local REDIS_HOST = "127.0.0.1"
+local REDIS_PORT = 6379
+
+-- 查询商品信息
+local itemJSON = common.redis_get(REDIS_HOST, REDIS_PORT, ITEM_INFO_KEY_PREFIX .. id)
+if not itemJSON then
+    itemJSON = common.http_get("/item/" .. id, nil)
+end
+local stockJSON = common.redis_get(REDIS_HOST, REDIS_PORT, ITEM_STOCK_KEY_PREFIX .. id)
+if not stockJSON then
+    stockJSON = common.http_get("/item/stock/" .. id, nil)
+end
+
+-- 转换为table
+local item = cjson.decode(itemJSON)
+local stock = cjson.decode(stockJSON)
+
+-- 组装数据
+item.stock = stock.stock
+item.sold = stock.sold
+
+-- 返回结果
+ngx.say(cjson.encode(item))
+```
+
+这里额外需要注意的是，redis_get不能解析本地域名，只能填写ip地址，如果是本机请使用127.0.0.1而不是localhost。然后进行测试，我们可以直接关闭Tomcat服务，仅启用Redis，刷新前端页面，依然可以完成请求
+
+> ![](img4/37.png)
+
+#### Nginx本地缓存
+
+OpenResty为NGINX提供了shared dict的功能，可以在多个nginx的worker之间共享数据，worker类似于线程，负责接收用户请求并进行代理转发，而shared dict则可以实现缓存功能
+
+如果需要开启shared dict，则需要在nginx.conf的http栏中添加一条
+
+```conf
+# 开启缓存功能，缓存对象命令为item_cache，缓存大小为150Mib
+lua_shared_dict item_cache 150m;
+```
+
+然后通过专属的api来操作缓存
+
+```lua
+-- 获取缓存对象
+local item_cache = ngx.shared.item_cache
+-- 向缓存中存储数据，可以设置TTL，单位为秒，0表示永不过期
+item_cache:set("key", "value", TTL)
+-- 读取缓存中的数据
+local val = item_cache:get("key")
+```
+
+据此，我们继续来改造原始lua脚本，为其添加NGINX本地缓存。这里我们先将查询逻辑封装为一个函数，在函数中统一先查询本地，再查询Redis，最后调用Tomcat
+
+```lua
+-- 导入common.lua
+local common = require("common")
+-- 导入cjson
+local cjson = require("cjson")
+
+local REDIS_ITEM_INFO_KEY_PREFIX = "cache:item:info:"
+local REDIS_ITEM_STOCK_KEY_PREFIX = "cache:item:stock:"
+local REDIS_HOST = "127.0.0.1"
+local REDIS_PORT = 6379
+
+local LOCAL_ITEM_INFO_KEY_PREFIX = "cache:item:info:"
+local LOCAL_ITEM_STOCK_KEY_PREFIX = "cache:item:stock:"
+local LOCAL_ITEM_INFO_KEY_TTL = 30 * 60
+local LOCAL_TIEM_STOCK_KEY_TTL = 60
+
+-- 封装查询函数
+local function query(local_cache, 
+    local_cache_key, 
+    redis_key, 
+    http_path, 
+    http_param,
+    local_cache_ttl
+)
+    -- 查询本地缓存
+    ngx.log(ngx.ERR, "开始执行查询，尝试本地缓存")
+    local res = local_cache:get(local_cache_key)
+    if not res then
+        -- 查询Redis
+        ngx.log(ngx.ERR, "本地缓存查询失败，尝试Redis")
+        res = common.redis_get(REDIS_HOST, REDIS_PORT, redis_key)
+        if not res then
+            -- 查询Tomcat
+            ngx.log(ngx.ERR, "Redis查询失败，尝试Tomcat")
+            res = common.http_get(http_path, http_param)
+        end
+
+        -- 构建本地缓存
+        ngx.log(ngx.ERR, "构建本地缓存", res)
+        local_cache:set(local_cache_key, res, local_cache_ttl)
+    end
+
+    return res
+end
+
+-- 获取路径参数
+local id = ngx.var[1]
+
+if not id then
+    ngx.say()
+end
+
+-- 导入本地缓存
+local item_cache = ngx.shared.item_cache
+
+-- 查询商品信息
+local itemJSON = query(item_cache, 
+    LOCAL_ITEM_INFO_KEY_PREFIX .. id, 
+    REDIS_ITEM_INFO_KEY_PREFIX .. id, 
+    "/item/" .. id, 
+    nil,
+    LOCAL_ITEM_INFO_KEY_TTL
+)
+local stockJSON = query(item_cache, 
+    LOCAL_ITEM_STOCK_KEY_PREFIX .. id, 
+    REDIS_ITEM_STOCK_KEY_PREFIX .. id, 
+    "/item/stock/" .. id, 
+    nil,
+    LOCAL_TIEM_STOCK_KEY_TTL
+)
+
+-- 转换为table
+local item = cjson.decode(itemJSON)
+local stock = cjson.decode(stockJSON)
+
+-- 组装数据
+item.stock = stock.stock
+item.sold = stock.sold
+
+-- 返回结果
+ngx.say(cjson.encode(item))
+```
+
+访问前端，查询错误日志，我们就可以看到缓存是否构建成功
+
+> ![](img4/38.png)
+
+可以看到，在构建本地缓存后，第二次查询就不再通过Redis，而是直接通过本地缓存返回数据
+
+### 缓存同步
+
+缓存同步的常见方式有如下三种
+
+- 设置有效期：给缓存设置有效期或者TTL，到期后自动删除，再次查询时更新，优点是简单方便，缺点是时效性差，缓存过期之前可能数据不一致
+
+- 同步双写：在修改数据库的同时直接修改缓存，优点是时效性强，缓存与数据库强一致性，缺点是有代码侵入，而且代码耦合度高，不利于维护
+- 异步通知：修改数据库时发送事件通知，相关服务监听到通知后修改缓存数据，优点是低耦合，可以同时通知多个缓存服务，缺点是时效性一般，可能存在中间不一致状态，而且可靠性性完全依赖消息中间件
+
+#### 基于Canal的异步通知
+
+canal是阿里巴巴旗下一款开源项目，基于Java开发，可以实现基于数据库增量日志解析，提供增量数据订阅与消费。简单来说，canal可以监听Mysql的数据变化，然后发布通知。相比Service在更新数据库时发送消息，可以省去手动发布消息的步骤，进一步提升时效性。canal的监听是基于Mysql主从同步来实现的
+
+Mysql的主从同步类似Redis的增量同步，主节点将数据变更写入而今日文件Binary Log，其中记录的数据叫做Binary Log Events。从节点将主节点的Binary Log Events复制到自己的Relay Log中，然后从节点再通过单独的执行线程读取并重放Relay Log中的事件，达到主从一致
+
+canal的原理就是将自己伪装成Mysql的从节点，监听主节点的binary log变化，再把变化的信息发送到canal客户端，进而完成对其他数据库的通知
 
