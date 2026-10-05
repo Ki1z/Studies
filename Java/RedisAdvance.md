@@ -1,6 +1,6 @@
 # Redis Advance
 
-`更新时间：2026-10-03`
+`更新时间：2026-10-05`
 
 注释解释：
 
@@ -1248,4 +1248,328 @@ canal是阿里巴巴旗下一款开源项目，基于Java开发，可以实现�
 Mysql的主从同步类似Redis的增量同步，主节点将数据变更写入而今日文件Binary Log，其中记录的数据叫做Binary Log Events。从节点将主节点的Binary Log Events复制到自己的Relay Log中，然后从节点再通过单独的执行线程读取并重放Relay Log中的事件，达到主从一致
 
 canal的原理就是将自己伪装成Mysql的从节点，监听主节点的binary log变化，再把变化的信息发送到canal客户端，进而完成对其他数据库的通知
+
+#### 基于Canal实现缓存同步
+
+在配置完成canal服务端后，由于官方的Java API比较复杂，我们使用第三方的API来在SpringBoot项目中构建一个监听器，并完成Redis的缓存更新
+
+首先引入依赖，并填写canal相关配置
+
+```xml
+<!-- canal -->
+<dependency>
+    <groupId>top.javatool</groupId>
+    <artifactId>canal-spring-boot-starter</artifactId>
+    <version>1.2.1-RELEASE</version>
+</dependency>
+```
+
+```yml
+canal:
+  destination: test
+  server: localhost:11111
+```
+
+然后就可以开始编写监听器，需要实现EntryHandler接口
+
+```java
+package com.heima.item.canal;
+
+import com.heima.item.pojo.Item;
+import org.springframework.stereotype.Component;
+import top.javatool.canal.client.annotation.CanalTable;
+import top.javatool.canal.client.handler.EntryHandler;
+
+@CanalTable("tb_item")
+@Component
+public class ItemHandler implements EntryHandler<Item> {
+
+    @Override
+    public void insert(Item item) {
+        
+    }
+
+    @Override
+    public void update(Item before, Item after) {
+
+    }
+
+    @Override
+    public void delete(Item item) {
+
+    }
+}
+```
+
+在ItemHandler中，使用注解@CanalTable标注监听的表名称，在canal监听到数据表变化后，自动封装为Item实体类传递到ItemHandler中，我们实现的三个方法，分别表示数据表发生对应操作时调用的回调方法，我们可以在更新方法中添加一条日志来测试一下
+
+```java
+@Override
+public void update(Item before, Item after) {
+    log.debug("商品数据发生变化，before: {}, after: {}", before, after);
+}
+```
+
+> ![](img4/39.png)
+
+这里可以发现，虽然canal监听到了数据变化，但是id、name、title等字段值均为null，这是因为canal并不知道数据库字段与实体类属性的映射关系，所以我们需要在实体类中添加对应注解，标记数据库字段
+
+```java
+package com.heima.item.pojo;
+
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import lombok.Data;
+
+import javax.persistence.Column;
+import javax.persistence.Id;
+import javax.persistence.Transient;
+import java.util.Date;
+
+@Data
+@TableName("tb_item")
+public class Item {
+    @TableId(type = IdType.AUTO)
+    @Id
+    private Long id;//商品id
+    @Column(name = "name")
+    private String name;//商品名称
+    private String title;//商品标题
+    private Long price;//价格（分）
+    private String image;//商品图片
+    private String category;//分类名称
+    private String brand;//品牌名称
+    private String spec;//规格
+    private Integer status;//商品状态 1-正常，2-下架
+    private Date createTime;//创建时间
+    private Date updateTime;//更新时间
+    @TableField(exist = false)
+    @Transient
+    private Integer stock;
+    @TableField(exist = false)
+    @Transient
+    private Integer sold;
+}
+```
+
+对于主键字段，使用@Id注解，注意包名为javax.persistence.Id。属性名如果与数据库字段一直，canal能够自动解析，如果不一致则需要@Column字段，设置name=数据库字段。如果是表中不存在的字段，则需要添加@Transient注解，在Java序列化中，添加@Transient注解的属性不会被序列化，属性值为null，也就相当于忽略该属性
+
+```java
+package com.heima.item.canal;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.heima.item.config.RedisHandler;
+import com.heima.item.pojo.Item;
+import com.heima.item.pojo.ItemStock;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Component;
+import top.javatool.canal.client.annotation.CanalTable;
+import top.javatool.canal.client.handler.EntryHandler;
+
+@CanalTable("tb_item")
+@Component
+@Slf4j
+@RequiredArgsConstructor
+public class ItemHandler implements EntryHandler<Item> {
+
+    private final RedisHandler redisHandler;
+    private final Cache<Long, Item> itemCache;
+
+    @Override
+    public void insert(Item item) {
+        try {
+            // 缓存到Redis
+            redisHandler.saveItem(item);
+            // 缓存到Caffeine
+            itemCache.put(item.getId(), item);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void update(Item before, Item after) {
+        try {
+            redisHandler.saveItem(after);
+            itemCache.put(after.getId(), after);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Override
+    public void delete(Item item) {
+        redisHandler.deleteItem(item.getId());
+        itemCache.invalidate(item.getId());
+    }
+}
+```
+
+编写完整的缓存更新策略，在数据库发生变更后，同时修改Redis和JVM本地缓存。然后我们启动项目进行测试
+
+> ![](img4/40.png)
+
+> ![](img4/41.png)
+
+*注：这里其实还存在一个问题，如何更新NGINX的本地缓存呢？*
+
+## Redis最佳实践
+
+### 键值设计
+
+#### Key规范
+
+Redis的Key虽然可以自定义，但是一般需要遵循以下几个最佳实践约定
+
+- 遵循基本格式：`业务名称:数据名称:数据id`
+- 长度不超过44字节，约等于44字符的英文
+- 不包含特殊字符
+
+例如登录业务需要保存用户信息，则Key可以设计为 `login:user:10`
+
+对于这样的Key设计，其优点有以下四种
+
+1. 可读性强，使用冒号作为分隔符将Key分割为三个区域，第一区域展示业务名称或者服务名称，login表示登录业务；第二区域展示数据意义，user表示用户数据；第三区域展示数据id，10表示为用户id为10
+2. 避免Key冲突，实际开发中，对于相同数据id，可能多个业务都需要使用，如果仅使用数据id作为Key，极大可能造成Key重复，进而导致数据被覆盖
+3. 方便管理，在某些Redis客户端中，Key中的冒号会被识别为层级分隔符，客户端会自动为相同层级的Key创建独立的空间，方便开发人员进行管理
+4. 节省内存，Key是string类型，在Redis底层针对string有int、embstr和raw三种编码，而embstr在小于44字节时使用，采用连续内存空间，内存占用更小
+
+#### BigKey
+
+BigKey不是指Key本身很长，而是Key中的数据量非常庞大，例如String类型的Key，存储的文本数据超过5MiB，ZSET类型的Key，存储的元素数量超过10000个，Hash类型的Key，存储的元素数量只有100个，但是每个元素占用1MiB，合计超过100MiB
+
+在Redis中，可以使用MEMORY USAGE命令来查看某个Key占用的内存字节数量
+
+> ![](img4/42.png)
+
+不过MEMORY USAGE对CPU占用较高，所以一般直接查看value长度或者元素数量来粗略评估Key占用
+
+> ![](img4/43.png)
+
+对于string类型的Key，一般值大小不超过10KiB；对于集合或者列表类型的Key，元素数量不超过1000
+
+BigKey容易造成以下危害
+
+- 网络阻塞：对BigKey执行读请求时，少量的QPS就可能导致服务器带宽被占满，例如某个Key占用5MiB，服务器带宽100MiB，仅需20个请求就可以占满所有带宽，导致服务不可用
+- 数据倾斜：BigKey所在的实例内存占用远超其他实例，无法使数据分片的内存资源达到平衡
+- Redis阻塞：对元素较多的Hash、List、ZSET等进行运算会耗时较长，使主线程被阻塞
+- CPU压力：对BigKey的数据序列化和反序列化会导致CPU使用率飙升，影响Redis实例和本机中其他运行的程序
+
+redis-cli其实自带有关bigkey的扫描功能，使用--bigkeys参数
+
+> ![](img4/44.png)
+
+#### 合适的数据类型
+
+为value选择合适的数据类型至关重要，选择合适的数据类型也可以进一步降低BigKey出现的概率。例如需要保存一个Java实体类，就可以有三种存储方式
+
+- JSON字符串：将实体类转换为JSON字符串，使用Redis的string类型存储。优点是实现简单，缺点是需要手动把实体类与JSON字符串进行转换，而且数据过耦合，无法直接修改特定字段
+- 字段打散：使用多个string类型的Key，分别存储实体类中的不同属性值。优点是操作灵活，可以存储任意实体属性，也可以任意修改，缺点是数据过于解耦，占用空间大，无法统一控制
+- Hash：将一个实体作为一个Hash Key，属性作为Hash field。优点是占用空间小，操作灵活，可以修改任意实体属性，缺点是实现相对复杂，在Java中需要将实体类转换为Map
+
+**Hash优化**
+
+现在假设有一个Hash类型的Key，其中有100万条entry，field为自增类型，该如何对这个Key进行优化？
+
+我们首先需要知道，Redis对Hash类型有两种编码形式，默认在entry小于500时，Hash会使用ziplist存储，相比哈希表，ziplist的内存占用会少很多。所以，针对Hash类型的优化，可以将其拆分为多个哈希Key，每个哈希存储最多500个entry
+
+我们来建立一个规模小一些的示例，使用一个hash存储100000个entry对比使用1000和哈希存储100个entry
+
+> ![](img4/45.png)
+
+> ![](img4/46.png)
+
+可以看到，使用ziplist的Hash结构相比哈希表，内存占用仅为不到28%
+
+> ![](img4/47.png)
+
+### 批处理优化
+
+在Redis中，可能会遇到需要同时执行大量命令的情况，如果将这些命令全部一条一条地执行，效率其实非常低。从整体来看，Redis的执行速度非常快，但是造成最终执行效率低下的重要因素，却是网络传输。如果客户端想服务器单独发送多条命令，每条都命令都需要计算网络传输中的开销，虽然宏观上来看，几毫秒的延迟并没有什么影响，但在大数据量的情况下，假设需要发送1000条命令，每条命令网络传输耗时10ms，10ms的1000倍就是10秒，已经能够明显感觉到业务阻塞，所以需要进行批处理优化
+
+Redis本身提供了String、Hash类型的批处理命令，如MSET，HMSET。但并没有提供List、Set、ZSet等类型的批处理命令，这里就需要使用pipeline
+
+Pipeline是Redis提供的统一批处理方案，可以执行任意类型Key，任意数量的批处理。不过pipeline总体仍比M命令更慢，因为pipeline在底层上只是将所有命令一同发往Redis，而Redis执行命令时可能有其他命令插队。而M命令是Redis内置命令，优先级最高，Redis会将M命令原子性执行，不允许其他命令插队
+
+Pipeline在Spring Data Redis中通过redisTemplate.executePipelined()访问，executePipelined接收一个RedisCallback，通过RedisConnection直接执行命令，注意回调方法必须返回null
+
+```java
+stringRedisTemplate.executePipelined((RedisCallback<?>) (connection) -> {
+    connection.set("test".getBytes(), "test".getBytes());
+    connection.get("test".getBytes());
+    return null;
+});
+```
+
+如果不想手动转换为Bytes，在使用StringRedisTemplate时可以将RedisConnection强转为StringRedisConnection
+
+```java
+stringRedisTemplate.executePipelined((RedisCallback<?>) (connection) -> {
+    StringRedisConnection conn = (StringRedisConnection) connection;
+    conn.set("test", "test");
+    conn.get("test");
+    return null;
+});
+```
+
+#### 集群下的批处理
+
+在分片集群下，Redis会将插槽平均分配到不同的实例中，如果M命令或者Pipeline在执行批处理时，发现Key的插槽不一致，则会拒绝执行。为了解决集群下的批处理，一般有四种方案
+
+| 方案     | 实现思路                                                     | 耗时                                           | 优点             | 缺点             |
+| -------- | ------------------------------------------------------------ | ---------------------------------------------- | ---------------- | ---------------- |
+| 串行命令 | for循环便利Key，依次执行每个命令                             | N次网络传输 + N次命令耗时                      | 实现简单         | 等于没有批处理   |
+| 串行slot | 在客户端为每一个Key计算slot，对于相同slot的Key分为一组，每组利用Pipeline串行执行 | 假设存在M组，则M次网络传输 + N次命令消耗       | 耗时较短         | 实现较复杂       |
+| 并行slot | 在串行slot的基础上引入线程池，为每组分配单独的执行线程并行执行 | 假设存在M组，则不超过M次网络传输 + N次命令消耗 | 耗时短           | 实现复杂         |
+| hash_tag | 利用散列插槽的有效Key设定，为所有Key设置相同的hash_tag，强行让所有Key的插槽相同 | 1次网络传输 + N次命令消耗                      | 耗时短，实现简单 | 容易出现数据倾斜 |
+
+在Spring Data Redis中，默认的Luttuce就使用了并行slot的方案
+
+```java
+@Override
+public RedisFuture<String> mset(Map<K, V> map) {
+
+    Map<Integer, List<K>> partitioned = SlotHash.partition(codec, map.keySet());
+
+    if (partitioned.size() < 2) {
+        return super.mset(map);
+    }
+
+    Map<Integer, RedisFuture<String>> executions = new HashMap<>();
+
+    for (Map.Entry<Integer, List<K>> entry : partitioned.entrySet()) {
+
+        Map<K, V> op = new HashMap<>();
+        entry.getValue().forEach(k -> op.put(k, map.get(k)));
+
+        RedisFuture<String> mset = super.mset(op);
+        executions.put(entry.getKey(), mset);
+    }
+
+    return MultiNodeExecution.firstOfAsync(executions);
+}
+```
+
+在io.lettuce.core.cluster.RedisAdvancedClusterAsyncCommandsImpl#mset中，第一行就通过SlotHash.partition计算每个Key的插槽，然后封装到一个Map元素中，后续再便利Map元素，通过RedisFuture\<String> mset = super.mset(op)异步执行
+
+### 服务端优化
+
+#### 慢查询
+
+慢查询是指执行时间较长的命令，不仅限于查询，任何写入、查询超过，只要超过指定阈值，都会被认为是慢查询。在Redis中，可以通过设置slowlog-log-slower-than配置项来设置慢查询阈值，默认为10000，单位是微秒。一般可以将其设置为更小数值，因为Redis常规查询通常在百微秒以内，如果追求极致性能，可以设置为100us
+
+如果出现慢查询，Redis会将其记录在slowlog中，slowlog的长度也可以通过slowlog-max-len来修改，默认长度128，仅记录128条慢查询命令，一般可以设置更大容量
+
+在Redis中，可以通过SLOWLOG GET来查询慢查询日志
+
+> ![](img4/48.png)
+
+第一行为日志编号，从0开始；第二行为日志记录时间戳，可以得知慢查询何时发生；第三行为慢查询耗时，单位微秒，这里仅记录实际命令耗时，不记录网络传输耗时；第四行为执行的命令，这里执行了`COMMAND DOCS`命令，就可以得知慢查询是由命令导致，而非业务问题；第五行为客户端地址，可以知道慢查询由谁触发；第六行为客户端名称，默认为空
+
+通过查阅慢查询日志，可以分析慢查询产生原因，针对性地进行改进，提升业务总体性能。所以慢查询日志对于运维人员来说是一份相当重要的日志
 
