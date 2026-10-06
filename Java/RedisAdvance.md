@@ -1,6 +1,6 @@
 # Redis Advance
 
-`更新时间：2026-10-05`
+`更新时间：2026-10-06`
 
 注释解释：
 
@@ -1573,3 +1573,293 @@ public RedisFuture<String> mset(Map<K, V> map) {
 
 通过查阅慢查询日志，可以分析慢查询产生原因，针对性地进行改进，提升业务总体性能。所以慢查询日志对于运维人员来说是一份相当重要的日志
 
+## Redis原理
+
+### Redis数据结构
+
+#### 动态字符串SDS
+
+Redis中保存的Key是字符串，value往往也是字符串或者字符串的集合，如SET、HASH、LIST等，可见字符串是Redis中最常用，最重要的一种数据结构，没有字符串就没有Redis。Redis是C语言编写的，但是Redis并没有直接使用C语言中的字符串，因为C语言字符串存在一些问题
+
+```c
+// C语言字符串
+char* str = "hello";
+```
+
+C语言不支持字符串，所以字符串的本质是字符数组，类似于`{'h', 'e', 'l', 'l', 'o', '\0'}`，C语言字符串最显著的特征就是存在一个结束符`\0`。对于C语言字符串，如果需要统计字符串长度，就必须计算该字符数组的长度，从0开始遍历计数，性能并不好。而且C语言字符串中不允许出现特殊字符`\0`，否则会被认为是字符串结束符，例如早期PHP中出现的某些`\0`截断漏洞，其实就源于底层C语言字符串中将`\0`作为结束符。同时，C语言字符串不允许修改，如果需要修改，必须申请新的内存空间，将数组指着指向新的内存地址
+
+因此，Redis自己定义了一种新的数据结构，叫做简单动态字符串Simple Dynamic String，简称SDS
+
+```c
+struct __attrubute__ ((__packed__)) sdshdr8 {
+    uint8_t len;
+    uint8_t alloc;
+    unsigned char flags;
+    char buf[];
+}
+```
+
+在C语言中，Redis为SDS设计了一个结构体，包含四个变量
+
+- `uint8_t len`：无符号八位整型，最大值$2^8 - 1 = 255$，用于表示SDS当前已经使用的字节数
+- `uint8_t alloc`：同样是无符号八位整型，用于表示申请的可使用最大字节数
+- `unsigned char flags`：无符号char类型，占用一个字节，最大值255，表示不同的SDS头类型
+- `char buf[]`：char类型，保存实际的字符串
+
+SDS的结构体不止sdshdr8一种，根据允许的最大长度划分，还有sdshdr5、sdshdr16、sdshdr32、sdshdr64，flags的作用就是标识这几种不同的SDS结构体
+
+```c
+#define SDS_TYPE_5  0
+#define SDS_TYPE_8  1
+#define SDS_TYPE_16 2
+#define SDS_TYPE_32 3
+#define SDS_TYPE_64 4
+```
+
+在实际的内存空间中，一个包含字符串name的SDS如下所示，为了兼容C语言，也使用了结束符`\0`
+
+> ![](img4/49.png)
+
+**动态扩容**
+
+SDS之所以叫动态字符串，是因为他具备动态扩容能力，例如存在一个内存为hi的SDS字符串
+
+> ![](img4/50.png)
+
+现在我们需要为其追加一段新的字符串`, Amy`，首先需要申请新的内存空间。SDS有两种申请模式，如果新字符串小于1MiB，则新的空间为扩展后字符串长度的两倍+1；如果新的字符串大于1MiB，则新空间为扩展后字符串长度+1MiB+1，这被称为内存预分配。在操作系统中，系统调用命令，特别是内存申请的命令非常占用系统资源，所以为了尽可能少地发起申请内存的请求，Redis为其设计了这样的申请模式
+
+#### IntSet
+
+IntSet是Redis中Set集合的一种实现方式，基于C语言的整数数组来实现，具备长度可变，有序等特征
+
+```c
+typedef struct intset {
+    uint32_t encoding;
+    uint32_t length;
+    int8_t contents[];
+} intset;
+```
+
+- `uint32_t encoding`：IntSet编码方式，支持存放16位、32位、64位整数
+- `uint32_t length`：元素个数
+- `int8_t contents`：整数数组，用于保存集合内容
+
+encoding支持三种编码方式
+
+```c
+#define INTSET_ENC_INT16 (sizeof(int16_t))
+#define INTSET_ENC_INT32 (sizeof(int32_t))
+#define INTSET_ENC_INT64 (sizeof(int64_t))
+```
+
+为了方便查找，Redis将IntSet中的所有整数按照升序依次保存在contents数组中，如下
+
+> ![](img4/51.png)
+
+IntSet中的元素无论本身的实际大小，一定会占用指定编码的内存空间，这是为了指针能够根据下标快速计算出元素内存地址。举个例子，在不指定编码的情况下，内存中元素占用的空间为实际元素大小
+
+> ![](img4/52.png)
+
+假设数组中存储了5、50、500、510四个元素，5和50占用一个字节，500和510占用两个字节，那么在寻找元素500的时候，就需要先计算5和50的元素大小，然后才能计算出500所在的内存地址。而如果强制编码长度，则只需要得到元素的下标，用下标乘以编码长度，就可以快捷计算出元素所在内存地址
+
+**IntSet升级**
+
+假设存在一个IntSet，编码方式为INTSET_ENC_INT16，其中存储了元素5、10、20。但是现在需要向其中插入一个数字50000，很显然50000超过了INT16的最大值，因此IntSet需要进行升级。IntSet的升级步骤如下
+
+- 升级编码为INTSET_ENC_INT32，每个整数占4字节，按照新的编码方式申请内存空间
+- 申请内存空间后，倒序将数组中的元素复制到扩容后的正确位置。这里不使用正序是避免数据被覆盖，如果按照正序复制，元素5扩容后占4字节，也就是原来的元素5个和元素10共同的内存空间，如果直接进行覆盖，元素10就丢失了，因此只能进行倒序复制
+- 旧元素移动完成后，将需要加入的元素放在数组末尾
+- 最后将IntSet的encoding更新为INTSET_ENC_INT32，并将length修改为4
+
+我们通过查阅C源码来进行分析，升级发生在元素插入阶段，所以我们定位到插入元素的函数
+
+```c
+/* Insert an integer in the intset */
+intset *intsetAdd(intset *is, int64_t value, uint8_t *success) {
+    uint8_t valenc = _intsetValueEncoding(value);
+    uint32_t pos;
+    if (success) *success = 1;
+
+    /* Upgrade encoding if necessary. If we need to upgrade, we know that
+     * this value should be either appended (if > 0) or prepended (if < 0),
+     * because it lies outside the range of existing values. */
+    if (valenc > intrev32ifbe(is->encoding)) {
+        /* This always succeeds, so we don't need to curry *success. */
+        return intsetUpgradeAndAdd(is,value);
+    } else {
+        /* Abort if the value is already present in the set.
+         * This call will populate "pos" with the right position to insert
+         * the value when it cannot be found. */
+        if (intsetSearch(is,value,&pos)) {
+            if (success) *success = 0;
+            return is;
+        }
+
+        is = intsetResize(is,intrev32ifbe(is->length)+1);
+        if (pos < intrev32ifbe(is->length)) intsetMoveTail(is,pos,pos+1);
+    }
+
+    _intsetSet(is,pos,value);
+    is->length = intrev32ifbe(intrev32ifbe(is->length)+1);
+    return is;
+}
+```
+
+首先通过uint8_t valenc = _intsetValueEncoding(value);获取需要插入的元素的编码，也就是判断元素的大小，如果元素大小大于intset的编码，则需要进行扩容。然后声明了uint32_t pos，需要插入的位置，这里暂时为null，需要后续计算得出。接着if (valenc > intrev32ifbe(is->encoding))判断元素编码是否大于当前intset编码，如果大于，则执行intsetUpgradeAndAdd(is,value)升级，否则调用if (intsetSearch(is,value,&pos))判断元素是否已经存在，因为是Set类型，对于已经存在的值就不允许插入，所以*success = 0，返回原intset。如果不存在，则为pos赋值，执行插入逻辑，intsetResize(is,intrev32ifbe(is->length)+1)将原来的intset的length加一，然后进行扩容，扩容后intset的地址可能发生变更。然后判断插入的元素位置是否在末尾，如果不是末尾，则需要将pos位置之后的元素向后移动一位，为新元素腾出空间，即if (pos < intrev32ifbe(is->length)) intsetMoveTail(is,pos,pos+1)。一切准备完成后，执行\_intsetSet(is,pos,value)插入新元素，is->length = intrev32ifbe(intrev32ifbe(is->length)+1)更新intset长度，最后返回新的intset
+
+当然，我们关注的是intset升级逻辑
+
+```c
+/* Upgrades the intset to a larger encoding and inserts the given integer. */
+static intset *intsetUpgradeAndAdd(intset *is, int64_t value) {
+    uint8_t curenc = intrev32ifbe(is->encoding);
+    uint8_t newenc = _intsetValueEncoding(value);
+    int length = intrev32ifbe(is->length);
+    int prepend = value < 0 ? 1 : 0;
+
+    /* First set new encoding and resize */
+    is->encoding = intrev32ifbe(newenc);
+    is = intsetResize(is,intrev32ifbe(is->length)+1);
+
+    /* Upgrade back-to-front so we don't overwrite values.
+     * Note that the "prepend" variable is used to make sure we have an empty
+     * space at either the beginning or the end of the intset. */
+    while(length--)
+        _intsetSet(is,length+prepend,_intsetGetEncoded(is,length,curenc));
+
+    /* Set the value at the beginning or the end. */
+    if (prepend)
+        _intsetSet(is,0,value);
+    else
+        _intsetSet(is,intrev32ifbe(is->length),value);
+    is->length = intrev32ifbe(intrev32ifbe(is->length)+1);
+    return is;
+}
+```
+
+首先通过uint8_t curenc = intrev32ifbe(is->encoding)获取当前的编码方式，然后调用_intsetValueEncoding()函数，传入value获取需要插入的元素需要的编码方式，也就是目标编码方式，接着又获取了原intset的长度以及一个prepend。prepend表示需要插入队首还是队尾，对于需要升级的元素，其值一定大于当前intset所有元素，或者小于intset允许的最小值，因此可能的插入位置只有队首和队尾两个，如果是插入队首，则后续升级移动旧元素时，就需要在队首额外预留一个新元素的位置，所以这里就使用了prepend作为标识
+
+然后通过is->encoding = intrev32ifbe(newenc)设置新的编码方式，is = intsetResize(is,intrev32ifbe(is->length)+1)设置新的intset长度。设置完成后，进入while循环，移动旧元素。while的条件是length\-\-，也就是倒序开始，指针依次向前移动，这里执行的函数是\_intsetSet(is,length+prepend,_intsetGetEncoded(is,length,curenc))，其实也就是intset设置元素位置的函数，第一个参数是intset本身，第二参数是元素位置，第三个参数是需要设置位置的数据。正因为使用了prepend作为队首标记，一旦prepend为1，在重新设置旧元素位置时，新的位置为length + prepend，也就是旧位置向后移一个位置，这样就可以为新元素腾出队首的空间。\_intsetGetEncoded()函数的作用是获取某个位置的元素，所以第三参数直接调用了\_intsetGetEncoded(is,length,curenc)，获取intset中位置为length，编码方式为curenc的元素，即需要移动位置的元素
+
+全部元素位置移动完成后，插入新的元素，如果prepend为1，表示为队首元素，则执行\_intsetSet(is,0,value)插入队首，否则执行\_intsetSet(is,intrev32ifbe(is->length),value)插入队尾，最后设置新的intset长度，并返回升级后的intset
+
+对于查找元素是否存在的intsetSearch(is,value,&pos)函数，底层原理是二分查找，这里就不再概述
+
+```c
+/* Search for the position of "value". Return 1 when the value was found and
+ * sets "pos" to the position of the value within the intset. Return 0 when
+ * the value is not present in the intset and sets "pos" to the position
+ * where "value" can be inserted. */
+static uint8_t intsetSearch(intset *is, int64_t value, uint32_t *pos) {
+    int min = 0, max = intrev32ifbe(is->length)-1, mid = -1;
+    int64_t cur = -1;
+
+    /* The value can never be found when the set is empty */
+    if (intrev32ifbe(is->length) == 0) {
+        if (pos) *pos = 0;
+        return 0;
+    } else {
+        /* Check for the case where we know we cannot find the value,
+         * but do know the insert position. */
+        if (value > _intsetGet(is,max)) {
+            if (pos) *pos = intrev32ifbe(is->length);
+            return 0;
+        } else if (value < _intsetGet(is,0)) {
+            if (pos) *pos = 0;
+            return 0;
+        }
+    }
+
+    while(max >= min) {
+        mid = ((unsigned int)min + (unsigned int)max) >> 1;
+        cur = _intsetGet(is,mid);
+        if (value > cur) {
+            min = mid+1;
+        } else if (value < cur) {
+            max = mid-1;
+        } else {
+            break;
+        }
+    }
+
+    if (value == cur) {
+        if (pos) *pos = mid;
+        return 1;
+    } else {
+        if (pos) *pos = min;
+        return 0;
+    }
+}
+```
+
+#### Dict
+
+Redis是典型的键值对型数据库，我们可以根据键实现快速的增删改查，而键与值的映射关系正是通过Dict来实现的。在Java中也有一种键值对数据结构HashMap，其原理是一个哈希数组，数组元素为一个个Entry，Entry中存放键值对结构，而HashMap的Entry存放的位置是通过计算Key的哈希来得到的，因此HashMap的性能非常优秀。而Redis的dict也是类似的数据结构，dict由三部分构成，分别是哈希表DictHashTable、哈希节点DictEntry和字典Dict
+
+```c
+typedef struct dictht {
+    dictEntry **table;
+    unsigned long size;
+    unsigned long sizemask;
+    unsigned long used;
+} dictht;
+typedef struct dictEntry {
+    void *key;
+    union {
+        void *val;
+        uint64_t u64;
+        int64_t s64;
+        double d;
+    } v;
+    struct dictEntry *next;
+} dictEntry;
+```
+
+先来看dictht
+
+- `dictEntry **table`：指向Entry指针数组的指针，Entry指针数据中保存的是所有指向Entry的指针，这样就可以让Dict能访问所有Entry
+- `unsigned long size`：哈希表的大小，只能为2的n次幂
+- `unsigned long sizemask`：哈希表大小的掩码，总是为size - 1
+- `unsigned long used`：Dict中Entry的个数
+
+然后是dictEntry
+
+- `void *key`：指向键的指针，上文提到，Redis的键为String结构，所以实际的数据结构为SDS，这里便使用了一个指针来表示
+- `union {...}`：union是C语言的一个特殊结构，该变量类型只能为union中的一种，其中`void *val`表示键值对的值可以为任意数据类型，如SDS等
+- `struct dictEntry *next`：指向下一个Entry的指针
+
+当需要向Dict添加键值对时，Redis首先根据Key计算出hash值，然后计算 hash(key) & sizemask 来得到元素应该存储到数组中的哪个索引位置。一般来说，对于长度有限的数组，应当使用mod运算，这里进行与运算正是利用了sizemask的特性
+
+上文我们提到，sizemask只能为size - 1，而size只能为2的n次幂，我们假设存在一个dict，长度规定为8，那么二进制表示为
+$$
+size = 1000_{(2)}
+$$
+而sizemask表示为
+$$
+sizemask = size - 1 = 0111_{(2)}
+$$
+任意数与0111进行与运算，一定会小于等于0111，因此，与运算与模运算的结果是一致的。而计算机进行与运算的性能高于模运算，Redis在底层也对运算方式性能进行了优化
+
+如果存在两个哈希值相同的元素，发生哈希碰撞，dict就会为其构建一个链表
+
+> ![](img4/53.png)
+
+Redis会将dictEntry数组的指针指向新Entry，新Entry的指针指向旧Entry，一旦再有新的Entry加入，重复这一过程，就可以快捷插入数据
+
+上文我们提到，dict由dictht、dictEntry和dict组成，那么dict的作用是什么呢？
+
+```c
+typedef struct dict {
+    dictType *type;
+    void *privdata;
+    dictht ht[2];
+    long rehashidx; /* rehashing not in progress if rehashidx == -1 */
+    int16_t pauserehash; /* If >0 rehashing is paused (<0 indicates coding error) */
+} dict;
+```
+
+- `dictType *type`：
+- `void *privdata`：
+- `dictht ht[2]`：
+- `long rehashidx`：
+- `int16_t pauserehash`：
