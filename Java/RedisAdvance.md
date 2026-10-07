@@ -1,6 +1,6 @@
 # Redis Advance
 
-`更新时间：2026-10-06`
+`更新时间：2026-10-07`
 
 注释解释：
 
@@ -1620,7 +1620,7 @@ SDS的结构体不止sdshdr8一种，根据允许的最大长度划分，还有s
 
 > ![](img4/49.png)
 
-**动态扩容**
+##### 动态扩容
 
 SDS之所以叫动态字符串，是因为他具备动态扩容能力，例如存在一个内存为hi的SDS字符串
 
@@ -1662,7 +1662,7 @@ IntSet中的元素无论本身的实际大小，一定会占用指定编码的�
 
 假设数组中存储了5、50、500、510四个元素，5和50占用一个字节，500和510占用两个字节，那么在寻找元素500的时候，就需要先计算5和50的元素大小，然后才能计算出500所在的内存地址。而如果强制编码长度，则只需要得到元素的下标，用下标乘以编码长度，就可以快捷计算出元素所在内存地址
 
-**IntSet升级**
+##### IntSet升级
 
 假设存在一个IntSet，编码方式为INTSET_ENC_INT16，其中存储了元素5、10、20。但是现在需要向其中插入一个数字50000，很显然50000超过了INT16的最大值，因此IntSet需要进行升级。IntSet的升级步骤如下
 
@@ -1858,8 +1858,293 @@ typedef struct dict {
 } dict;
 ```
 
-- `dictType *type`：
-- `void *privdata`：
-- `dictht ht[2]`：
-- `long rehashidx`：
-- `int16_t pauserehash`：
+- `dictType *type`：标识不同的dict类型，因为Redis中多种数据类型都需要使用dict，使用的哈希函数也不同，所以使用type字段来标注特定的dict类型
+- `void *privdata`：私有数据，用于在特殊哈希函数中进行运算
+- `dictht ht[2]`：哈希表，一般情况只使用其中一个哈希表，另一个为空，当需要rehash时，才会使用第二个哈希表
+- `long rehashidx`：rehash的进度，-1表示未进行
+- `int16_t pauserehash`：rehash是否暂停，1表示暂停，0表示进行中
+
+##### Dict扩容
+
+Dict的HashTable就是数组结合单向链表的实现，当集合中元素较多时，必定会导致哈希冲突增多，链表过长，此时查询性能就会大大降低。所以dict在每次新增键值对时都会检查负载因子，负载因子公式为 LoadFactor = used / size，满足以下两种情况时会触发哈希表扩容
+
+- 哈希表负载因子大于等于1，并且服务器没有执行BGSAVE或者BGWRITEAOF等后台进程
+- 哈希表负载因子大于5
+
+```c
+/* Add an element to the target hash table */
+int dictAdd(dict *d, void *key, void *val)
+{
+    dictEntry *entry = dictAddRaw(d,key,NULL);
+
+    if (!entry) return DICT_ERR;
+    dictSetVal(d, entry, val);
+    return DICT_OK;
+}
+```
+
+分析dictAdd()函数，首先调用dictAddRaw(d,key,NULL)想Entry中添加一个空值，这其实是先占位，确保dict能提供插入空间，否则返回DICT_ERR。如果NULL插入成功，则执行dictSetVal(d, entry, val)将真正的值填入，并返回DICT_OK
+
+```c
+dictEntry *dictAddRaw(dict *d, void *key, dictEntry **existing)
+{
+    long index;
+    dictEntry *entry;
+    dictht *ht;
+
+    if (dictIsRehashing(d)) _dictRehashStep(d);
+
+    /* Get the index of the new element, or -1 if
+     * the element already exists. */
+    if ((index = _dictKeyIndex(d, key, dictHashKey(d,key), existing)) == -1)
+        return NULL;
+
+    /* Allocate the memory and store the new entry.
+     * Insert the element in top, with the assumption that in a database
+     * system it is more likely that recently added entries are accessed
+     * more frequently. */
+    ht = dictIsRehashing(d) ? &d->ht[1] : &d->ht[0];
+    entry = zmalloc(sizeof(*entry));
+    entry->next = ht->table[index];
+    ht->table[index] = entry;
+    ht->used++;
+
+    /* Set the hash entry fields. */
+    dictSetKey(d, entry, key);
+    return entry;
+}
+```
+
+在dictAddRaw函数中，声明了三个变量，long index插入索引，dictEntry *entry需要插入的Entry，dictht *ht插入的Entry所在的哈希表。if (dictIsRehashing(d))先判断了dict是否处于rehash状态，如果没有rehash，则执行index = _dictKeyIndex(d, key, dictHashKey(d,key), existing)计算插入索引，如果索引为-1，表示无法插入，返回NULL
+
+然后再根据rehash状态选择dict中的哈希表，如果在rehash状态，则选择第二张表。然后利用entry = zmalloc(sizeof(*entry))为新Entry申请内存空间，空间大小为Entry指定的大小，接着entry->next = ht->table[index]让新Entry的next指向当前哈希表中对应位置的Entry，再ht->table[index] = entry将哈希表中对应位置的Entry更改为新插入的Entry，完成插入，并ht->used++更新容量，最后执行dictSetKey(d, entry, key)插入Key，并返回Entry
+
+```c
+/* Returns the index of a free slot that can be populated with
+ * a hash entry for the given 'key'.
+ * If the key already exists, -1 is returned
+ * and the optional output parameter may be filled.
+ *
+ * Note that if we are in the process of rehashing the hash table, the
+ * index is always returned in the context of the second (new) hash table. */
+static long _dictKeyIndex(dict *d, const void *key, uint64_t hash, dictEntry **existing)
+{
+    unsigned long idx, table;
+    dictEntry *he;
+    if (existing) *existing = NULL;
+
+    /* Expand the hash table if needed */
+    if (_dictExpandIfNeeded(d) == DICT_ERR)
+        return -1;
+    for (table = 0; table <= 1; table++) {
+        idx = hash & d->ht[table].sizemask;
+        /* Search if this slot does not already contain the given key */
+        he = d->ht[table].table[idx];
+        while(he) {
+            if (key==he->key || dictCompareKeys(d, key, he->key)) {
+                if (existing) *existing = he;
+                return -1;
+            }
+            he = he->next;
+        }
+        if (!dictIsRehashing(d)) break;
+    }
+    return idx;
+}
+```
+
+我们来看看索引是如何计算的。先判断是否需要扩容，如果返回DICT_ERR，则表示无法扩容，返回了-1。然后遍历了dict中两张哈希表，对于每一张哈希表，先计算idx = hash & d->ht[table].sizemask，得到Entry数组下标，然后he = d->ht[table].table[idx]获取对应下标的Entry，因为哈希表中每一个位置都是一个Entry链表，所以又进入了一层while循环
+
+在while循环中，if (key==he->key || dictCompareKeys(d, key, he->key))判断Key是否存在，如果Key已经存在，则返回-1，然后将Entry的指针修改为链表中下一个Entry，直到链表结束。然后再判断了是否处于rehash中，如果没有rehash，则立即终止，并返回插入索引，也就是默认只使用第一张表
+
+```c
+/* Expand the hash table if needed */
+static int _dictExpandIfNeeded(dict *d)
+{
+    /* Incremental rehashing already in progress. Return. */
+    if (dictIsRehashing(d)) return DICT_OK;
+
+    /* If the hash table is empty expand it to the initial size. */
+    if (d->ht[0].size == 0) return dictExpand(d, DICT_HT_INITIAL_SIZE);
+
+    /* If we reached the 1:1 ratio, and we are allowed to resize the hash
+     * table (global setting) or we should avoid it but the ratio between
+     * elements/buckets is over the "safe" threshold, we resize doubling
+     * the number of buckets. */
+    if (d->ht[0].used >= d->ht[0].size &&
+        (dict_can_resize ||
+         d->ht[0].used/d->ht[0].size > dict_force_resize_ratio) &&
+        dictTypeExpandAllowed(d))
+    {
+        return dictExpand(d, d->ht[0].used + 1);
+    }
+    return DICT_OK;
+}
+```
+
+先判断是否在rehash，如果正在rehash，直接返回DICT_OK，因为在rehash时使用的是第二张表，所以不考虑扩容。然后判断dict中第一张表的size是否为0，如果为0，则表示该dict是新增的dict，需要进行初始化，执行dictExpand(d, DICT_HT_INITIAL_SIZE)初始化扩容，DICT_HT_INITIAL_SIZE默认为4。接着是一个复杂的判断，需要同时满足d->ht[0].used >= d->ht[0].size和(dict_can_resize || d->ht[0].used/d->ht[0].size > dict_force_resize_ratio)以及dictTypeExpandAllowed(d)，我们拆开来看
+
+d->ht[0].used >= d->ht[0].size表示已经使用的空间大于等于总空间，也就是负载因子大于等于1；dict_can_resize是一个标志位，当进行BGSAVE或者BGREWRITEAOF时，Redis会将其设置为0；d->ht[0].used/d->ht[0].size是负载因子，dict_force_resize_ratio是强制扩容率，默认为5；最后的dictTypeExpandAllowed(d)判断该dict是否允许被扩容，某些占用大量内存的dict具有expandAllowed()函数，这里会调用dict自己的expandAllowed函数来检查是否允许扩容
+
+因此，这段判断逻辑总结起来就是上文提到的两句话：哈希表负载因子大于等于1，并且服务器没有执行BGSAVE或者BGWRITEAOF等后台进程。哈希表负载因子大于5。同理，dict在删除元素时也会进行收缩，当负载因子小于0.1时会触发收缩，这里就不再跟踪代码
+
+##### rehash
+
+无论是扩容还是收缩，dict一定会创建新的哈希表，从而导致哈希表的size和sizemask发生变化，而Key的查询与sizemask有关。因此必须对哈希表中的每一个Key重新计算索引，并插入新的哈希表，这个过程就被称为rehash。大致步骤如下
+
+- 计算新hash表的size，值取决于当前需要扩容还是收缩，如果是扩容，则新size为不小于used + 1的第一个2的n次幂；如果是收缩，则新size为不小于used的第一个2的n次幂，最小不低于4
+- 按照新的size申请内存空间，创建dictht，并赋值给dict的第二张表
+- 设置dict的rehashidx = 0，表示开始进行rehash
+- 将第一张表中的每一个Entry进行rehash移动到第二张表
+- 将第二张表赋值给第一张表，然后重新初始化第二张表，释放原来第一张表的内存
+
+不过rehash并不是一次性全部完成的，假设哈希表中存储了百万级别的Entry，如果一次性完成rehash，就会导致主线程阻塞，所以Redis为其设计了渐进式rehash，在每次数据变动时才进行一次rehash，dict的rehashidx其实就是当前rehash的哈希表的下标，0表示从哈希表第一个元素开始。对于新增操作，在dictAddRaw中可以注意到这条语句
+
+```c
+ht = dictIsRehashing(d) ? &d->ht[1] : &d->ht[0];
+```
+
+在进行rehash时直接选择第二张表，这正是因为rehash是将第一张表的数据移动到第二张表，此时还向第一张表插入数据完全没有必要。在每个rehashidx完成后，rehashidx自增，以完成整个哈希表的rehash
+
+#### ZipList
+
+从dict的数据结构可以看出，当dict进行rehash时，dict中就存在两个申请了实际空间的哈希表，所以dict的内存占用其实相当大。在Redis中，有一个专门为了节省内存设计的数据结构，即ZipList
+
+ZipList是一种特殊的，类似于双向链表的结构，由一系列特殊编码的连续内存块组成，可以在任意一端进行压入弹出操作，并且该操作的时间复杂度为O(1)，性能非常高
+
+Redis并没有在源码中设计ziplist结构体，所以这里通过表格来模拟
+
+> ![](img4/55.png)
+
+| 类型     | 属性    | 长度  | 说明                                                         |
+| -------- | ------- | ----- | ------------------------------------------------------------ |
+| uint32_t | zlbytes | 4字节 | 记录ziplist占用的内存字节数                                  |
+| uint32_t | zltail  | 4字节 | 记录ziplist尾节点头距离ziplist起始地址的内存偏移量，用于快速计算尾节点地址 |
+| uint16_t | zllen   | 2字节 | 记录ziplist包含的节点数量，最大值为UINT16_MAX，即65534。超过这个值只会被记为65535，具体数量需要遍历计算 |
+| entry    | entry   | N/A   | ziplist的各个Entry，Entry长度由保存的数据决定                |
+| uint8_t  | zlend   | 1字节 | 末尾标记符，用于标记ziplist末尾，实际值为0xFF                |
+
+##### ZipList Entry
+
+ziplist的Entry并不像普通链表那样记录前后节点的指针，因为记录两个指针需要占用16字节，非常浪费内存空间。因此ziplist的Entry设计了如下结构
+
+> ![](img4/54.png)
+
+- `previous_entry_length`：前一个Entry的长度，占1个或者5个字节，当前一Entry的长度小于254字节，则使用1字节；否则使用5字节，并且第一个字节恒定为0xfe，后四个字节才是真实长度
+- `encoding`：数据编码，记录content保存的数据类型及长度，占用1，2或者5字节
+- `content`：保存的真实数据，可以是字符串或者整数
+
+##### Encoding
+
+当encoding以00、01或者10开头，则说明content存储的数据类型为字符串，其中00表示编码长度为1字节，字符串大小小于等于63字节，因为1字节8个比特位中，前两位需要标识数据类型；同理，01表示编码长度为2字节，字符串大小小于等于16383字节；10表示编码长度为5字节，字符串大小小于等于4294967295字节，比较少见
+
+举个例子，我们需要保存字符串ab和bc，先保存ab，前一个节点长度为0，字符串大小为2字节，所以最终Entry为
+
+```entry
+| 0x00 | 0x02 | 0x61 | 0x62 |
+```
+
+然后保存bc，bc的前一个节点ab长度为4
+
+```entry
+| 0x00 | 0x02 | 0x61 | 0x62 || 0x04 | 0x02 | 0x62 | 0x63 |
+```
+
+据此，我们也可以推理出整个ziplist结构
+
+```ziplist
+| 0x13 | 00 | 00 | 00 || 0x0E | 00 | 00 | 00 || 0x02 | 00 || 0x00 | 0x02 | 0x61 | 0x62 || 0x04 | 0x02 | 0x62 | 0x63 || 0xFF  |
+| 		 4Bytes		  ||        4Bytes       ||   2Bytes  ||           4Bytes          ||           4Bytes          || 1Byte |
+|		 zlbytes	  ||		zltail		 ||	  zllen   ||			entry		   ||			entry			|| zlen  |
+```
+
+计算机使用小端序存储数据，所以zlbytes、zltail、zllen的实际值都在高位
+
+当encoding以11开头，则表示content是整数类型，且encoding固定只占用1个字节
+
+| 编码     | 编码长度 | 整数类型                                                     |
+| -------- | -------- | ------------------------------------------------------------ |
+| 11000000 | 1        | int16_t                                                      |
+| 11010000 | 1        | int32_t                                                      |
+| 11100000 | 1        | int64_t                                                      |
+| 11110000 | 1        | 24位有符号整型                                               |
+| 11111110 | 1        | int8_t                                                       |
+| 1111xxxx | 1        | 当数据很小时，直接在编码中保存数据，节省1字节的content空间，范围从0001~1101，实际数据为编码数据减一 |
+
+举个例子，保存数字2和数字200，先保存数字2，由于数字很小，直接保存在编码中
+
+```entry
+| 0x00 | 0xF3 |
+```
+
+然后保存数字200，使用int8_t的编码
+
+```entry
+| 0x00 | 0xF3 || 0x02 | 0xFE | 0xC8 |
+```
+
+##### ZipList连锁更新问题
+
+假设存在一个特殊的ziplist，其中每一个Entry的长度都在250左右，不超过253，所以每一个Entry的previous_entry_length都只用一个字节表示
+
+> ![](img4/56.png)
+
+现在需要向该ziplist头部插入一个新的Entry，但是该Entry的长度远远大于254，此时就需要修改第二个Entry的previous_entry_length，由于新Entry长度大于254，所以第二个Entry的previous_entry_length必须升级到5字节长度，导致第二个Entry的总体长度由250增加至254。而由于第二个Entry的长度大于等于254，所以第三个Entry的previous_entry_length也就必须升级到5字节，以此类推，该ziplist中每一个Entry都需要升级自己的previous_entry_length长度，从而发生大量的内存申请，严重影响系统性能
+
+在Redis7.0后，ziplist被listpack替代，不再使用，listpack中相关字段保存的是节点自身长度，从根本上避免了这个问题
+
+#### QuickList
+
+ziplist虽然节省内存，但是申请的内存空间必须是连续的，如果内存占用较多，申请内存的效率就会很低。所以为了缓解这个问题，Redis在3.2版本引入了新的数据结构QuickList，QuickList本质是一个双端链表，链表中每一个节点都是一个ziplist，在Redis7.0后，ziplist被listpack替代
+
+quicklist限制了每个ziplist的大小和长度，一定程度避免了连锁更新问题的影响面，也提高了内存申请成功的几率
+
+在Redis中，可以通过list-max-ziplist-size来限制ziplist的大小或者长度，当为正数时，表示ziplist允许的最大Entry个数；当为负数时，表示ziplist最大允许的内存大小，其中-1表示4KiB，-2表示8KiB，-3表示16KiB，-4表示32KiB，-5表示64KiB，默认值为-2
+
+> ![](img4/57.png)
+
+除了控制ziplist的大小，QuickList还可以对节点的ziplist进行压缩，通过配置项list-compress-depth来控制，因为链表一般都是从首尾访问较多，因此首尾通常不压缩。0表示不压缩，1表示QuickList首尾各有一个节点不压缩，中间进行压缩，2表示QuickList首尾各有2个节点不压缩，中间节点压缩，以此类推。默认值为0
+
+> ![](img4/58.png)
+
+```c
+typedef struct quicklist {
+    quicklistNode *head;
+    quicklistNode *tail;
+    unsigned long count;        /* total count of all entries in all ziplists */
+    unsigned long len;          /* number of quicklistNodes */
+    int fill : QL_FILL_BITS;              /* fill factor for individual nodes */
+    unsigned int compress : QL_COMP_BITS; /* depth of end nodes not to compress;0=off */
+    unsigned int bookmark_count: QL_BM_BITS;
+    quicklistBookmark bookmarks[];
+} quicklist;
+```
+
+我们来观察QuickList的结构体，由8个成员变量组成
+
+- `quicklistNode *head`：头指针，指向一个quicklistNode结构体
+- `quicklistNode *tail`：尾指针
+- `unsigned long count`：QuickList中所有Entry的总数
+- `unsigned long len`：QuickList中quicklistNode节点的数量，并不等于ziplist的数量，因为一个节点包含多个ziplist
+- `int fill`：QuickList容量限制符，上文提到由list-max-ziplist-size配置项设置，默认为-2，这里的冒号表示该变量的位宽，也就是占用的比特位数，QL_COMP_BITS默认16
+- `unsigned int compress`：首尾不压缩的节点数量
+- `unsigned int bookmark_count`：内存重分配时的书签数量，暂不作解释
+- `quicklistBookmark bookmarks[]`：内存重分配时的书签数组，暂不作解释
+
+```c
+typedef struct quicklistNode {
+    struct quicklistNode *prev;
+    struct quicklistNode *next;
+    unsigned char *zl;
+    unsigned int sz;             /* ziplist size in bytes */
+    unsigned int count : 16;     /* count of items in ziplist */
+    unsigned int encoding : 2;   /* RAW==1 or LZF==2 */
+    unsigned int container : 2;  /* NONE==1 or ZIPLIST==2 */
+    unsigned int recompress : 1; /* was this node previous compressed? */
+    unsigned int attempted_compress : 1; /* node can't compress; too small */
+    unsigned int extra : 10; /* more bits to steal for future usage */
+} quicklistNode;
+```
+
+然后来看节点结构体，节点结构体由10个成员变量组成
+
