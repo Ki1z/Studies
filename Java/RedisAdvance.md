@@ -1,6 +1,6 @@
 # Redis Advance
 
-`更新时间：2026-10-07`
+`更新时间：2026-10-08`
 
 注释解释：
 
@@ -2146,5 +2146,318 @@ typedef struct quicklistNode {
 } quicklistNode;
 ```
 
-然后来看节点结构体，节点结构体由10个成员变量组成
+然后来看quicklistNode节点结构体，节点结构体由10个成员变量组成
+
+- `struct quicklistNode *prev`：前一个节点指针
+- `struct quicklistNode *next`：后一个节点指针
+- `unsigned char *zl`：当前节点的ziplist指针
+- `unsigned int sz`：当前节点的ziplist字节大小
+- `unsigned int count : 16`：当前节点ziplist的Entry个数
+- `unsigned int encoding : 2`：编码方式，1表示ziplist，2表示压缩模式
+- `unsigned int container : 2`：数据容器类型，1表示其他，2表示ziplist
+- `unsigned int recompress : 1`：解压缩标识符，1则表示被解压了，后续需要重新压缩
+- `unsigned int attempted_compress : 1`：测试字段
+- `unsigned int extra : 10`：预留字段
+
+下图是一个QuickList总体结构图
+
+> ![](img4/59.png)
+
+QuickList的head和tail分别指向一个QuickListNode，而每个QuickListNode自己的前指针和后指针分别指向对应的Node，图中的QuickList的compress为1，表示首尾各有一个ziplist不压缩，所以中间的两个Node的ziplist的数据并不是标准ziplist，而是压缩后的格式
+
+#### SkipList
+
+跳表是一种双向链表，但与传统的链表结构有所不同。传统链表结构中，中间位数据的索引是一大难题，假设需要访问一个中间位数据，则需要从头或者从尾部开始遍历，每次遍历一个元素，直到访问目标数据
+
+而跳表将数据升序进行排列，并且允许每个节点存在多个指针，指针的跨度可以大于1。举个例子，假设存在一个跳表，跳表中存储了1-20的数据
+
+> ![](javaweb2/230.png)
+
+在普通链表中，如果要查询第10号元素，无论首尾开始，时间复杂度均为O(n)，也就是需要遍历10次才能访问到目标元素。而跳表则是加入一些跳跃指针，例如直接在元素1中添加一个指向元素10的指针，元素10再指向元素20，这时如果想要查询10，时间复杂度就变成了O(1)
+
+> ![](javaweb2/231.png)
+
+但如果想要查询第15号元素，这时的时间复杂度又变成了O(6)，所以我们可以再设定一级跳跃指针，由1指向7，7指向15，15再指向20，此时的时间复杂度缩短为了O(2)
+
+> ![](javaweb2/232.png)
+
+在跳表中，原始的跨度为1的指针被称为一级指针，跨度大于的1的指针，根据定义跨度分级的不同可以成为二级、三级指针等等。跳表允许的最大指针分级为32级，因此在大长度链表中，可以定义多级多跨度指针，以求最佳的查询效率。假设我们定义每级指针的跨度是上级的二倍，那么跳表就可以支持最大$2^{32}$个元素，查询时的时间复杂度为O(log n)，这表示长度越长，跳表查询效率越高
+
+我们来观察跳表的结构体
+
+```c
+typedef struct zskiplist {
+    struct zskiplistNode *header, *tail;
+    unsigned long length;
+    int level;
+} zskiplist;
+```
+
+可以看到，跳表的结构非常简单，仅由四个成员变量组成，struct zskiplistNode *header, *tail是头尾指针，unsigned long length记录跳表的长度，int level记录最大的索引层级，默认为1
+
+```c
+typedef struct zskiplistNode {
+    sds ele;
+    double score;
+    struct zskiplistNode *backward;
+    struct zskiplistLevel {
+        struct zskiplistNode *forward;
+        unsigned long span;
+    } level[];
+} zskiplistNode;
+```
+
+- `sds ele`：存储的数据体
+- `double score`：节点分数，用于排序和查找
+- `struct zskiplistNode *backward`：前指针
+- `struct zskiplistLevel level[]`：单独的额zskiplistLevel结构体，包含两个成员变量，struct zskiplistNode *forward后指针，unsigned long span索引跨度。level是指针数组，一个节点中可能同时存在多个跨度的指针，所以这些指针存储在level中，而非一个节点中存储同一跨度的多个指针
+
+> ![](img4/60.png)
+
+跳表最高支持32级指针，占用的实际内存相比普通链表也并非爆炸式增长。同样使用上文中的例子，假设定义一个长度为1000的跳表，计算机指针大小为8字节，设置的跨度通常为2倍
+$$
+首先选择最佳层数，对于跳表，一般最佳层数为：\\
+\\
+L \approx [log_2n] \\
+\\
+因此当n=1000：\\
+\\
+log_21000 \approx 9.97 \Rightarrow 10\\
+\\
+因此我们选择最高10级，此时的每级跨度如下：\\
+$$
+
+| 层级 | 跨度 | 增加的节点数量 |
+| ---- | ---- | -------------- |
+| L1   | 1    | 0              |
+| L2   | 2    | 500            |
+| L3   | 4    | 250            |
+| L4   | 8    | 125            |
+| L5   | 16   | 63             |
+| L6   | 32   | 32             |
+| L7   | 64   | 16             |
+| L8   | 128  | 8              |
+| L9   | 256  | 4              |
+| L10  | 512  | 2              |
+
+$$
+然后来计算相比普通链表增加的内存容量 \\
+\\
+8B * (500 + 250 + 125 + 63 + 32 + 16 + 8 + 4 + 2) = 8000B = 8KB
+$$
+
+其实在计算时不难发现，增加的节点数量刚好等于一级节点数量，而且这只是最粗略的计算，不考虑其他优化方案。因此，Redis选择了跳表这一数据结构，极大优化查询效率
+
+#### RedisObject
+
+Redis中的任意数据类型的键和值都会封装为一个RedisObject，又称为Redis对象，其C语言源码如下
+
+使用struct关键字定义了一个结构体redisObject，并使用typedef为其设置了一个别名为robj
+
+```c
+typedef struct redisObject {
+    unsigned type:4;
+    unsigned encoding:4;
+    unsigned lru:LRU_BITS; // LRU_BITS为24
+    int refcount;
+    void *prt;
+} robj;
+```
+
+- type：unsigned无符号整型，type:4表示占用4个bit，仅二分之一字节，type用于表示Redis数据类型，即string、list、set、zset、hash。而其他的扩展数据类型，如Bitmap、HyperLogLog、GeoSpatial等都是基于普通数据类型来实现的，因此不需要专属的type
+
+```c
+#define OBJ_STRING 0
+#define OBJ_LIST 1
+#define OBJ_SET 2
+#define OBJ_ZSET 3
+#define OBJ_HASH 4
+```
+
+- encoding：unsigned无符号整型，占4个bit，用于表示数据编码方式，例如对于string类型的数据，长度小于20的会设置为int，长度大于20会设置为embstr，而对于字符串，长度小于44的使用embstr，大于44则使用raw。Redis针对不同的数据类型，根据其不同的特征使用不同的编码方式，这样可以提升Redis性能，并减少资源消耗
+
+> ![](javaweb2/228.png)
+>
+> ![](javaweb2/229.png)
+
+编码方式总共有12种，如下：
+
+| 编号 | 编码方式                | 说明                   |
+| ---- | ----------------------- | ---------------------- |
+| 0    | OBJ_ENCODING_RAW        | raw编码动态字符串      |
+| 1    | OBJ_ENCODING_INT        | long类型的整数字符串   |
+| 2    | OBJ_ENCODING_HT         | 哈希表                 |
+| 3    | ~~OBJ_ENCODING_ZIPMAP~~ | 早期哈希实现，现已废弃 |
+| 4    | OBJ_ENCODING_LINKEDLIST | 双向链表               |
+| 5    | OBJ_ENCODING_ZIPLIST    | 压缩列表               |
+| 6    | OBJ_ENCODING_INTSET     | 整数集合               |
+| 7    | OBJ_ENCODING_SKIPLIST   | 跳表                   |
+| 8    | OBJ_ENCODING_EMBSTR     | 动态字符串             |
+| 9    | OBJ_ENCODING_QUICKLIST  | 快速列表               |
+| 10   | OBJ_ENCODING_STREAM     | Stream流               |
+| 11   | OBJ_ENCODING_LISTPACK   | 紧凑列表               |
+
+数据类型对应编码方式如下：
+
+| 数据类型 | 编码方式                                         |
+| -------- | ------------------------------------------------ |
+| STRING   | INT、EMBSTR、RAW                                 |
+| LIST     | LINKEDLIST和ZIPLIST（<3.2）、QUICKLIST（>=3.2）  |
+| SET      | INTSET、HT                                       |
+| ZSET     | ZIPLIST（<7.0）、LISTPACK（>=7.0）、HT、SKIPLIST |
+| HASH     | ZIPLIST（<7.0）、LISTPACK（>=7.0）、HT           |
+
+- lru：unsigned无符号整型，默认长度是常量LRU_BITS，24bit，也就是三字节，用于记录该对象最后一次被访问时间
+- refcount，int整型，默认长度一般为四字节32bit，用于表示对象引用计数，计数器为0表示没有对象引用，可以被回收以释放内存
+- \*ptr：指针，指向真实数据的保存地址，一般为八字节   
+
+#### 基本数据类型
+
+##### String
+
+String是Redis中最常见的数据存储类型，其基本编码方式是RAW，基于SDS实现，存储上限为512MiB，如果存储的SDS长度小于44字节，则会采用EMBSTR编码，此时objethead与SDS是一段连续内存空间，申请内存时只需要调用一次内存分配函数，效率更高。简单来说，就是在申请内存时，直接在RedisObject后面插入SDS
+
+> ![](img4/61.png)
+
+为什么SDS长度在小于44字节时才使用EMBSTR呢？因为Redis在申请内存时调用gmlock，采用2的n次幂大小的内存容量去分配，当SDS长度等于44时，Redisobject与SDS总计刚好64字节，也就是一个内存分片大小，不会产生内存碎片，性能更好
+
+如果String存储的是整数，且不超过64位整型最大值，Redis会使用INT编码，直接在redisobject的ptr位置直接存储数据体，不再指向其他位置。因为ptr刚好是8字节，不再需要SDS
+
+> ![](img4/62.png)
+
+##### List
+
+List在Redis中是一个双端链表结构，可以从首尾操作列表中的元素，而上文提到的基本数据结构中，有三种结构有类似特征，分别是LinkedList、Ziplist和QuickList，LinkedList就是最基本的双端链表结构
+
+在Redis3.2版本之前，Redis采用ziplist与LinkedList来实现List，当元素数量小于512且元素大小小于64字节时，采用ziplist编码，超过阈值则采用LinkedList编码。在Redis3.2到6.2之间，全部采用QuickList来实现。在Redis7.0之后，Redis采用listpack和QuickList来实现，当listpack大于8KiB时，会从listpack升级为由listpack构成的QuickList，ziplist完全弃用
+
+```c
+/* Implements LPUSH/RPUSH/LPUSHX/RPUSHX. 
+ * 'xx': push if key exists. */
+void pushGenericCommand(client *c, int where, int xx) {
+    int j;
+
+    for (j = 2; j < c->argc; j++) {
+        if (sdslen(c->argv[j]->ptr) > LIST_MAX_ITEM_SIZE) {
+            addReplyError(c, "Element too large");
+            return;
+        }
+    }
+
+    robj *lobj = lookupKeyWrite(c->db, c->argv[1]);
+    if (checkType(c,lobj,OBJ_LIST)) return;
+    if (!lobj) {
+        if (xx) {
+            addReply(c, shared.czero);
+            return;
+        }
+
+        lobj = createQuicklistObject();
+        quicklistSetOptions(lobj->ptr, server.list_max_ziplist_size,
+                            server.list_compress_depth);
+        dbAdd(c->db,c->argv[1],lobj);
+    }
+
+    for (j = 2; j < c->argc; j++) {
+        listTypePush(lobj,c->argv[j],where);
+        server.dirty++;
+    }
+
+    addReplyLongLong(c, listTypeLength(lobj));
+
+    char *event = (where == LIST_HEAD) ? "lpush" : "rpush";
+    signalModifiedKey(c,c->db,c->argv[1]);
+    notifyKeyspaceEvent(NOTIFY_LIST,event,c->argv[1],c->db->id);
+}
+```
+
+观察一下List的push函数，服务端中List仅有一个有效push函数，LPUSH和RPUSH只是插入的位置不同，服务端根据位置标识符int where来得知。首先定义了一个变量int j，然后进入循环for (j = 2; j < c->argc; j++)，这一步是获取客户端命令中的所有元素，j也就是命令参数下标。Redis将客户端命令按照空格进行划分，构建了argv数组，下标为0的是CONMMAND，1是KEY，2及其后续就是操作的元素或者参数，对于每一个元素，都调用sdslen(c->argv[j]->ptr)获取其长度，然后判断是否超过LIST_MAX_ITEM_SIZE，LIST_MAX_ITEM_SIZE默认为((1ull<<32)-1024)，1ULL是64位无符号整型，也就是$2^{32}$再减去1024，实际值为4294966272。对于超过4294966272值的数据不允许插入
+
+然后服务器开始寻找对应Key，创建了一个robj *lobj结构体指针，调用lookupKeyWrite(c->db, c->argv[1])，传入的参数中，c->db是选择的数据库，Redis默认有16个数据库，编号从0到15，一般只使用0号；c->argv[1]就是传入的Key。接着if (checkType(c,lobj,OBJ_LIST))判断返回的结构体类型，实际就是判断结构体中的type字段是否是OBJ_LIST，避免获取到错误的数据类型
+
+然后再判断是否为空，如果为空且命令为XX模式，则不创建该键，则直接返回，否则通过lobj = createQuicklistObject()创建一个新的QuickListObject，并赋值给lobj。而后quicklistSetOptions(lobj->ptr, server.list_max_ziplist_size, server.list_compress_depth)为新创建的QuickList添加配置项，如list_max_ziplist_size，list_compress_depth等，然后dbAdd(c->db,c->argv[1],lobj)将其添加到数据库中
+
+然后for (j = 2; j < c->argc; j++)开始遍历每一个元素，通过listTypePush(lobj,c->argv[j],where)插入该元素，并让server.dirty自增，标记该数据库被修改。插入完成后，通过addReplyLongLong(c, listTypeLength(lobj))返回操作完成后List的长度，并发布通知
+
+```c
+robj *createQuicklistObject(void) {
+    quicklist *l = quicklistCreate();
+    robj *o = createObject(OBJ_LIST,l);
+    o->encoding = OBJ_ENCODING_QUICKLIST;
+    return o;
+}
+```
+
+来分析创建QuickList的函数，首先调用quicklistCreate()创建了一个QuickList，然后传入createObject(OBJ_LIST,l)创建对应的RedisObject，再将其编码设置为OBJ_ENCODING_QUICKLIST，最后返回
+
+##### Set
+
+Set是Redis中的单列集合型数据类型，需要满足乱序，元素唯一，可以进行交集、并集、差集运算等特征。而且Set相关命令如SADD、SISMEMBER、SINTER等都需要先判断元素是否存在，所以Set对元素查询的效率要求比较高
+
+为了保证查询效率和唯一性，在7.0之前，Redis采用Dict中的Hashtable编码，也就是将Dict的Key用来存储元素，value统一为null；而7.0后，由于引入了listpack，元素少的set会使用listpack存储，listpack在数据结构上是有序且允许重复的，而Redis会在逻辑上维护listpack的set性质。如果set中全部元素都是整型，Redis则会使用intset
+
+```c
+/* Factory method to return a set that *can* hold "value". When the object has
+ * an integer-encodable value, an intset will be returned. Otherwise a regular
+ * hash table. */
+robj *setTypeCreate(sds value) {
+    if (isSdsRepresentableAsLongLong(value,NULL) == C_OK)
+        return createIntsetObject();
+    return createSetObject();
+}
+```
+
+在创建Set的函数中可以看到，首先通过isSdsRepresentableAsLongLong(value,NULL)判断Set中的元素是否都是整型，只有当所有元素都为整型时，return createIntsetObject()返回一个intset类型的redisobject，否则返回Set类型，跟入createSetObject()
+
+```c
+robj *createSetObject(void) {
+    dict *d = dictCreate(&setDictType,NULL);
+    robj *o = createObject(OBJ_SET,d);
+    o->encoding = OBJ_ENCODING_HT;
+    return o;
+}
+```
+
+这里便创建了dict，并将编码方式设置为了OBJ_ENCODING_HT，也就是hashtable。当然，intset类型不是永久的，只要向Set中插入一个String类型的元素，就会自动升级为hashtable
+
+```c
+int setTypeAdd(robj *subject, sds value) {
+    long long llval;
+    if (subject->encoding == OBJ_ENCODING_HT) {
+        dict *ht = subject->ptr;
+        dictEntry *de = dictAddRaw(ht,value,NULL);
+        if (de) {
+            dictSetKey(ht,de,sdsdup(value));
+            dictSetVal(ht,de,NULL);
+            return 1;
+        }
+    } else if (subject->encoding == OBJ_ENCODING_INTSET) {
+        if (isSdsRepresentableAsLongLong(value,&llval) == C_OK) {
+            uint8_t success = 0;
+            subject->ptr = intsetAdd(subject->ptr,llval,&success);
+            if (success) {
+                /* Convert to regular set when the intset contains
+                 * too many entries. */
+                size_t max_entries = server.set_max_intset_entries;
+                /* limit to 1G entries due to intset internals. */
+                if (max_entries >= 1<<30) max_entries = 1<<30;
+                if (intsetLen(subject->ptr) > max_entries)
+                    setTypeConvert(subject,OBJ_ENCODING_HT);
+                return 1;
+            }
+        } else {
+            /* Failed to get integer from object, convert to regular set. */
+            setTypeConvert(subject,OBJ_ENCODING_HT);
+
+            /* The set *was* an intset and this value is not integer
+             * encodable, so dictAdd should always work. */
+            serverAssert(dictAdd(subject->ptr,sdsdup(value),NULL) == DICT_OK);
+            return 1;
+        }
+    } else {
+        serverPanic("Unknown set encoding");
+    }
+    return 0;
+}
+```
 
