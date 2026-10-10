@@ -1,6 +1,6 @@
 # Redis Advance
 
-`更新时间：2026-10-08`
+`更新时间：2026-10-10`
 
 注释解释：
 
@@ -2458,6 +2458,507 @@ int setTypeAdd(robj *subject, sds value) {
         serverPanic("Unknown set encoding");
     }
     return 0;
+}
+```
+
+在setTypeAdd函数中，传入两个参数，robj *subject需要返回的redisobject，以及需要插入的数据sds value。首先声明long long llval，但是并未赋值，实际是为后续intset预留。然后if (subject->encoding == OBJ_ENCODING_HT)判断当前robj类型是否是哈希表，如果是哈希表，则dict *ht = subject->ptr获取其table，然后调用dictAddRaw(ht,value,NULL)尝试插入，取得返回值Entry。if (de)判断是否插入成功，如果插入成功，则说明可以进一步插入真实数据，则dictSetKey(ht,de,sdsdup(value))将Key设置为Key的备份，dictSetVal(ht,de,NULL)设置value为null，最后返回1表示插入成功；如果插入失败，则说明Key已经存在，返回0
+
+而如果robj类型为intset，将value转换为long long类型，也就是赋值给llval，然后uint8_t success = 0声明标识符，subject->ptr = intsetAdd(subject->ptr,llval,&success)执行intset的插入，插入成功后，size_t max_entries = server.set_max_intset_entries获取当前intset配置的最大Entry数量，if (max_entries >= 1<<30) max_entries = 1<<30判断如果最大Entry数量大于等于1073741824，则将其设置为1073741824，避免intset中Entry数量过多。再判断当前intset中Entry的数量是否已经大于允许的最大数量，如果超过，则setTypeConvert(subject,OBJ_ENCODING_HT)将其转换为哈希表存储。如果robj类型为intset，但需要插入的value无法转换为long long，则将其转换为哈希表，并执行serverAssert(dictAdd(subject->ptr,sdsdup(value),NULL) == DICT_OK)强制插入，且必须成功，最后返回1。
+
+如果robj表示哈希表或者intset，则报错serverPanic("Unknown set encoding")未知Set编码，确保不会修改错误的数据结构
+
+```c
+void setTypeConvert(robj *setobj, int enc) {
+    setTypeIterator *si;
+    serverAssertWithInfo(NULL,setobj,setobj->type == OBJ_SET &&
+                             setobj->encoding == OBJ_ENCODING_INTSET);
+
+    if (enc == OBJ_ENCODING_HT) {
+        int64_t intele;
+        dict *d = dictCreate(&setDictType,NULL);
+        sds element;
+
+        /* Presize the dict to avoid rehashing */
+        dictExpand(d,intsetLen(setobj->ptr));
+
+        /* To add the elements we extract integers and create redis objects */
+        si = setTypeInitIterator(setobj);
+        while (setTypeNext(si,&element,&intele) != -1) {
+            element = sdsfromlonglong(intele);
+            serverAssert(dictAdd(d,element,NULL) == DICT_OK);
+        }
+        setTypeReleaseIterator(si);
+
+        setobj->encoding = OBJ_ENCODING_HT;
+        zfree(setobj->ptr);
+        setobj->ptr = d;
+    } else {
+        serverPanic("Unsupported set conversion");
+    }
+}
+```
+
+来观察类型转换函数setTypeConvert()，头部声明了迭代器setTypeIterator *si，用于便利intset中存储的数据，然后serverAssertWithInfo(NULL,setobj,setobj->type == OBJ_SET && setobj->encoding == OBJ_ENCODING_INTSET)断言setobj的类型必须是OBJ_SET，且编码必须是intset，因为在Set中类型转换的操作仅能由intset转换为hashtable，不允许逆向转换
+
+然后二次判断enc目标编码是否是hashtable，如果是OBJ_ENCODING_HT才允许转换，否则serverPanic("Unsupported set conversion")报错不支持的set类型转换。先声明了三个变量，int64_t intele保存的数字，dict *d = dictCreate(&setDictType,NULL)创建了一个新的dict，sds element数字转换后存储的sds。再通过dictExpand(d,intsetLen(setobj->ptr))将dict扩展到能够存储所有数字的长度，并si = setTypeInitIterator(setobj)初始化迭代器
+
+接着使用while (setTypeNext(si,&element,&intele) != -1)开始遍历intset中的元素，对于每一个元素，element = sdsfromlonglong(intele)将intset中的数字转换为dict支持的sds，然后执行serverAssert(dictAdd(d,element,NULL) == DICT_OK)将数字作为Key插入dict，并且保证必须成功。因为这是set类型，所以value统一为null。然后setTypeReleaseIterator(si)释放迭代器内存空间，setobj->encoding = OBJ_ENCODING_HT设置robj的编码为哈希表，并zfree(setobj->ptr)释放原来的intset，setobj->ptr = d让robj的ptr指向抓换后的哈希表，完成转换
+
+##### ZSet
+
+Zset也就是SortedSet，其中每一个元素都需要指定一个score值和member值，ZSET可以根据score值排序，member必须唯一，并且可以根据member值查询分数。因此ZSET底层数据结构必须满足键值存储、键必须唯一、可排序这几个需求，但我们之前了解的所有Redis编码中，似乎并没有一种编码可以完全满足这几点需求
+
+- skiplist：可以排序，并且可以同时存储分数值与元素值，但是不保证唯一
+- hashtable：可以键值存储，并且可以根据Key访问value，可以保证唯一，但是无法排序
+
+所以，Redis其实结合了skiplist与hashtable两者的特点，结合使用，组成了ZSET
+
+```c
+typedef struct zset {
+    dict *dict;
+    zskiplist *zsl;
+} zset;
+```
+
+在server.h中，zset结构体由两个成员变量组成，dict *dict存储键值关系，并确保唯一的哈希表；zskiplist *zsl存储排序关系与分数的跳表。不过这里需要额外注意的是，当使用skiplist + dict存储时，robj的编码会被设置为skiplist，dict中的键为member，值为score，方便利用键获取分数；而skiplist中同样存储ele和score，并根据score进行排序
+
+> ![](img4/64.png)
+
+当元素数量不多时，HT和skiplist的优势不明显，并且会占用更多内存，因此ZSET还会采用ziplist来节省内存，阈值可以通过zset_max_ziplist_entries和zset_max_ziplist_value来设置最大元素数量和元素最大占用字节数，默认值分别为128和64。在Redis7.0+，ziplist完全弃用，改为listpack
+
+> ![](img4/63.png)
+
+```c
+int zsetAdd(robj *zobj, double score, sds ele, int in_flags, int *out_flags, double *newscore) {
+    /* Turn options into simple to check vars. */
+    int incr = (in_flags & ZADD_IN_INCR) != 0;
+    int nx = (in_flags & ZADD_IN_NX) != 0;
+    int xx = (in_flags & ZADD_IN_XX) != 0;
+    int gt = (in_flags & ZADD_IN_GT) != 0;
+    int lt = (in_flags & ZADD_IN_LT) != 0;
+    *out_flags = 0; /* We'll return our response flags. */
+    double curscore;
+
+    /* NaN as input is an error regardless of all the other parameters. */
+    if (isnan(score)) {
+        *out_flags = ZADD_OUT_NAN;
+        return 0;
+    }
+
+    /* Update the sorted set according to its encoding. */
+    if (zobj->encoding == OBJ_ENCODING_ZIPLIST) {
+        unsigned char *eptr;
+
+        if ((eptr = zzlFind(zobj->ptr,ele,&curscore)) != NULL) {
+            /* NX? Return, same element already exists. */
+            if (nx) {
+                *out_flags |= ZADD_OUT_NOP;
+                return 1;
+            }
+
+            /* Prepare the score for the increment if needed. */
+            if (incr) {
+                score += curscore;
+                if (isnan(score)) {
+                    *out_flags |= ZADD_OUT_NAN;
+                    return 0;
+                }
+            }
+
+            /* GT/LT? Only update if score is greater/less than current. */
+            if ((lt && score >= curscore) || (gt && score <= curscore)) {
+                *out_flags |= ZADD_OUT_NOP;
+                return 1;
+            }
+
+            if (newscore) *newscore = score;
+
+            /* Remove and re-insert when score changed. */
+            if (score != curscore) {
+                zobj->ptr = zzlDelete(zobj->ptr,eptr);
+                zobj->ptr = zzlInsert(zobj->ptr,ele,score);
+                *out_flags |= ZADD_OUT_UPDATED;
+            }
+            return 1;
+        } else if (!xx) {
+            /* check if the element is too large or the list
+             * becomes too long *before* executing zzlInsert. */
+            if (zzlLength(zobj->ptr)+1 > server.zset_max_ziplist_entries ||
+                sdslen(ele) > server.zset_max_ziplist_value ||
+                !ziplistSafeToAdd(zobj->ptr, sdslen(ele)))
+            {
+                zsetConvert(zobj,OBJ_ENCODING_SKIPLIST);
+            } else {
+                zobj->ptr = zzlInsert(zobj->ptr,ele,score);
+                if (newscore) *newscore = score;
+                *out_flags |= ZADD_OUT_ADDED;
+                return 1;
+            }
+        } else {
+            *out_flags |= ZADD_OUT_NOP;
+            return 1;
+        }
+    }
+
+    /* Note that the above block handling ziplist would have either returned or
+     * converted the key to skiplist. */
+    if (zobj->encoding == OBJ_ENCODING_SKIPLIST) {
+        zset *zs = zobj->ptr;
+        zskiplistNode *znode;
+        dictEntry *de;
+
+        de = dictFind(zs->dict,ele);
+        if (de != NULL) {
+            /* NX? Return, same element already exists. */
+            if (nx) {
+                *out_flags |= ZADD_OUT_NOP;
+                return 1;
+            }
+
+            curscore = *(double*)dictGetVal(de);
+
+            /* Prepare the score for the increment if needed. */
+            if (incr) {
+                score += curscore;
+                if (isnan(score)) {
+                    *out_flags |= ZADD_OUT_NAN;
+                    return 0;
+                }
+            }
+
+            /* GT/LT? Only update if score is greater/less than current. */
+            if ((lt && score >= curscore) || (gt && score <= curscore)) {
+                *out_flags |= ZADD_OUT_NOP;
+                return 1;
+            }
+
+            if (newscore) *newscore = score;
+
+            /* Remove and re-insert when score changes. */
+            if (score != curscore) {
+                znode = zslUpdateScore(zs->zsl,curscore,ele,score);
+                /* Note that we did not removed the original element from
+                 * the hash table representing the sorted set, so we just
+                 * update the score. */
+                dictGetVal(de) = &znode->score; /* Update score ptr. */
+                *out_flags |= ZADD_OUT_UPDATED;
+            }
+            return 1;
+        } else if (!xx) {
+            ele = sdsdup(ele);
+            znode = zslInsert(zs->zsl,score,ele);
+            serverAssert(dictAdd(zs->dict,ele,&znode->score) == DICT_OK);
+            *out_flags |= ZADD_OUT_ADDED;
+            if (newscore) *newscore = score;
+            return 1;
+        } else {
+            *out_flags |= ZADD_OUT_NOP;
+            return 1;
+        }
+    } else {
+        serverPanic("Unknown sorted set encoding");
+    }
+    return 0; /* Never reached. */
+}
+```
+
+ZSET的add函数非常长，我们分段来解析
+
+```c
+/* Turn options into simple to check vars. */
+int incr = (in_flags & ZADD_IN_INCR) != 0;
+int nx = (in_flags & ZADD_IN_NX) != 0;
+int xx = (in_flags & ZADD_IN_XX) != 0;
+int gt = (in_flags & ZADD_IN_GT) != 0;
+int lt = (in_flags & ZADD_IN_LT) != 0;
+*out_flags = 0; /* We'll return our response flags. */
+double curscore;
+
+/* NaN as input is an error regardless of all the other parameters. */
+if (isnan(score)) {
+    *out_flags = ZADD_OUT_NAN;
+    return 0;
+}
+```
+
+头部的incr、nx、xx、gt、lt都是在解析命令参数，在执行ZADD时可以传入这些可选参数；out_flags相当于一个标识符，调用者通过out_flags来得知zsetAdd的执行情况；double curscore预先声明一个当前分数变量，为下文运算预留
+
+然后if (isnan(score))判断传入的分数是否是NaN(Not A Number)，如果score不是数字，则设置out_flags为ZADD_OUT_NAN，并返回0插入失败
+
+```c
+/* Update the sorted set according to its encoding. */
+if (zobj->encoding == OBJ_ENCODING_ZIPLIST) {
+    unsigned char *eptr;
+
+    if ((eptr = zzlFind(zobj->ptr,ele,&curscore)) != NULL) {
+        /* NX? Return, same element already exists. */
+        if (nx) {
+            *out_flags |= ZADD_OUT_NOP;
+            return 1;
+        }
+
+        /* Prepare the score for the increment if needed. */
+        if (incr) {
+            score += curscore;
+            if (isnan(score)) {
+                *out_flags |= ZADD_OUT_NAN;
+                return 0;
+            }
+        }
+
+        /* GT/LT? Only update if score is greater/less than current. */
+        if ((lt && score >= curscore) || (gt && score <= curscore)) {
+            *out_flags |= ZADD_OUT_NOP;
+            return 1;
+        }
+
+        if (newscore) *newscore = score;
+
+        /* Remove and re-insert when score changed. */
+        if (score != curscore) {
+            zobj->ptr = zzlDelete(zobj->ptr,eptr);
+            zobj->ptr = zzlInsert(zobj->ptr,ele,score);
+            *out_flags |= ZADD_OUT_UPDATED;
+        }
+        return 1;
+    } else if (!xx) {
+        /* check if the element is too large or the list
+         * becomes too long *before* executing zzlInsert. */
+        if (zzlLength(zobj->ptr)+1 > server.zset_max_ziplist_entries ||
+            sdslen(ele) > server.zset_max_ziplist_value ||
+            !ziplistSafeToAdd(zobj->ptr, sdslen(ele)))
+        {
+            zsetConvert(zobj,OBJ_ENCODING_SKIPLIST);
+        } else {
+            zobj->ptr = zzlInsert(zobj->ptr,ele,score);
+            if (newscore) *newscore = score;
+            *out_flags |= ZADD_OUT_ADDED;
+            return 1;
+        }
+    } else {
+        *out_flags |= ZADD_OUT_NOP;
+        return 1;
+    }
+}
+```
+
+如果robj编码为OBJ_ENCODING_ZIPLIST，则进入这段逻辑。if ((eptr = zzlFind(zobj->ptr,ele,&curscore)) != NULL)判断元素是否存在，如果存在，先判断是否是NX模式，如果是NX模式，则直接返回；判断是否是自增模式，如果是，则累加自增，然后返回；再判断gt和lt，分数是否在指定范围内，如果不在，则返回；if (newscore) *newscore = score更新分数；if (score != curscore)判断分数是否发生变化，如果发生变化，先zobj->ptr = zzlDelete(zobj->ptr,eptr)将其删除，再zobj->ptr = zzlInsert(zobj->ptr,ele,score)重新插入，最后返回1
+
+如果元素不存在，且不是XX模式，则if (zzlLength(zobj->ptr)+1 > server.zset_max_ziplist_entries || sdslen(ele) > server.zset_max_ziplist_value || !ziplistSafeToAdd(zobj->ptr, sdslen(ele)))判断其长度是否大于ziplist最大Entry，元素大小是否超过ziplist允许的最大元素大小，以及调用ziplistSafeToAdd()函数判断能否安全插入。如果任一条件不满足，则执行zsetConvert(zobj,OBJ_ENCODING_SKIPLIST)转换为skiplist，否则zobj->ptr = zzlInsert(zobj->ptr,ele,score)插入元素，if (newscore) *newscore = score更新分数，并返回1
+
+最后如果是XX模式，不允许新增zset，则直接返回1
+
+```c
+/* Note that the above block handling ziplist would have either returned or
+ * converted the key to skiplist. */
+if (zobj->encoding == OBJ_ENCODING_SKIPLIST) {
+    zset *zs = zobj->ptr;
+    zskiplistNode *znode;
+    dictEntry *de;
+
+    de = dictFind(zs->dict,ele);
+    if (de != NULL) {
+        /* NX? Return, same element already exists. */
+        if (nx) {
+            *out_flags |= ZADD_OUT_NOP;
+            return 1;
+        }
+
+        curscore = *(double*)dictGetVal(de);
+
+        /* Prepare the score for the increment if needed. */
+        if (incr) {
+            score += curscore;
+            if (isnan(score)) {
+                *out_flags |= ZADD_OUT_NAN;
+                return 0;
+            }
+        }
+
+        /* GT/LT? Only update if score is greater/less than current. */
+        if ((lt && score >= curscore) || (gt && score <= curscore)) {
+            *out_flags |= ZADD_OUT_NOP;
+            return 1;
+        }
+
+        if (newscore) *newscore = score;
+
+        /* Remove and re-insert when score changes. */
+        if (score != curscore) {
+            znode = zslUpdateScore(zs->zsl,curscore,ele,score);
+            /* Note that we did not removed the original element from
+             * the hash table representing the sorted set, so we just
+             * update the score. */
+            dictGetVal(de) = &znode->score; /* Update score ptr. */
+            *out_flags |= ZADD_OUT_UPDATED;
+        }
+        return 1;
+    } else if (!xx) {
+        ele = sdsdup(ele);
+        znode = zslInsert(zs->zsl,score,ele);
+        serverAssert(dictAdd(zs->dict,ele,&znode->score) == DICT_OK);
+        *out_flags |= ZADD_OUT_ADDED;
+        if (newscore) *newscore = score;
+        return 1;
+    } else {
+        *out_flags |= ZADD_OUT_NOP;
+        return 1;
+    }
+} else {
+    serverPanic("Unknown sorted set encoding");
+}
+return 0; /* Never reached. */
+```
+
+如果robj编码类型为OBJ_ENCODING_SKIPLIST，则执行skiplist的插入逻辑。首先声明三个变量，zset \*zs = zobj->ptr获取zset，zskiplistNode \*znode和dictEntry \*de。调用dictFind(zs->dict,ele)寻找对应元素所在的dictEntry，if (de != NULL)判断Entry是否存在，即元素是否存在。如果存在，且为NX模式，则直接返回1。curscore = \*(double\*)dictGetVal(de)获取当前元素的分数，如果是INCR模式，进行累加自增，如果score为NaN，返回0。再判断gt和lt，如果超出范围，直接返回1。if (score != curscore)判断分数是否变化，如果变化，zslUpdateScore(zs->zsl,curscore,ele,score)更新并返回节点，赋值给znode，dictGetVal(de) = &znode->score将dict中的score的地址更新为skiplist中的score地址，让dict和skiplist共享一个score地址，并返回1
+
+如果元素不存在，且不为XX模式，需要创建新的节点。ele = sdsdup(ele)创建数据备份，znode = zslInsert(zs->zsl,score,ele)添加一个skiplist节点，然后serverAssert(dictAdd(zs->dict,ele,&znode->score) == DICT_OK)向dict中插入一个新Entry，并保证一定插入成功，并返回1。如果为XX模式，则直接返回1
+
+如果robj编码不是ziplist或者skiplist，则serverPanic("Unknown sorted set encoding")抛出异常未知zset编码，并返回0
+
+ziplist本身没有排序和键值对功能，因此需要由zset手动编写业务逻辑实现。ziplist是连续内存，score和element是紧挨在一起的两个Entry，element在前，score在后。score越小越接近队首，score越大越接近队尾，按照score值升序排列
+
+> ![](img4/65.png)
+
+##### Hash
+
+哈希的底层编码相对就非常简单了，Redis7.0之前，元素较少时使用ziplist，7.0+元素较少时使用listpack，元素较多时转换为dict，转换的阈值为hash-max-ziplist-entries和hash-max-ziplist-value，均由配置文件维护，默认为512和64
+
+```c
+void hsetCommand(client *c) {
+    int i, created = 0;
+    robj *o;
+
+    if ((c->argc % 2) == 1) {
+        addReplyErrorFormat(c,"wrong number of arguments for '%s' command",c->cmd->name);
+        return;
+    }
+
+    if ((o = hashTypeLookupWriteOrCreate(c,c->argv[1])) == NULL) return;
+    hashTypeTryConversion(o,c->argv,2,c->argc-1);
+
+    for (i = 2; i < c->argc; i += 2)
+        created += !hashTypeSet(o,c->argv[i]->ptr,c->argv[i+1]->ptr,HASH_SET_COPY);
+
+    /* HMSET (deprecated) and HSET return value is different. */
+    char *cmdname = c->argv[0]->ptr;
+    if (cmdname[1] == 's' || cmdname[1] == 'S') {
+        /* HSET */
+        addReplyLongLong(c, created);
+    } else {
+        /* HMSET */
+        addReply(c, shared.ok);
+    }
+    signalModifiedKey(c,c->db,c->argv[1]);
+    notifyKeyspaceEvent(NOTIFY_HASH,"hset",c->argv[1],c->db->id);
+    server.dirty += (c->argc - 2)/2;
+}
+```
+
+if ((c->argc % 2) == 1)快捷判断hset的参数数量是否合法，因为hash类型必须以键值对型存在，所以包含HSET本身在内，参数个数一定为2的倍数，如果模2的结果等于1，则表明一定有某一个field没有对应的value。if ((o = hashTypeLookupWriteOrCreate(c,c->argv[1])) == NULL)判断Key是否存在，如果不存在，创建一个新的hash类型，然后返回。如果存在，则执行hashTypeTryConversion(o,c->argv,2,c->argc-1)判断是否需要将ziplist转换为dict。然后从第三个参数，也就是第一个field开始遍历所有键值对，如果对应field不存在，则需要创建一个Entry，计入created计数器
+
+接着判断是HSET还是HMSET，对于HSET，执行addReplyLongLong(c, created)，而HMSET则执行addReply(c, shared.ok)，最后signalModifiedKey(c,c->db,c->argv[1])标记操作的Key，notifyKeyspaceEvent(NOTIFY_HASH,"hset",c->argv[1],c->db->id)下发通知，server.dirty += (c->argc - 2)/2累计操作次数，减2是减去HSET或者HMSET以及Key，剩下的就是Field和Value，除以2是因为每个键值对只操作一次
+
+```c
+robj *hashTypeLookupWriteOrCreate(client *c, robj *key) {
+    robj *o = lookupKeyWrite(c->db,key);
+    if (checkType(c,o,OBJ_HASH)) return NULL;
+
+    if (o == NULL) {
+        o = createHashObject();
+        dbAdd(c->db,key,o);
+    }
+    return o;
+}
+```
+
+在hashTypeLookupWriteOrCreate函数中，先robj *o = lookupKeyWrite(c->db,key)查询Key对应的redisobject，if (checkType(c,o,OBJ_HASH))判断robj的类型是否是OBJ_HASH，如果不是HASH，则不应该继续操作，直接返回NULL。如果robj为NULL，Key不存在，则调用o = createHashObject()创建一个新的hash，并dbAdd(c->db,key,o)添加到数据库中，最后返回该hashObject
+
+```c
+robj *createHashObject(void) {
+    unsigned char *zl = ziplistNew();
+    robj *o = createObject(OBJ_HASH, zl);
+    o->encoding = OBJ_ENCODING_ZIPLIST;
+    return o;
+}
+```
+
+从创建hash的函数就可以看出来，Redis在创建新hash时一定会先创建一个ziplist类型的hash，设置robj编码为OBJ_ENCODING_ZIPLIST，之后再通过hashTypeTryConversion()函数来判断hash类型是否需要升级为dict编码
+
+```c
+void hashTypeTryConversion(robj *o, robj **argv, int start, int end) {
+    int i;
+    size_t sum = 0;
+
+    if (o->encoding != OBJ_ENCODING_ZIPLIST) return;
+
+    for (i = start; i <= end; i++) {
+        if (!sdsEncodedObject(argv[i]))
+            continue;
+        size_t len = sdslen(argv[i]->ptr);
+        if (len > server.hash_max_ziplist_value) {
+            hashTypeConvert(o, OBJ_ENCODING_HT);
+            return;
+        }
+        sum += len;
+    }
+    if (!ziplistSafeToAdd(o->ptr, sum))
+        hashTypeConvert(o, OBJ_ENCODING_HT);
+}
+```
+
+我们来观察hashTypeTryConversion()是如果将ziplist转换为dict的。头部声明了两个变量int i和size_t sum = 0，i用于标识field的起始位置，hsetCommand()调用时传入的参数为hashTypeTryConversion(o,c->argv,2,c->argc-1)，即从第三个参数开始。if (o->encoding != OBJ_ENCODING_ZIPLIST)判断当前robj类型是否是ziplist，如果不是ziplist直接返回，避免修改错误的数据类型。然后从第一个field开始遍历所有的Entry，通过sdsEncodedObject(argv[i])判断该参数是否是sds编码，也就是判断是否是字符串，如果不是字符串，则跳过该参数，检查下一个。如果是sds，则size_t len = sdslen(argv[i]->ptr)记录字符串长度，然后if (len > server.hash_max_ziplist_value)判断该字符串长度是否大于ziplist允许的元素最大字节数，如果大于，则执行hashTypeConvert()转换为dict，然后sum += len累计当前参数总长度
+
+再ziplistSafeToAdd(o->ptr, sum)判断总长度是否大于ziplist允许的最大占用内存，默认为1GiB，如果超过，则执行hashTypeConvert(o, OBJ_ENCODING_HT)转换为dict
+
+```c
+void hashTypeConvert(robj *o, int enc) {
+    if (o->encoding == OBJ_ENCODING_ZIPLIST) {
+        hashTypeConvertZiplist(o, enc);
+    } else if (o->encoding == OBJ_ENCODING_HT) {
+        serverPanic("Not implemented");
+    } else {
+        serverPanic("Unknown hash encoding");
+    }
+}
+```
+
+hashTypeConvert()是一个入口函数，负责判断转换的robj编码是否合法，如果是OBJ_ENCODING_ZIPLIST，则执行hashTypeConvertZiplist(o, enc)，如果是OBJ_ENCODING_HT，则不需要进行转换，serverPanic("Not implemented")抛出异常未实现，也可能是为未来新的hash数据结构预留。如果既不是ziplist，也不是hashtable，则报错未知的hash编码
+
+```c
+void hashTypeConvertZiplist(robj *o, int enc) {
+    serverAssert(o->encoding == OBJ_ENCODING_ZIPLIST);
+
+    if (enc == OBJ_ENCODING_ZIPLIST) {
+        /* Nothing to do... */
+
+    } else if (enc == OBJ_ENCODING_HT) {
+        hashTypeIterator *hi;
+        dict *dict;
+        int ret;
+
+        hi = hashTypeInitIterator(o);
+        dict = dictCreate(&hashDictType, NULL);
+
+        while (hashTypeNext(hi) != C_ERR) {
+            sds key, value;
+
+            key = hashTypeCurrentObjectNewSds(hi,OBJ_HASH_KEY);
+            value = hashTypeCurrentObjectNewSds(hi,OBJ_HASH_VALUE);
+            ret = dictAdd(dict, key, value);
+            if (ret != DICT_OK) {
+                serverLogHexDump(LL_WARNING,"ziplist with dup elements dump",
+                    o->ptr,ziplistBlobLen(o->ptr));
+                serverPanic("Ziplist corruption detected");
+            }
+        }
+        hashTypeReleaseIterator(hi);
+        zfree(o->ptr);
+        o->encoding = OBJ_ENCODING_HT;
+        o->ptr = dict;
+    } else {
+        serverPanic("Unknown hash encoding");
+    }
 }
 ```
 
