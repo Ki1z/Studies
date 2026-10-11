@@ -1,6 +1,6 @@
 # Redis Advance
 
-`更新时间：2026-10-10`
+`更新时间：2026-10-11`
 
 注释解释：
 
@@ -2962,3 +2962,171 @@ void hashTypeConvertZiplist(robj *o, int enc) {
 }
 ```
 
+先断言serverAssert(o->encoding == OBJ_ENCODING_ZIPLIST)必须是ziplist编码的robj才能进行转换，不允许其他类型在该函数中转换。然后判断目标类型，if (enc == OBJ_ENCODING_ZIPLIST)如果目标类型也是OBJ_ENCODING_ZIPLIST，那等同于原地TP；如果else if (enc == OBJ_ENCODING_HT)目标类型为hashtable，则执行对应的转换逻辑，否则serverPanic("Unknown hash encoding")报错未知的hash编码
+
+在转换逻辑中，先声明了三个变量，hashTypeIterator *hi迭代器、dict *dict创建的新dict、int ret返回值标识符。然后hi = hashTypeInitIterator(o)初始化迭代器，dict = dictCreate(&hashDictType, NULL)创建新的dict，接着就while (hashTypeNext(hi) != C_ERR)遍历ziplist元素，开始进行转换。对于每一个ziplist元素，key = hashTypeCurrentObjectNewSds(hi,OBJ_HASH_KEY)和value = hashTypeCurrentObjectNewSds(hi,OBJ_HASH_VALUE)创建新的Key和value，然后ret = dictAdd(dict, key, value)插入dict中，返回值记录在ret里，if (ret != DICT_OK)判断是否插入成功，如果任一元素插入失败，则说明key重复，serverLogHexDump(LL_WARNING,"ziplist with dup elements dump", o->ptr,ziplistBlobLen(o->ptr))输出Key的hex，并报错ziplist数据损坏。然后hashTypeReleaseIterator(hi)释放迭代器，zfree(o->ptr)释放ziplist，o->encoding = OBJ_ENCODING_HT设置robj编码为哈希表，最后o->ptr = dict让robj指向新的dict，完成转换
+
+## Redis网络模型
+
+Redis到底是单线程还是多线程？一般认为Redis是单线程的，但实际上，如果仅仅是Redis的核心业务部分，比如命令处理，确实是单线程的，但如果针对整个Redis应用，那么可以认为是多线程的
+
+在Redis版本迭代的过程中，在两个重要时间节点上引入了多线程的支持，分别是Redis4.0引入了多线程异步处理一些耗时较长的任务，比如异步删除命令unlink；在Redis6.0网络模型中引入了多线程，进一步提高对多核cpu的利用率
+
+不过为什么Redis仍选择核心业务单线程呢，以下是几个重要因素
+
+- 如果忽略持久化操作，Redis是纯内存操作，执行速度非常快，他的性能瓶颈是网络延迟而不是执行速度，因此多线程并不会带来巨大的性能提升
+- 多线程会导致过多的上下文切换，带来不必要的开销
+- 引入多线程会面临线程安全问题，必然需要引入线程锁等安全手段，实现复杂度增高，而且性能也会大幅降低
+
+Redis通过IO多路复用来提高网络性能，并且支持各种不同的多路复用实现，并且将这些实现进行了封装，提供了统一的高性能事件API，名为AE
+
+> ![](img4/66.png)
+
+Redis提供了针对epoll、evport、kqueue和select四种不同的IO多路复用实现，并且会自动根据系统选择对应的实现方式
+
+```c
+/* Include the best multiplexing layer supported by this system.
+ * The following should be ordered by performances, descending. */
+#ifdef HAVE_EVPORT
+#include "ae_evport.c"
+#else
+    #ifdef HAVE_EPOLL
+    #include "ae_epoll.c"
+    #else
+        #ifdef HAVE_KQUEUE
+        #include "ae_kqueue.c"
+        #else
+        #include "ae_select.c"
+        #endif
+    #endif
+#endif
+```
+
+## Redis通信协议
+
+### RESP协议
+
+Redis是一个CS架构的软件，通信一般分为两部
+
+- 客户端向服务器发送一条命令
+- 服务器解析并执行命令，返回响应结果给客户端
+
+因此客户端发送命令的格式、服务端响应结果的格式必须有一个规范，这个规范就是通信协议。而Redis中采用的就是Redis自定义的协议RESP，Redis于1.2版本引入了RESP协议，Redis2.0版本中成为了与Redis服务端通信的标准协议，称为RESP2，Redis6.0版本后，为了增加更多数据类型并支持新特性客户端缓存，Redis将RESP2升级到了RESP3协议，但是两者并不兼容，因此默认仍使用RESP2
+
+#### RESP数据类型
+
+- 单行字符串：首字节为`+`，后面紧跟单行字符串，以CRLF`\r\n`结尾
+- 错误：首字节为`-`，与单行字符串格式一样，只是字符串是异常信息，一般由服务端返回
+- 数值：首字节为`:`，与单行字符串格式一样
+- 多行字符串：首字节为`$`，后面紧跟字符串长度，然后是CRLF，后面是字符串内容，再以CRLF结尾，最大支持512MiB
+- 数组：首字节为`*`，后面紧跟数组元素个数，然后是CRLF，后面就是数组元素，元素类型不限
+
+### 手动编写Redis客户端
+
+在了解了RESP协议后，我们根据协议规范，使用Java编写一个简易的Redis客户端。Redis使用的网络连接方式为socket连接
+
+```java
+package com.eiousee.redis;
+
+import java.io.*;
+import java.net.Socket;
+
+public class Client {
+
+    public static final String HOST = "localhost";
+    public static final int PORT = 6379;
+    public static final String CRLF = "\r\n";
+
+    private static final byte[] readBuf = new byte[2048];
+    private static final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+
+    public static void main(String[] args) throws Exception {
+        // 建立socket连接
+        Socket s = new Socket(HOST, PORT);
+        // 发送命令 SET name jack
+        byte[] command = buildCommand("SET", "name", "jack");
+        s.getOutputStream().write(command);
+        // 读取响应
+        int len = s.getInputStream().read(readBuf);
+        String response = new String(readBuf, 0, len);
+        System.out.println("Response: " + response);
+    }
+
+    public static byte[] buildCommand(String... args) throws IOException {
+        // 写入命令参数个数
+        baos.write(("*" + args.length + CRLF).getBytes());
+        for (String arg : args) {
+            // 写入每个参数的长度和内容
+            baos.write(("$" + arg.length() + CRLF).getBytes());
+            baos.write((arg + CRLF).getBytes());
+        }
+        return baos.toByteArray();
+    }
+}
+```
+
+首先声明常量HOST、PORT和CRLF，然后准备读取缓冲区readBuf和输出流baos，然后通过Socket建立连接，根据buildCommand()方法生成字节数组，再通过socket的getOutputStream().write()方法发送。接着通过getInputStream().read()读取服务端响应内容，返回值为数组长度，然后新建String对象，构造器传入readBuf和长度，最后打印输出
+
+在buildCommand()方法中，统计命令参数个数，先构造一个数组结构，然后对于数组中每一个元素构造一个多行字符串结构，最后返回字节数组
+
+> ![](img4/67.png)
+
+> ![](img4/68.png)
+
+*注：这里的每个参数长度计算存在问题，不能直接获取arg的长度，而是应该获取arg的字节数组长度，一个中文字符占两个字节，所以直接使用arg.length()在中文情况在会出现异常*
+
+## Redis内存回收
+
+### 过期KEY处理
+
+Redis提供了一个EXPIRE命令，可以为KEY设置一个存活时间TTL，当TTL到期后，Redis会释放KEY中的数据，此时访问KEY得到的结果为(nil)
+
+> ![](javaweb2/233.png)
+
+Redis本身是键值对型数据库，所有的数据都存储在一个redisDB结构体中，这个结构体包含了两个哈希表
+
+- dict：保存Redis中所有的键值对数据
+- expires：保存了Redis中所有设置了过期时间的KEY及其TTL
+
+但Redis并不是实时监测KEY过期时间，在KEY过期后马上删除，而是采用两种延迟删除的策略。第一，当有命令需要操作一个KEY时，Redis才会检查该KEY的存活时间，如果已经过期才执行删除，这被称为惰性删除；第二，通过一个定时任务，周期性抽样部分设置有TTL的KEY，如果已经过期则执行删除，这被称为周期删除
+
+而Redis的周期删除有两种执行模式。SLOW模式，默认执行频率为每秒10次，但每次执行时长不能超过25ms，SLOW模式的执行周期收server.hz参数影响；FAST模式，执行频率不固定，跟随Redis内部IO事件循环执行，两次任务之间的间隔不能低于2ms，执行时长不能超过1ms
+
+### 内存淘汰策略
+
+内存淘汰是指当Redis内存使用达到设置的阈值时，Redis会主动挑选部分KEY进行删除，以释放更多内存的流程。Redis会在每次处理客户端命令时对内存使用情况进行判断，如果内存已经用尽，则触发内存淘汰策略
+
+| 淘汰策略        | 说明                                                    |
+| --------------- | ------------------------------------------------------- |
+| noeviction      | 不淘汰任何KEY，但是内存写满时不允许写入新数据，默认策略 |
+| volatile-ttl    | 在设置了TTL的KEY中，比较KEY剩余TTL，TTL越少的先被淘汰   |
+| allkeys-random  | 对全体KEY随机淘汰                                       |
+| volatile-random | 设置了TTL的KEY随机淘汰                                  |
+| allkeys-lru     | 对全体KEY基于LRU算法进行淘汰                            |
+| volatile-lru    | 对设置了TTL的KEY基于LRU算法进行淘汰                     |
+| allkeys-lfu     | 对全体KEY基于LFU算法进行淘汰                            |
+| volatile-lfu    | 对设置了TTL的KEY基于LFU算法进行淘汰                     |
+
+- LRU：Least Recently Used 最近最少使用，在Redis中使用当前时间减去最后一次访问时间，值越大淘汰优先级越高
+- LFU：Least Frequently Used 最少频率使用，Redis会统计每个KEY的访问频率，值越小淘汰优先级越高
+
+在上文提到的RedisObject结构体中，定义了一个unsigned lru:LRU_BITS来存储最近一次访问时间。这个变量先前是为LRU算法准备的，但是在较新版本的Redis中引入了LFU算法，因此也需要使用lru来记录访问次数。LRU_BITS默认有24为，一般使用前16位，以分钟为单位记录访问时间，后8位记录访问次数。但是如果单纯用8位记录真实访问次数是完全不够用的，因此Redis为其设计了一个逻辑访问次数算法
+$$
+首先生成一个随机数R \\
+\\
+R \in [0,1) \\
+\\
+然后计算P\\
+\\
+P = 1 / (当前访问次数 \times lfu\_log\_factor + 1)\\
+\\
+其中 lfu\_log\_factor 默认为10。然后进行判断，如果R<P，则计数器加一\\
+同时逻辑访问次数随时间衰减，距离上一次访问时间每隔 lfu\_decay\_time 分钟，计数器减一，lfu\_decay\_time默认为1
+$$
+现在我们来模拟访问，先进行第一次访问，生成随机数R = 0.5，计算P = 1 / (0 x 10 + 1) = 1，R < P，因此计数器加一；然后第二次访问，生成随机数R=0.3，计算P = 1 / (1 x 10 + 1) = 0.09，R > P，计数器不变；进行第三次访问，R = 0.05，R < P，计数器加一
+
+如此反复，只要访问频率足够多，计数器就能一直加一，而且访问次数越多，越难加一，通过数学计算可以得到从0-255的访问次数数学期望
+$$
+E \approx \sum_{c=0}^{c}{(10c+1)}，c \in [0, 255]
+$$
+当c=2时，E约等于32，当c=20时，E约等于2120，而8位的最大值c=255时，E约等于326655，这几乎不可能用完，因为还有lfu\_decay\_time衰减，因此Redis LFU是一套非常优秀的淘汰算法，能够更加精确地反映出KEY的重要性
