@@ -1,6 +1,6 @@
 # Java八股
 
-`更新时间：2026-10-13`
+`更新时间：2026-10-15`
 
 注释解释：
 
@@ -449,4 +449,460 @@ public static void quickSort(int[] arr, int left, int right) {
 > ![](img4/79.png)
 
 #### 双边循环
+
+在单边循环中，选择最左侧元素为基准点元素，j指针负责从右向左找比基准点小的元素，i指针负责从左向右找比基准点大的元素，一旦找到二者进行交换，直至i等于j，最后基准点与i交换，i积分分区位置
+
+同样举个例子，假设存在一个数组5,3,7,2,9,8,1,4
+
+- 选择最左侧元素5为基准点，i此时为5，j此时位于数组最右侧，位于4的位置
+- 开始进行比较，j此时发现4小于基准点，因此停止等待
+- 然后i右移，寻找比基准点大的元素，移动到7的位置
+- 交换i，j，得到新数组5,3,4,2,9,8,1,7
+- 然后j左移到1，比基准点小，停止等待
+- i右移到9，与j进行交换，得到新数组5,3,4,2,1,8,9,7
+- j左移到8的位置，i右移到8的位置，此时j等于i，停止循环
+- 比较当前元素与基准点元素的大小，如果大于，基准点元素与当前元素索引 - 1 进行交换，否则交换当前元素
+- 基准点与1进行交换，一轮排序完成，得到新数组1,3,4,2,5,8,9,7
+
+```java
+private static int partition_v2(int[] arr, int left, int right) {
+    // 确定基准元素
+    int pivot = arr[left];
+    // 确定i, j
+    int i = left + 1, j = right;
+    while (i < j) {
+        if (arr[i] > pivot && arr[j] < pivot) {
+            swap(arr, i, j);
+            i++;
+            j--;
+        }
+        if (arr[i] <= pivot) i++;
+        if (arr[j] >= pivot) j--;
+    }
+    if (arr[i] > pivot) {
+        swap(arr, i - 1, left);
+        return i - 1;
+    }
+    swap(arr, i, left);
+    return i;
+}
+```
+
+> ![](img4/80.png)
+
+快速排序平均时间复杂度为$O(n \times \log_2n)$，最坏时间复杂度为$O(n^2)$，数据量越大，优势越明显。快速排序有多种实现方式，均属于不稳定排序。一般认为，双边循环快排比单边循环快3倍左右
+
+## 集合
+
+### ArrayList扩容
+
+使用ArrayList的无参构造器默认创建的是一个长度为0的数组
+
+```java
+private static final Object[] DEFAULTCAPACITY_EMPTY_ELEMENTDATA = {};
+
+public ArrayList() {
+    this.elementData = DEFAULTCAPACITY_EMPTY_ELEMENTDATA;
+}
+```
+
+对于有参构造器，如果传入的是数组长度，则返回一个指定长度数组
+
+```java
+public ArrayList(int initialCapacity) {
+    if (initialCapacity > 0) {
+        this.elementData = new Object[initialCapacity];
+    } else if (initialCapacity == 0) {
+        this.elementData = EMPTY_ELEMENTDATA;
+    } else {
+        throw new IllegalArgumentException("Illegal Capacity: "+
+                                           initialCapacity);
+    }
+}
+```
+
+如果传入一个集合，则按照集合的大小来创建数组
+
+```java
+public ArrayList(Collection<? extends E> c) {
+    Object[] a = c.toArray();
+    if ((size = a.length) != 0) {
+        if (c.getClass() == ArrayList.class) {
+            elementData = a;
+        } else {
+            elementData = Arrays.copyOf(a, size, Object[].class);
+        }
+    } else {
+        // replace with empty array.
+        elementData = EMPTY_ELEMENTDATA;
+    }
+}
+```
+
+#### add扩容
+
+向ArrayList中插入第一个数据时，就会触发其扩容机制
+
+```java
+public boolean add(E e) {
+    modCount++;
+    add(e, elementData, size);
+    return true;
+}
+```
+
+modCount是结构性修改计数器，与下文的快速失败机制有关。然后执行了add(e, elementData, size)
+
+```java
+private void add(E e, Object[] elementData, int s) {
+    if (s == elementData.length)
+        elementData = grow();
+    elementData[s] = e;
+    size = s + 1;
+}
+```
+
+size用于记录ArrayList中保存的元素的个数，也就是ArrayList的实际大小。然后判断实际大小是否等于数组的最大长度，如果等于，则说明数组已经满了，需要扩容。对于新数组，elementData.length为0，size也为0，所以执行elementData = grow()
+
+```java
+private Object[] grow() {
+    return grow(size + 1);
+}
+```
+
+调用了重写方法，并传入参数size + 1
+
+```java
+private Object[] grow(int minCapacity) {
+    int oldCapacity = elementData.length;
+    if (oldCapacity > 0 || elementData != DEFAULTCAPACITY_EMPTY_ELEMENTDATA) {
+        int newCapacity = ArraysSupport.newLength(oldCapacity,
+                minCapacity - oldCapacity, /* minimum growth */
+                oldCapacity >> 1           /* preferred growth */);
+        return elementData = Arrays.copyOf(elementData, newCapacity);
+    } else {
+        return elementData = new Object[Math.max(DEFAULT_CAPACITY, minCapacity)];
+    }
+}
+```
+
+通过int oldCapacity = elementData.length获取原来的数组长度，然后判断数组长度是否大于0，如果大于0，则执行ArraysSupport.newLength扩容，如果是新数组，长度为0，则初始化一个新数组，长度为DEFAULT_CAPACITY和minCapacity中的最大值。minCapacity是传入的size + 1，我们知道size为0，所以minCapacity也就为1
+
+```java
+private static final int DEFAULT_CAPACITY = 10
+```
+
+DEFAULT_CAPACITY默认为10，所以对于新创建的ArrayList，在第一次插入数据时，其容量会被扩展到10
+
+```java
+public static int newLength(int oldLength, int minGrowth, int prefGrowth) {
+    // preconditions not checked because of inlining
+    // assert oldLength >= 0
+    // assert minGrowth > 0
+
+    int prefLength = oldLength + Math.max(minGrowth, prefGrowth); // might overflow
+    if (0 < prefLength && prefLength <= SOFT_MAX_ARRAY_LENGTH) {
+        return prefLength;
+    } else {
+        // put code cold in a separate method
+        return hugeLength(oldLength, minGrowth);
+    }
+}
+```
+
+newLength是ArraysSupport中一个用于计算合适的数组长度的方法，传入三个参数oldLength旧数组长度、minGrowth最小增量、prefGrowth推荐增量。在ArrayList的扩容中，minGrowth为minCapacity - oldCapacity，oldCapacity为elementData.length，而minCapacity 为size + 1，当size == elementData.length才触发扩容，所以minGrowth恒为1；prefGrowth默认为oldCapacity >> 1，oldCapacity是正数，所以oldCapacity >> 1等价于oldCapacity / 2，也就是原容量的一半
+
+然后int prefLength = oldLength + Math.max(minGrowth, prefGrowth)计算合适的新容量，取minGrowth和prefGrowth的最大值，加上oldLength。我们知道minGrowth恒为1，所以prefLength一定为oldLength + oldLength / 2，也就是原容量的1.5倍
+
+不过当prefGrowth非常大时，计算oldLength + Math.max(minGrowth, prefGrowth)可能导致溢出，所以为了安全，需要判断if (0 < prefLength && prefLength <= SOFT_MAX_ARRAY_LENGTH)，当prefLength大于0且长度不超过SOFT_MAX_ARRAY_LENGTH，也就是2147483639时，才返回prefLength，否则需要执行hugeLength(oldLength, minGrowth)
+
+```java
+private static int hugeLength(int oldLength, int minGrowth) {
+    int minLength = oldLength + minGrowth;
+    if (minLength < 0) { // overflow
+        throw new OutOfMemoryError(
+            "Required array length " + oldLength + " + " + minGrowth + " is too large");
+    } else if (minLength <= SOFT_MAX_ARRAY_LENGTH) {
+        return SOFT_MAX_ARRAY_LENGTH;
+    } else {
+        return minLength;
+    }
+}
+```
+
+对于大容量，无法扩展到自身1.5倍长度的数组，会计算oldLength + minGrowth得到能够使用的最小长度，然后判断是否溢出，如果溢出，则抛出OutOfMemoryError异常，如果小于SOFT_MAX_ARRAY_LENGTH，则直接扩容到SOFT_MAX_ARRAY_LENGTH，如果大于SOFT_MAX_ARRAY_LENGTH但没有溢出，则扩容到计算出的minLength。SOFT_MAX_ARRAY_LENGTH为Integer. MAX_VALUE - 8，所以理论上ArrayList的长度可以到Integer. MAX_VALUE。但是一般JVM不会允许直接创建这么大容量的数组
+
+add扩容方式得到的数组长度可以形成一个特定列表
+
+```java
+0, 10, 15, 22, 33, 49, 73, 109, 163, 244, 366, 549, 823, 1234, 1851, 2776, 4164, 6246, 9369, 14053, 21079...
+```
+
+#### addAll扩容
+
+addAll与add方法的扩容有些不同
+
+```java
+public boolean addAll(Collection<? extends E> c) {
+    Object[] a = c.toArray();
+    modCount++;
+    int numNew = a.length;
+    if (numNew == 0)
+        return false;
+    Object[] elementData;
+    final int s;
+    if (numNew > (elementData = this.elementData).length - (s = size))
+        elementData = grow(s + numNew);
+    System.arraycopy(a, 0, elementData, s, numNew);
+    size = s + numNew;
+    return true;
+}
+```
+
+首先将传入的集合转换为数组，然后自增modCount，判断插入的集合长度是否为空，如果为空，则返回false。然后判断当前数组长度减去实际存储的容量是否大于需要插入的数组的长度，否则进行扩容，扩容大小为当前实际长度加上需要插入的数组长度
+
+所以，对于一个空的ArrayList，如果执行addAll插入一个长度小于11的集合，那么会扩容为10；但如果插入一个长度大于11的集合，则会扩容为插入的集合长度，而不是add扩容方式对应的容量列表
+
+但是，对于一个已经有数据的ArrayList，插入另一个集合时，其容量取决于二者的长度之和。如果长度和小于旧集合的下次扩容，则直接按add方式扩容；如果长度和大于下次扩容，则扩容到长度和
+
+下面用示例来证明，向一个长度为10的ArrayList中插入长度为3的集合
+
+```java
+public static void main(String[] args) throws Exception {
+    List<Object> list = new ArrayList<>(10);
+    for (int i = 0; i < 10; i++) {
+        list.add(i);
+    }
+    // 下次扩容时10 -> 15
+    list.addAll(List.of(1, 2, 3));
+    // 获取属性
+    Field elementDataField = ArrayList.class.getDeclaredField("elementData");
+    elementDataField.setAccessible(true);
+    // 获取属性值
+    Object[] elementData = (Object[]) elementDataField.get(list);
+    System.out.println(elementData.length);
+}
+```
+
+> ![](img4/81.png)
+
+然后重新插入一个长度为6的集合
+
+```java
+public static void main(String[] args) throws Exception {
+    List<Object> list = new ArrayList<>(10);
+    for (int i = 0; i < 10; i++) {
+        list.add(i);
+    }
+    // 下次扩容时10 -> 15
+    list.addAll(List.of(1, 2, 3, 4, 5, 6));
+    // 获取属性
+    Field elementDataField = ArrayList.class.getDeclaredField("elementData");
+    elementDataField.setAccessible(true);
+    // 获取属性值
+    Object[] elementData = (Object[]) elementDataField.get(list);
+    System.out.println(elementData.length);
+}
+```
+
+> ![](img4/82.png)
+
+### fail_fast和fail_safe
+
+fail_fast和fail_safe是集合迭代器Iterator的两种针对并发修改问题的应对措施。先来说说什么是并发修改，当迭代器遍历某个集合时，如果集合中元素增多或者元素减少，导致集合长度发生变化，此时迭代器指针所指向的元素也可能发生变化，如下
+
+假设此时指针指向索引1，元素为2
+
+```iterator
+1, 2, 3, 4, 5
+   ^
+```
+
+然后集合长度发生变化，在1和2之间插入了元素6
+
+```iterator
+1, 6, 2, 3, 4, 5
+   ^
+```
+
+这就导致本来迭代器操作的元素是2，但是却变成了6，造成了数据不一致的情况
+
+fail_fast快速失败，是指当并发修改发生时，立即终止遍历，并抛出并发修改异常。而fail_safe故障保护，当并发修改发生时，做出一些应对措施，允许临时的数据不一致，让遍历能够运行完成
+
+ArrayList的迭代器属于fail_fast类型，不允许并发修改
+
+```java
+public static void main(String[] args) throws Exception {
+    List<Object> list = new ArrayList<>(10);
+    for (int i = 0; i < 10; i++) {
+        list.add(i);
+    }
+    for (Object i : list) {
+        list.add(2, 0);
+    }
+```
+
+例如遍历list时，向索引为2的位置插入一个元素0
+
+> ![](img4/83.png)
+
+而java.util.concurrent.CopyOnWriteArrayList的迭代器则属于fail_safe类型，支持并发修改
+
+```java
+public static void main(String[] args) throws Exception {
+    List<Object> list = new CopyOnWriteArrayList<>();
+    for (int i = 0; i < 10; i++) {
+        list.add(i);
+    }
+    for (Object i : list) {
+        list.add(2, 0);
+    }
+    System.out.println(list);
+}
+```
+
+> ![](img4/84.png)
+
+#### fail_fast
+
+在执行增强for的时候，会先创建一个迭代器对象
+
+```java
+public Iterator<E> iterator() {
+    return new Itr();
+}
+```
+
+在创建迭代器时，会维护一个属性int expectedModCount = modCount，modCount在ArrayList中用于记录结构性修改操作时，modCount都会自增，上文也有所提及。结构性修改是指增加、删除、清空、替换等操作，而迭代器获取一份modCount，也就是为了确保在遍历过程中，能根据结构性修改次数来判断是否发生并发修改
+
+```java
+public E next() {
+    checkForComodification();
+    int i = cursor;
+    if (i >= size)
+        throw new NoSuchElementException();
+    Object[] elementData = ArrayList.this.elementData;
+    if (i >= elementData.length)
+        throw new ConcurrentModificationException();
+    cursor = i + 1;
+    return (E) elementData[lastRet = i];
+}
+```
+
+在执行迭代器的next方法时，就会先调用checkForComodification()检查modCount的值是否被修改，而且还会if (i >= elementData.length)判断指针是否越界，如果指针越界，也说明在遍历时有元素插入，抛出ConcurrentModificationException并发修改异常
+
+```java
+final void checkForComodification() {
+    if (modCount != expectedModCount)
+        throw new ConcurrentModificationException();
+}
+```
+
+ #### fail_safe
+
+在CopyOnWriteArrayList的迭代器初始化时，会保留一份原数组的备份es
+
+```java
+COWIterator(Object[] es, int initialCursor) {
+    cursor = initialCursor;
+    snapshot = es;
+}
+```
+
+在迭代器进行遍历时，实际操作的元素始终是备份es，而不是原数组，所以即使在遍历时进行结构性修改，也不会影响正在遍历的数组
+
+```java
+public E next() {
+    if (! hasNext())
+        throw new NoSuchElementException();
+    return (E) snapshot[cursor++];
+}
+```
+
+我们来观察COW的add方法
+
+```java
+public boolean add(E e) {
+    synchronized (lock) {
+        Object[] es = getArray();
+        int len = es.length;
+        es = Arrays.copyOf(es, len + 1);
+        es[len] = e;
+        setArray(es);
+        return true;
+    }
+}
+```
+
+上来就添加了一个互斥锁，锁的来源是final transient Object lock = new Object()，也就是每个实例都有一把不同的锁，保证一个实例在同一时间只能被一个线程访问。然后获取当前的数组，并获取长度，将当前数组扩容，并将元素插入，然后将扩容后的数组返回给COW实例
+
+因此，在对COW进行迭代器遍历时，获取到的数据都是原数组的备份，但是结构性操作又是在真正的数组中进行的。所以当我们遍历整个列表并打印，并不会是输出我们新增的元素
+
+```java
+public static void main(String[] args) throws Exception {
+    List<Object> list = new CopyOnWriteArrayList<>();
+    for (int i = 0; i < 5; i++) {
+        list.add(i);
+    }
+    for (Object i : list) {
+        list.add(2, 5);
+        System.out.println(i);
+    }
+    System.out.println(list);
+}
+```
+
+> ![](img4/85.png)
+
+### LinkedList vs ArrayList
+
+- ArrayList
+
+1. 基于数组，需要连续内存
+2. 随机访问快，可以根据下标访问
+3. 尾部插入、删除性能更好，其他部分插入、删除都需要移动数据，性能相对较低
+4. 可以利用cpu缓存，局部性原理
+
+- LinkedList
+
+1. 基于双向链表，无需连续内存
+2. 随机访问慢，需要沿着链表遍历
+3. 头尾插入与删除性能更好，因为仅需要改变节点头尾指针
+4. 每个节点需要额外存储两个指针，占用内存相对更多
+
+#### 随机访问性能对比
+
+ArrayList基于数组结构，数组中存储的是指向各个元素的指针，而指针大小是确定的，所以只需要知道元素的索引，就可以快捷计算出元素距离数组头部的偏移量，然后得到数组的内存地址。ArrayList的查询时间复杂度为$O(1)$
+
+LinkedList基于双向链表，由多个节点组成，每个节点有两个指针，分别指向上一个和下一个链表节点。如果需要查询链表的某个元素，则需要从头节点或者尾节点遍历，LinkedList的查询时间复杂度为$O(n)$
+
+按照传统意义的查询来说，例如按照元素内容查询元素的下标，ArrayList和LinkedList的时间复杂度都是$O(n)$，如果需要快速查询，则应该选择如HashMap、TreeMap这样的结构
+
+#### 增删性能对比
+
+当需要向ArrayList中插入一个元素时，其时间复杂度会根据插入位置的不同而发生变化。当插入位置为尾部时，不需要移动元素，时间复杂度为$O(1)$；当插入位置为其他时，ArrayList需要将该位置后面的元素复制一份，然后右移一位覆盖原来的数组，再插入新数据，此时时间复杂度为$O(n)$。ArrayList的删除操作类似，删除尾部的时间复杂度为$O(1)$，其他位置为$O(n)$
+
+而当需要向LinkedList插入数据时，其时间复杂度也根据插入位置的不同而不同。当插入位置为头部或者尾部时，仅需更改头部或者尾部元素的前指针和后指针，时间复杂度为$O(1)$；如果插入中间元素，则需要先遍历寻找位置，时间复杂度为$O(n)$。删除操作类似
+
+ArrayList的中间增删操作性能仍优于LinkedList，因为ArrayList查询中间元素的性能更高
+
+#### 局部性原理
+
+在计算机中，CPU计算的速度非常快，CPU时钟周期是CPU中最小的时间单位，完成一个CPU命令一般需要一个或者更多的时钟周期。时钟周期是CPU主频率的倒数，对于现代主流桌面端CPU，主频一般在4G甚至5G赫兹以上，时钟周期也就是0.2纳秒左右。而CPU与内存间的读写性能一般在100纳秒左右，所以实际上CPU大量时间都是在等内存提供数据，而不是进行计算
+
+而为了提高CPU的利用率，1985年起，英特尔首次为CPU添加独立的高速缓存，发展至今，形成了现在的CPU三级缓存L1、L2、L3。L1读写性能一般在1纳秒，L2在3到5纳秒，L3在10到20纳秒。如果三级缓存中仍无法获取数据，才从内存中获取数据
+
+> ![](img4/86.png)
+
+所以，如果想要提高计算机性能，就应该尽量提高CPU三级缓存的命中率，而局部性原理就是一种缓存优化措施。CPU在读取数组中元素到缓存时，并不会只读取需要计算的那一个特定元素，而是将数组中与之相邻的一些元素也读取到缓存中，因为相邻元素有很大可能也会被访问，这就是空间局部性
+
+局部性原理将局部性分为三类
+
+- 时间局部性：近期访问过的数据或指令很可能在不久后再次被访问，如循环中的变量
+- 空间局部性：被访问位置附近的存储单元也可能很快被访问，如数组顺序遍历
+- 顺序局部性：指令通常按顺序执行，顺序执行与非顺序执行比例约为 5:1
+
+LinkedList因本身是非连续内存，在运算时不满足局部性原理，因此在缓存层面性能也比ArrayList更低
+
+### HashMap
 
