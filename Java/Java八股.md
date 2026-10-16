@@ -906,3 +906,246 @@ LinkedList因本身是非连续内存，在运算时不满足局部性原理，�
 
 ### HashMap
 
+HashMap的底层数据结构在JDK1.7和1.8版本有所不同，1.7使用数组 + 链表结构，而1.8引入红黑树，使用数组 + 链表 + 红黑树结构。HashMap类似于Redis中的dict，在插入元素时先计算元素的哈希值，然后使用哈希值映射到数组上的一个位置，数组中存储的并不是一个一个的元素，而是一个单链表，如果哈希数组的长度足够小，就容易出现哈希碰撞，此时将新元素挂载在旧元素后方，就可以避免元素被覆盖或者无法插入
+
+如下，我们定义一个长度为16的HashMap，向其中插入10个元素
+
+> ![](img4/87.png)
+
+以下是有关HashMap的重要常量
+
+```java
+static final int DEFAULT_INITIAL_CAPACITY = 1 << 4; // aka 16
+static final int MAXIMUM_CAPACITY = 1 << 30;
+static final float DEFAULT_LOAD_FACTOR = 0.75f;
+static final int TREEIFY_THRESHOLD = 8;
+static final int MIN_TREEIFY_CAPACITY = 64;
+static final int UNTREEIFY_THRESHOLD = 6;
+```
+
+- DEFAULT_INITIAL_CAPACITY：使用无参构造器时创建的桶数组的默认长度，每个桶就是一个节点链表
+- MAXIMUM_CAPACITY：HashMap允许的最大容量
+- DEFAULT_LOAD_FACTOR：默认负载因子，当负载率超过这个值时会触发扩容，负载率等于负载量除以总容量
+- TREEIFY_THRESHOLD：长度树化阈值，当桶中的链表长度大于等于8时，会树化形成红黑树
+- MIN_TREEIFY_CAPACITY：容量树化阈值，当桶数组的长度大于等于64时，才会触发树化，与TREEIFY_THRESHOLD必须同时满足
+- UNTREEIFY_THRESHOLD：退化阈值，当红黑树节点树小于等于6时，会从红黑树退化为链表
+
+```java
+static class Node<K,V> implements Map.Entry<K,V> {
+    final int hash;
+    final K key;
+    V value;
+    Node<K,V> next;
+}
+```
+
+这是HashMap中有关节点的定义，一个节点中存储了四个属性，分别是哈希值、键、值和指向下一个Node的指针
+
+#### 链表过长问题
+
+哈希表最大的优点是查询速度非常快，如果使用合适的哈希函数，并且数据量较小，HashMap的查询时间复杂度为$O(1)$，等同于数组；但是如果哈希函数选择不恰当，或者在小容量的哈希表中存储大量结构，导致一个桶存储了大长度的链表，HashMap的最坏时间复杂度会降低到$O(n)$，因为需要遍历链表中每一个元素
+
+对于HashMap，提升查询性能实际就是缩短链表长度，或者提升链表的查询性能。目前有扩容和树化两种方案
+
+##### 扩容
+
+HashMap在插入时，先计算键的哈希值，然后以哈希值为基准，映射出桶数组上的一个索引位置，再在对应位置插入Entry。而如果对HashMap进行扩容，就可以使映射的范围更大，原来索引相同的元素在扩容后的索引就可能不同，从而减短链表长度，提升性能
+
+HashMap的扩容永远只会发生在size大于threshold的时候，每次调用put()、putAll()等方法时，会判断当前的size与threshold的关系
+
+```java
+public V put(K key, V value) {
+    return putVal(hash(key), key, value, false, true);
+}
+```
+
+包装方法，实际调用了putVal()
+
+```java
+final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
+               boolean evict) {
+    Node<K,V>[] tab; Node<K,V> p; int n, i;
+    if ((tab = table) == null || (n = tab.length) == 0)
+        n = (tab = resize()).length;
+    if ((p = tab[i = (n - 1) & hash]) == null)
+        tab[i] = newNode(hash, key, value, null);
+    else {
+        Node<K,V> e; K k;
+        if (p.hash == hash &&
+            ((k = p.key) == key || (key != null && key.equals(k))))
+            e = p;
+        else if (p instanceof TreeNode)
+            e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value);
+        else {
+            for (int binCount = 0; ; ++binCount) {
+                if ((e = p.next) == null) {
+                    p.next = newNode(hash, key, value, null);
+                    if (binCount >= TREEIFY_THRESHOLD - 1) // -1 for 1st
+                        treeifyBin(tab, hash);
+                    break;
+                }
+                if (e.hash == hash &&
+                    ((k = e.key) == key || (key != null && key.equals(k))))
+                    break;
+                p = e;
+            }
+        }
+        if (e != null) { // existing mapping for key
+            V oldValue = e.value;
+            if (!onlyIfAbsent || oldValue == null)
+                e.value = value;
+            afterNodeAccess(e);
+            return oldValue;
+        }
+    }
+    ++modCount;
+    if (++size > threshold)
+        resize();
+    afterNodeInsertion(evict);
+    return null;
+}
+```
+
+首先定义了Node<K,V>[] tab桶数组、Node<K,V> p待插入的节点和int n, i两个标识符。然后if ((tab = table) == null || (n = tab.length) == 0)判断当前桶数组是否为空，或者桶数组的长度是否为0，如果桶数组是空的，则执行resize()，并将新的长度赋值给n，即n代表当前桶数组长度。而resize()其实就是扩容方法
+
+接着if ((p = tab[i = (n - 1) & hash]) == null)判断索引位置是否存在其他元素，如果p为null，则表示该桶暂未插入任何元素，直接tab[i] = newNode(hash, key, value, null)插入一个新Node
+
+如果桶中存在元素，则if (p.hash == hash && ((k = p.key) == key || (key != null && key.equals(k))))判断Key是否是相同的，如果是相同Key，则e = p表示需要进行替换；再else if (p instanceof TreeNode)判断是否是一个树节点，如果是树节点，执行e = ((TreeNode<K,V>)p).putTreeVal(this, tab, hash, key, value)插入一个分支；如果不是树节点，且Key不相同，则说明是链表结构，需要遍历寻找Key。这里循环先执行了if ((e = p.next) == null)判断是否存在下一个Node，是因为如果走到这一个分支，就可以确保链表中之前的节点都没有这个Key，如果不存在下一个节点，则说明该HashMap中Key不存在，p.next = newNode(hash, key, value, null)直接插入即可。而在插入之后，还需要if (binCount >= TREEIFY_THRESHOLD - 1)判断是否满足了树化条件，当旧链表长度大于等于TREEIFY_THRESHOLD - 1的时候，插入新的节点，链表长度就一定大于等于TREEIFY_THRESHOLD，需要进行树化
+
+然后再判断当前节点的Key是否与插入Key相等，相等则需要进行替换，替换不触发树化。接着判断e是否为null，如果e不为null，说明上方找到了Key相同的节点，所以覆盖原来的value，V oldValue = e.value记录旧value，e.value = value替换value，最后return oldValue返回旧value
+
+如果是插入新值，需要自增modCount，因为存在modCount，所以HashMap也是线程不安全的，并且并发问题的应对策略是fail_fast。接着if (++size > threshold)判断是否需要扩容，最后返回null
+
+*注：这里的afterNodeAccess()和afterNodeInsertion()是LinkedHashMap的方法，在HashMap中均为空实现*
+
+```java
+final Node<K,V>[] resize() {
+    Node<K,V>[] oldTab = table;
+    int oldCap = (oldTab == null) ? 0 : oldTab.length;
+    int oldThr = threshold;
+    int newCap, newThr = 0;
+    if (oldCap > 0) {
+        if (oldCap >= MAXIMUM_CAPACITY) {
+            threshold = Integer.MAX_VALUE;
+            return oldTab;
+        }
+        else if ((newCap = oldCap << 1) < MAXIMUM_CAPACITY &&
+                 oldCap >= DEFAULT_INITIAL_CAPACITY)
+            newThr = oldThr << 1; // double threshold
+    }
+    else if (oldThr > 0) // initial capacity was placed in threshold
+        newCap = oldThr;
+    else {               // zero initial threshold signifies using defaults
+        newCap = DEFAULT_INITIAL_CAPACITY;
+        newThr = (int)(DEFAULT_LOAD_FACTOR * DEFAULT_INITIAL_CAPACITY);
+    }
+    if (newThr == 0) {
+        float ft = (float)newCap * loadFactor;
+        newThr = (newCap < MAXIMUM_CAPACITY && ft < (float)MAXIMUM_CAPACITY ?
+                  (int)ft : Integer.MAX_VALUE);
+    }
+    threshold = newThr;
+    @SuppressWarnings({"rawtypes","unchecked"})
+    Node<K,V>[] newTab = (Node<K,V>[])new Node[newCap];
+    table = newTab;
+    if (oldTab != null) {
+        for (int j = 0; j < oldCap; ++j) {
+            Node<K,V> e;
+            if ((e = oldTab[j]) != null) {
+                oldTab[j] = null;
+                if (e.next == null)
+                    newTab[e.hash & (newCap - 1)] = e;
+                else if (e instanceof TreeNode)
+                    ((TreeNode<K,V>)e).split(this, newTab, j, oldCap);
+                else { // preserve order
+                    Node<K,V> loHead = null, loTail = null;
+                    Node<K,V> hiHead = null, hiTail = null;
+                    Node<K,V> next;
+                    do {
+                        next = e.next;
+                        if ((e.hash & oldCap) == 0) {
+                            if (loTail == null)
+                                loHead = e;
+                            else
+                                loTail.next = e;
+                            loTail = e;
+                        }
+                        else {
+                            if (hiTail == null)
+                                hiHead = e;
+                            else
+                                hiTail.next = e;
+                            hiTail = e;
+                        }
+                    } while ((e = next) != null);
+                    if (loTail != null) {
+                        loTail.next = null;
+                        newTab[j] = loHead;
+                    }
+                    if (hiTail != null) {
+                        hiTail.next = null;
+                        newTab[j + oldCap] = hiHead;
+                    }
+                }
+            }
+        }
+    }
+    return newTab;
+}
+```
+
+resize()是HashMap的核心与难点。Node<K,V>[] oldTab = table存储旧hashtable，也就是桶数组；int oldCap = (oldTab == null) ? 0 : oldTab.length记录桶数组长度，如果oldTab == null，则是新创建的HashMap，还未进行初始化，赋值为0；int oldThr = threshold记录旧阈值，阈值通过(int)(DEFAULT_LOAD_FACTOR * DEFAULT_INITIAL_CAPACITY)计算，DEFAULT_LOAD_FACTOR为0.75，DEFAULT_INITIAL_CAPACITY为16，所以初始阈值为12；int newCap, newThr = 0初始化新hashtable的长度和阈值
+
+if (oldCap > 0)判断是否需要初始化，如果不需要，则进一步判断if (oldCap >= MAXIMUM_CAPACITY)旧的长度是否大于允许的最大长度，超过则设置threshold = Integer.MAX_VALUE阈值为int最大值，然后直接返回旧的hashtable，不进行扩容。((newCap = oldCap << 1) < MAXIMUM_CAPACITY && oldCap >= DEFAULT_INITIAL_CAPACITY)将旧容量左移一位，即翻倍得到新容量，再判断是否小于最大值，并且旧容量需要大于等于初始容量，满足则将新阈值也翻倍
+
+else if (oldThr > 0)如果需要初始化，但是已经设定了阈值，则newCap = oldThr将容量设置为阈值；最后就是完全初始化，newCap = DEFAULT_INITIAL_CAPACITY设置默认容量，newThr = (int)(DEFAULT_LOAD_FACTOR * DEFAULT_INITIAL_CAPACITY)设置默认阈值
+
+接着如果新阈值仍为0，即当oldCap大于0，但是不满足(newCap = oldCap << 1) < MAXIMUM_CAPACITY或者oldCap >= DEFAULT_INITIAL_CAPACITY，仍需计算一个新阈值。先计算float ft = (float)newCap * loadFactor得到ft，然后判断新容量小于最大值且ft小于最大值，如果二者均满足，则新阈值为ft；任一不满足，新阈值为int最大值
+
+新hashtable参数计算完成，threshold = newThr赋值新阈值，Node<K,V>[] newTab = (Node<K,V>[])new Node[newCap]根据新容量创建桶数组，table = newTab将HashMap的桶数组更换为新数组，下面就开始转移数据
+
+for循环遍历oldCap，if ((e = oldTab[j]) != null)获取每一个桶，并判断桶是否为空，如果桶不为空，oldTab[j] = null释放原来的桶。if (e.next == null)判断是否只有一个元素，如果只有一个元素，则newTab[e.hash & (newCap - 1)] = e重新计算索引，并插入该节点；else if (e instanceof TreeNode)如果节点类型是树节点，((TreeNode<K,V>)e).split(this, newTab, j, oldCap)拆分红黑树，这一步可能导致树退化为链表；最后的情况就是桶中存储了一个链表
+
+在上文中我们知道，HashMap的扩容，一直会将容量扩展至当前容量的2倍，而在重新计算索引时，这也会导致新索引仅有两种可能。第一，索引位于原位置；第二，索引位于i + oldCap位置。举个例子，假设存在一个HashMap，默认长度16，元素A的哈希值为97，元素B的哈希值为49，与16取模结果都为1。但是如果将HashMap进行一次扩容，长度达到32，重新计算元素A和元素B的索引，就会发现元素A新索引仍为1，但是元素B新索引为17，刚好是1 + 16
+
+所以Java定义了四个指针Node<K,V> loHead = null, loTail = null和Node<K,V> hiHead = null, hiTail = null。lo表示low低位，hi表示high高位，Java在判断是否需要移动位置时的公式是e.hash & oldCap而不是重新计算hash & (newCap - 1)。我们从可以从数学上来理解这个计算方式
+$$
+假设 \ oldCap=16，newCap=32，则 \\
+oldCap - 1 = 00001111_{(2)} \\
+newCap - 1 = 00011111_{(2)} \\
+对任意数字，计算hash \ \& \ (newCap - 1)都有 \\
+hash \ \& \ (newCap - 1) = hash \ \& \ (oldCap - 1) + hash \ \& \ oldCap \\
+例如hash(a)=97，hash(b)=49则 \\
+hash(a) \ \& \ 16 = 0 \\
+hash(b) \ \& \ 16 = 16
+$$
+所以只需要计算e.hash & oldCap，判断结果是否为0，如果为0，表示元素仍在原位置；而结果不为0，元素需要移动到i + oldCap的位置。因此，if ((e.hash & oldCap) == 0)判断节点位置，如果为0，if (loTail == null)判断是尾节点是否为null，也就是是否刚开始遍历这个链表，如果是，设置loHead = e，放在原位置，并且是头节点；如果loTail == null尾节点不为空，则loTail.next = e挂载在尾节点之后，也就是尾插入法，最后loTail = e设置e为尾节点。而如果e.hash & oldCap不为0，表示需要移动到新位置，同样if (hiTail == null)判断是否是头节点，然后设置相应头尾节点
+
+遍历完成后，if (loTail != null)判断原位置是否还有元素，如果有，则loTail.next = null释放尾节点原来的next，因为可能指向另外一个位置的节点，然后newTab[j] = loHead交给新数组。if (hiTail != null)判断高位是否有元素，有则与低位一样，释放尾节点next，并newTab[j + oldCap] = hiHead插入到新数组的j + oldCap位置
+
+##### 树化
+
+当链表元素个数大于等于8，且桶数组容量大于等于64时，才会触发树化。树化会将链表转换为一个红黑树，红黑树的查询性能优于链表，时间复杂度为$O(\log_2{n})$，但是应当尽量避免树化。对于合格的哈希函数，应当服从泊松分布，在负载因子0.75的情况下，链表长度超过8的概率是0.00000006，树化阈值设置为8就是为了尽量避免树化
+
+红黑树的内存占用相比普通链表更大，在Java中，TreeNode继承了Node
+
+```java
+static final class TreeNode<K,V> extends LinkedHashMap.Entry<K,V> {
+    TreeNode<K,V> parent;  // red-black tree links
+    TreeNode<K,V> left;
+    TreeNode<K,V> right;
+    TreeNode<K,V> prev;    // needed to unlink next upon deletion
+    boolean red;
+}
+```
+
+parent父节点，left左子节点，right右子节点，prev前指针，red颜色标识符，如果为true表示该节点为红色节点。Java在构建红黑树节点时还保留了双向链表结构，也是为了能够更方便地退化为链表。相比链表，红黑树节点多了四个指针和一个布尔值，而且大多数情况下HashMap每个桶的长度都不会超过2，使用链表的效率和内存占用要远远优于红黑树
+
+**退化**
+
+上文提到，当桶长度小于等于6时，红黑树会退化为链表，而退化还有一个规则。删除一个红黑树节点前，当红黑树的根节点，其子节点、左子节点的左子节点任意一个为null时，也会导致树退化
+
+> ![](img4/88.png)
+
+例如上图所示的红黑树，如果删除74、85，他们是右子节点的子节点，树不会退化；而如果删除9和2（不考虑平衡），左子节点的左子节点为null，再次删除元素时，就会导致该树退化为链表
+
