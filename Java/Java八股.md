@@ -1,6 +1,6 @@
 # Java八股
 
-`更新时间：2026-10-15`
+`更新时间：2026-10-17`
 
 注释解释：
 
@@ -1147,5 +1147,305 @@ parent父节点，left左子节点，right右子节点，prev前指针，red颜�
 
 > ![](img4/88.png)
 
-例如上图所示的红黑树，如果删除74、85，他们是右子节点的子节点，树不会退化；而如果删除9和2（不考虑平衡），左子节点的左子节点为null，再次删除元素时，就会导致该树退化为链表
+例如上图所示的红黑树，如果删除74、85，他们是右子节点的子节点，树不会退化；而如果删除9和2（此处不考虑平衡），左子节点的左子节点为null，再次删除元素时，就会导致该树退化为链表
 
+#### 索引计算与容量
+
+HashMap的索引计算实际上是两次哈希计算，然后再映射到桶数组中。首先调用键对象的hashCode()方法，再调用HashMap的hash()方法进行二次哈希，最后计算hash() & (capacity - 1)得到索引
+
+```java
+static final int hash(Object key) {
+    int h;
+    return (key == null) ? 0 : (h = key.hashCode()) ^ (h >>> 16);
+}
+```
+
+hash()方法一般被称为二次哈希，计算方式是将原始Key无符号右移16位，然后异或原始Key。为什么需要二次哈希呢？因为桶数组的长度一定小于哈希值的长度，Java对象的hashcode特点是高位变化大，低位变化比较小甚至重复，因此如果直接用hashcode计算索引，只会将低位参与运算，很容易导致索引分布不均，提升大容量桶出现的可能。而将hashcode右移16位，就可以保证计算索引时使用的是hashcode的高位，而且hash()本身还能提供一次混淆，让分布更加随机
+
+HashMap有个显著的特点，其桶数组长度一定为2的n次幂，从上文代码分析中我们知道，初始桶数组长度为16，每次扩容时扩容到原长度的2倍。当容量为2的n次幂时，计算索引就可以直接计算hash() & cap - 1，扩容时需要移动的元素位置也可以直接计算i + oldCap，这样可以提高HashMap的整体效率
+
+但是选择2的n次幂并不全是好处，如果选择桶数组长度为2的n次幂，插入的元素如果都是偶数，会造成哈希分布不均，所有的值都会落在偶数位置的桶中。如果需要追求更好的哈希分布性，则应该选择数组长度为质数，数组长度为质数时，即使不使用二次哈希，也能保证哈希结果均匀
+
+#### 并发问题
+
+无论是jdk1.7还是jdk1.8，HashMap并发下都可能会出现数据错乱的问题，而且jdk1.7下的HashMap在扩容时还可能造成死链问题
+
+##### 数据错乱
+
+```java
+if ((p = tab[i = (n - 1) & hash]) == null)
+    tab[i] = newNode(hash, key, value, null);
+```
+
+这是putVal()方法中，当桶为空时的插入逻辑。在以往的业务开发学习中，例如库存扣减问题，我们知道如果判断与扣减不是原子性的，那么很容易造成库存超卖问题。同理，这里的桶为空判断与节点替换操作也不是原子性的，如果有多个线程同时put索引一致的元素，在任一线程执行成功tab[i] = newNode(hash, key, value, null)之前，所有的线程都会将if ((p = tab[i = (n - 1) & hash]) == null)判定为true，从而导致每个线程都会执行一次tab[i] = newNode(hash, key, value, null)，正常情况下能插入所有元素，但是在并发下，只有最后一个执行tab[i] = newNode(hash, key, value, null)的线程能保留自己的数据，其他线程的数据都会因为被覆盖而丢失
+
+在线程安全的ConcurrentHashMap中，就将插入操作进行了原子化，多个线程同时插入，仅允许一个插入成功，失败的进行重试
+
+```java
+else if ((f = tabAt(tab, i = (n - 1) & hash)) == null) {
+    if (casTabAt(tab, i, null, new Node<K,V>(hash, key, value)))
+        break;                   // no lock when adding to empty bin
+}
+```
+
+##### 死链
+
+jdk1.7与1.8的扩容流程并不是相同的，上文中的实现也是基于jdk21的新实现方式。在jdk1.7中，数据插入使用了头插法，也就是将数据插入到链表头部，与1.8相反。1.7使用了两个指针变量来记录链表中的元素，e表示当前元素，next表示下一个元素，这与1.8相同。在一轮循环时，e指向头元素，next下移指向二号元素，然后移动头元素到新位置，e移动到二号元素，循环结束；二轮循环开始，next下移指向三号元素，暂定三号元素为null，然后将二号元素插入到一号元素的头部，e下移，二轮循环结束；三轮循环开始，e发现当前元素为null，因此退出循环，完成链表的迁移
+
+而节点中也存在一个next指针，指向自己链表的下一个元素。HashMap的头插入，实际就是将待转移的节点的next，也就是e.next赋值为新数组的位置，当转移头节点时，e.next指向新数组的空位置，所以头结点就成了尾节点；转移其他节点时，将e.next赋值为新数组的位置，也就是新数据中头结点的地址，新转移的节点也就成了头结点
+
+现在假设有一个链表，顺序为a->b->c，有两个线程同时触发扩容操作，线程1记录了e和next的位置，此时cpu线程切换，线程2执行，所以线程2也记录了e和next的位置，并移动了旧元素到新位置。此时又切换回到线程1，线程1由于已经记录了e和next，所以仍然可以访问原来链表上的数据，但是顺序是相反的，因为新链表是使用头插法插入的。线程1的e为a，next为b，但是此时链表变成了c->b->a，线程1取出a插入自己的桶，a.next此时为null，e更新为b；二轮，next为b.next，也就是a，然后取出b插入自己的桶，b.next仍为a，e更新为a；三轮，next为a.next，也就是null，然后取出a插入到自己的桶，a.next更新为b，e更新为null。循环退出，但是一个环形成了，a.next为b，b.next为a，虽然扩容本身没有问题，但是一旦查询该桶中不存在的元素时，指针就会在a和b之间无限循环，形成死链
+
+#### Key规范
+
+HashMap的Key允许为null，但是某些Map的实现类，如Hashtable、ConcurrentHashMap、TreeMap等不允许Key为null，否则可能出现空指针异常。在HashMap中，如果键为null，Entry则会被放置在0号桶中。如果需要作为Key对象，必须实现hashcode()方法和equals()方法，hashcode用于计算键的哈希值，equals()用于插入时判断是否是重复键
+
+Key必须是一个不可变对象，如果将一个Key插入Map后，Key进行了变更，很可能导致哈希值改变，从而无法找到该Key
+
+## 单例模式
+
+单例模式是指整个程序中只允许存在一个实例，在任意时间调用任意实例，必须返回同一个实例。单例模式的特点是构造器必须私有化
+
+### 饿汉式
+
+饿汉式单例相对于懒汉式单例，是指在返回实例前就已经创建了实例。饿汉式单例利用static静态成员变量的特性，Java类中的静态成员变量所有实例共享一个，所以可以在单例类中定义一个静态成员变量，然后提供一个get方法获取这个变量
+
+```java
+import java.io.Serializable;
+
+public class HungrySingleton implements Serializable {
+
+    private HungrySingleton() {}
+
+    private static final HungrySingleton INSTANCE = new HungrySingleton();
+
+    public static HungrySingleton getInstance() {
+        return INSTANCE;
+    }
+}
+```
+
+#### 单例破坏
+
+饿汉式单例可以通过反射、反序列化、unsafe等手段破坏单例
+
+##### 反射
+
+利用反射获取构造器，强行设置为私有，然后调用构造器构造新实例
+
+```java
+public static void main(String[] args) throws Exception {
+    HungrySingleton instance1 = HungrySingleton.getInstance();
+    System.out.println(instance1);
+    // 反射破坏
+    Constructor<HungrySingleton> constructor = HungrySingleton.class.getDeclaredConstructor();
+    constructor.setAccessible(true);
+    HungrySingleton instance2 = constructor.newInstance();
+    System.out.println(instance2);
+}
+```
+
+> ![](img4/89.png)
+
+可以通过在构造器中添加判定来预防反射破坏
+
+```java
+public class HungrySingleton implements Serializable {
+
+    private HungrySingleton() {
+        if (INSTANCE != null)
+            throw new RuntimeException("Instance already exists");
+    }
+
+    private static final HungrySingleton INSTANCE = new HungrySingleton();
+
+    public static HungrySingleton getInstance() {
+        return INSTANCE;
+    }
+}
+```
+
+> ![](img4/90.png)
+
+##### 反序列化
+
+如果单例类实现了Serializable接口，在反序列化时构造对象不通过构造器，很容易破坏单例
+
+```java
+public static void main(String[] args) throws Exception {
+    HungrySingleton instance1 = HungrySingleton.getInstance();
+    System.out.println(instance1);
+    // 反序列化破坏
+    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    ObjectOutputStream oos = new ObjectOutputStream(baos);
+    oos.writeObject(instance1);
+    ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(baos.toByteArray()));
+    HungrySingleton instance2 = (HungrySingleton) ois.readObject();
+    System.out.println(instance2);
+}
+```
+
+> ![](img4/91.png)
+
+如果重写了readResolve()方法，反序列化时则会将该方法的返回值作为反序列化的结果
+
+```java
+public class HungrySingleton implements Serializable {
+
+    private HungrySingleton() {
+        if (INSTANCE != null)
+            throw new RuntimeException("Instance already exists");
+    }
+
+    private static final HungrySingleton INSTANCE = new HungrySingleton();
+
+    public static HungrySingleton getInstance() {
+        return INSTANCE;
+    }
+
+    @Serial
+    public Object readResolve() {
+        return INSTANCE;
+    }
+}
+```
+
+> ![](img4/92.png)
+
+##### unsafe
+
+unsafe全限定名sun.misc.Unsafe，是Java底层中直接操作内存、线程和对象布局的类，jdk自身大量使用了unsafe类，但是禁止任何第三方使用。unsafe可以直接绕过构造器创建对象，无视private，不进行初始化。而普通类调用Unsafe.getUnsafe()会直接抛出SecurityException安全异常，所以需要使用反射获取，而且jvm参数需要添加--illegal-access=permit。在jdk17.0之后，--illegal-access=permit参数被移除
+
+```java
+public static void main(String[] args) throws Exception {
+    HungrySingleton instance1 = HungrySingleton.getInstance();
+    System.out.println(instance1);
+    // unsafe
+    Unsafe unsafe = getUnsafe();
+    HungrySingleton instance2 = (HungrySingleton) unsafe.allocateInstance(HungrySingleton.class);
+    System.out.println(instance2);
+}
+
+public static Unsafe getUnsafe() throws Exception {
+    Field f = Unsafe.class.getDeclaredField("theUnsafe");
+    f.setAccessible(true);
+    return (Unsafe) f.get(null);
+}
+```
+
+> ![](img4/93.png)
+
+*注：Unsafe本身其实也是单例模式*
+
+### 枚举饿汉式
+
+Java中其实自带一个单例类Enum，Enum是枚举类，当Enum中枚举数量为1时，就可以认为是一个单例类，而且枚举类中允许定义方法
+
+```java
+import java.io.Serializable;
+
+public enum EnumHungrySingleton implements Serializable {
+    INSTANCE;
+
+    public static EnumHungrySingleton getInstance() {
+        return INSTANCE;
+    }
+
+    @Override
+    public String toString() {
+        return getClass().getName() + "@" + Integer.toHexString(hashCode());
+    }
+}
+```
+
+枚举饿汉式单例可以预防反射和反序列化破坏，但是无法预防unsafe
+
+> ![](img4/94.png)
+
+### 懒汉式单例
+
+懒汉式单例就是在调用getInstance方法时才创建对象，如果已经存在，则返回该对象
+
+```java
+public class LazySingleton implements Serializable {
+
+    private LazySingleton() {}
+
+    private static LazySingleton INSTANCE = null;
+
+    public static LazySingleton getInstance() {
+        if (INSTANCE == null)
+            INSTANCE = new LazySingleton();
+        return INSTANCE;
+    }
+}
+```
+
+> ![](img4/95.png)
+
+懒汉式单例在多线程下会出现问题，因为判断INSTANCE是否为null和创建新的INSTANCE并赋值不是原子操作，并发下，可能有多个线程满足INSTANCE == null，然后创建实例并赋值。虽然不会最终单例，但是仍存在一定问题。最简单的解决方法是添加互斥锁
+
+```java
+public static synchronized LazySingleton getInstance() {
+    if (INSTANCE == null)
+        INSTANCE = new LazySingleton();
+    return INSTANCE;
+}
+```
+
+### DCL懒汉式
+
+如果对getInstance方法添加互斥锁，虽然可以解决并发安全问题，但是也会带来严重的性能影响。实例的创建仅在第一次调用时触发，但每个后续的线程都需要尝试获取这个锁，而且即使实例已经创建好了，不存在并发安全问题时仍需要获取锁。为了解决这个问题，就需要引入DCL
+
+DCL全称Double Check Lock双检索，它的思想是锁住的范围不能是整个方法，而是获取锁的逻辑，在获取锁之前先判断一次是否需要获取锁，转换到单例模式上，也就是在获取锁之前先判断一次实例是否已经创建了，如果实例没有创建，才尝试获取获
+
+```java
+public class LazySingleton implements Serializable {
+
+    private LazySingleton() {}
+
+    private static LazySingleton INSTANCE = null;
+
+    public static LazySingleton getInstance() {
+
+        if (INSTANCE == null) {
+            synchronized (LazySingleton.class) {
+                if (INSTANCE == null)
+                    INSTANCE = new LazySingleton();
+            }
+        }
+        return INSTANCE;
+    }
+}
+```
+
+第一次的if决定是否应该获取锁，第二次的if才决定谁来创建这个实例。如果没有第二个if，在并发情况下，很可能多个线程同时满足第一个if，所以全部等待获取锁，当第一个线程创建实例完成后，因为没有第二次if，所以第二个线程也会创建一个实例，并覆盖之前的实例。因此，再一次使用if，就是为了保证实例只会被创建一次
+
+如果使用双检索，还需要为INSTANCE添加一个volatile修饰符，确保其他线程不会获取到未初始化完成的实例
+
+```java
+private static volatile LazySingleton INSTANCE = null;
+```
+
+### 内部类懒汉式
+
+为什么饿汉式单例不需要考虑线程安全问题？因为饿汉式单例的实例创建在静态成员变量中，静态成员变量的赋值由静态代码块负责，而静态代码块的线程安全问题由JVM虚拟机负责，因此，如果我们也在静态代码块中创建实例，就不需要考虑线程安全问题了
+
+而静态成员中，静态内部类有一个特性，静态内部类只有在第一次调用时才会进行初始化。这正好符合懒汉式的定义，我们可以在单例类中定义一个静态内部类，在静态内部类中创建一个单例实例，然后由单例类提供getInstance方法即可
+
+```java
+import java.io.Serializable;
+
+public class StaticInnerClassLazySingleton implements Serializable {
+
+    private StaticInnerClassLazySingleton() {}
+
+    private static class Provider {
+        static final StaticInnerClassLazySingleton INSTANCE = new StaticInnerClassLazySingleton();
+    }
+
+    public static StaticInnerClassLazySingleton getInstance() {
+        return Provider.INSTANCE;
+    }
+}
+```
