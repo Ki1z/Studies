@@ -1,6 +1,6 @@
 # Java八股
 
-`更新时间：2026-10-17`
+`更新时间：2026-10-18`
 
 注释解释：
 
@@ -1449,3 +1449,337 @@ public class StaticInnerClassLazySingleton implements Serializable {
     }
 }
 ```
+
+### 单例模式的使用案例
+
+在jdk或者一些第三方库中，就是用了单例模式，如jdk的Runtime类
+
+```java
+public class Runtime {
+    private static final Runtime currentRuntime = new Runtime();
+
+    private static Version version;
+
+    /**
+     * Returns the runtime object associated with the current Java application.
+     * Most of the methods of class {@code Runtime} are instance
+     * methods and must be invoked with respect to the current runtime object.
+     *
+     * @return  the {@code Runtime} object associated with the current
+     *          Java application.
+     */
+    public static Runtime getRuntime() {
+        return currentRuntime;
+    }
+
+    /** Don't let anyone else instantiate this class */
+    private Runtime() {}
+}
+```
+
+可以看到Runtime的构造器为私有，提供了静态变量并进行了初始化，同时提供了getRuntime方法，是一个非常标准的饿汉式单例
+
+以及System类中的Console内部类，实际是一种DCL懒汉式单例
+
+```java
+private static volatile Console cons;
+
+/**
+ * Returns the unique {@link java.io.Console Console} object associated
+ * with the current Java virtual machine, if any.
+ *
+ * @return  The system console, if any, otherwise {@code null}.
+ *
+ * @since   1.6
+ */
+ public static Console console() {
+     Console c;
+     if ((c = cons) == null) {
+         synchronized (System.class) {
+             if ((c = cons) == null) {
+                 cons = c = SharedSecrets.getJavaIOAccess().console();
+             }
+         }
+     }
+     return c;
+ }
+```
+
+在Collections集合工具类中，大量的内部类都体现了单例模式
+
+```java
+private static class EmptyNavigableSet<E> extends UnmodifiableNavigableSet<E>
+    implements Serializable {
+    @java.io.Serial
+    private static final long serialVersionUID = -6291252904449939134L;
+
+    public EmptyNavigableSet() {
+        super(new TreeSet<>());
+    }
+
+    @java.io.Serial
+    private Object readResolve()        { return EMPTY_NAVIGABLE_SET; }
+}
+
+@SuppressWarnings("rawtypes")
+private static final NavigableSet<?> EMPTY_NAVIGABLE_SET =
+        new EmptyNavigableSet<>();
+```
+
+例如EmptyNavigableSet，内部类本身是private，所以构造器即使设置为public，其他类也不能调用，然后提供了静态成员变量存储唯一的实例。EmptyNavigableSet属于懒汉式单例，仅有在调用emptySortedSet()和emptyNavigableSet()两个方法时才会初始化内部类，并创建实例
+
+> ![](img4/96.png)
+
+Comparator.Comparators中的NaturalOrderComparator类是一个枚举单例类
+
+```java
+enum NaturalOrderComparator implements Comparator<Comparable<Object>> {
+    INSTANCE;
+
+    @Override
+    public int compare(Comparable<Object> c1, Comparable<Object> c2) {
+        return c1.compareTo(c2);
+    }
+
+    @Override
+    public Comparator<Comparable<Object>> reversed() {
+        return Comparator.reverseOrder();
+    }
+}
+```
+
+## 并发
+
+### 线程状态
+
+不同于计算机操作系统，在Java中，一般将线程状态分为六类
+
+- NEW 新建：当使用new关键字声明一个新的线程实例时，线程处于新建状态，此时线程还没有与cpu建立关联
+- RUNNABLE 可运行：调用线程对象的start方法后，线程由新建状态转换为可运行状态，与cpu中的线程建立关联，并将人物代码交由cpu执行
+- TERMINATED 终结：当代码执行完毕，没有后续人物，线程进入终结状态，线程的生命周期完成，底层的相关资源也会释放
+- BLOCKED 阻塞：多个线程可能会尝试竞争锁，获取锁成功的线程进入可运行态，获取锁失败的线程则进入阻塞态，等待锁释放
+- WAITING 等待：当锁竞争成功，但是某些任务的条件还不满足，无法继续执行，则需要执行wait()释放锁，并进入等待状态；当条件满足后，执行notify()唤醒等待的线程，但是线程需要重新竞争锁
+- TIMED_WAITING 超时等待：如果执行wait()函数时传入了一个参数long，则会进入超时等待状态，long表示等待超时时间，单位毫秒；如果中途没有notify()唤醒，则超时时间到期后，会自动唤醒超时等待的线程。如果对可运行态的线程执行sleep(long)，也会让线程进入超时等待状态
+
+计算机操作系统中，一般将线程状态划分为五类：新建、就绪、运行、终结、阻塞。其中新建、终结和运行态与Java类似，而就绪态是指可以分到cpu时间，但是目前没有分到cpu时间的状态；操作系统中的阻塞态是指无法分到cpu时间的，其中包含了阻塞IO、BLOCKED、WAITING、TIMED WAITING等
+
+### 线程池核心参数
+
+线程池核心参数一般是指Java中创建线程池时，其构造函数的核心参数的意义。线程池核心参数一般有7个
+
+- corePoolSize：核心线程数，最多保留的线程数，线程池由核心线程和救急线程两部分组成，救急线程一般只会在核心线程不可用以及任务队列满时创建，并且救急线程会在使用后释放
+- maximumPoolSize：最大线程数目，等于核心线程加上救急线程
+- keepAliveTime：救急线程最大生存时间，到期后会释放救急线程
+- unit：救急线程生存时间单位
+- workQueue：阻塞队列，也就是工作等待队列，当向线程池提交任务时，如果核心线程都在忙，则会进入阻塞队列，当阻塞队列满，才会创建救急线程
+- threadFactory：线程工厂，可以让开发者自定义如何创建线程，但是一般仅为线程命名
+- handler：拒绝策略，一般有四种。AbortPolicy，线程池已关闭，或队列已满且线程数已达maximumPoolSize时直接抛出RejectedExecutionException；CallerRunsPolicy，由由提交任务的线程自己执行该任务；DiscardPolicy，直接丢弃任务，不做任何处理；DiscardOldestPolicy，丢弃队列中最旧的任务，然后重新提交当前任务
+
+```java
+public static void main(String[] args) throws Exception {
+    AtomicInteger i = new AtomicInteger(1);
+    BlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(2);
+    ThreadPoolExecutor threadPoolExecutor = new ThreadPoolExecutor(
+            2,
+            3,
+            0,
+            TimeUnit.SECONDS,
+            queue,
+            r -> new Thread(r, "TestThread" + i.getAndIncrement()),
+            new ThreadPoolExecutor.CallerRunsPolicy()
+    );
+}
+```
+
+这是创建线程池的一个示例，当前线程池核心线程数量为2，最大线程数为3，救急线程生存时间0秒，等待队列长度为2，线程池工厂中为每个线程命名为`TestThread + 自增编号`，拒绝策略设置为了调用者执行策略
+
+*注：救急线程也会取出等待队列中的任务执行，只有当任务队列为空时，才会开始计算救急线程的生存时间*
+
+### Sleep() vs Wait()
+
+共同点：wait()、wait(long)和sleep(long)的效果都是让当前线程暂时放弃cpu使用权，进入阻塞状态。但是两个方法的归属不同，sleep(long)是Thread线程类的静态方法，可以理解为线程执行的任务调度；而wait()和wait(long)都属于Object对象成员方法，每个对象都有，所以wait()是任务对象主动申请等待，线程被迫等待
+
+sleep(long)和wait(long)的线程都会在等待相应毫秒后醒来，wait(long)和wait()还可以被notify()唤醒，wait()如果不唤醒则会一直保持等待。同时它们均可被打断唤醒
+
+wait()的调用必须先获取wait()对象的锁，而sleep()没有这个限制。wait()方法执行后会释放对象锁，允许其他线程获取该对象锁；而sleep()如果在synchronized代码块中执行，不会释放对象锁，其他线程仍需要等待锁释放
+
+### Lock vs Synchronized
+
+语法层面，synchronized是关键字，源码在jvm中，使用C++语言实现；而Lock是接口，源码由jdk提供，使用Java实现。使用synchronized时，退出同步代码块锁会自动释放，但使用Lock时，需要手动调用unlock方法释放锁
+
+功能层面，二者均属于悲观锁，都具备基本的互斥、同步、锁重入功能。Lock提供了许多synchronized不具备的功能，如获取等到状态、公平锁、可打断、可超时、多条件变量等等；Lock有适合不同场景的不同实现，如ReentrantLock、ReentrantReadWriteLock等
+
+性能层面，在没有竞争时，synchronized做了很多性能优化，如偏向锁，轻量级锁；而在竞争激烈时，Lock的实现通常会提供更好的性能
+
+### Volatile
+
+volatile如何保证线程安全性？线程安全要考虑三个方面：
+
+- 可见性：一个线程对共享变量修改，另一个线程能看到最新结果
+- 有序性：一个线程内代码按编写顺序执行，不能因为cpu优化将代码顺序改变
+- 原子性：一个线程内多行代码以一个整体运行，期间不能有其他线程的代码插队
+
+volatile能保证共享变量的可见性与有序性，但是无法保证其原子性
+
+#### 原子性
+
+```java
+import java.util.concurrent.CountDownLatch;
+
+public class Test {
+
+    private static final int TIMES = 100000;
+    public static volatile int balance = TIMES;
+
+    public static void sub() {
+        balance -= 1;
+    }
+
+    public static void main(String[] args) throws InterruptedException {
+        CountDownLatch latch = new CountDownLatch(TIMES);
+        for (int i = 0; i < TIMES; i++) {
+            new Thread(() -> {
+                sub();
+                latch.countDown();
+            }).start();
+        }
+        latch.await();
+        System.out.println("当前TIMES：" + TIMES);
+        System.out.println("balance结果：" +balance);
+    }
+}
+```
+
+在Test类中，我们声明了一个常量TIMES，设置为10万，然后将TIMES赋值给了balance，balance是静态成员变量，拥有volatile关键字，同时定义了一份sub方法，每次调用让balance减一。然后在主方法中，定义了一个CountDownLatch实例，CountDownLatch用于多线程下的线程同步，如果在初始化CountDownLatch时传入一个int类型的参数，执行latch.await()的线程就必须等待CountDownLatch的计数器为0时才能继续执行。所以这里传入CountDownLatch的值也为TIMES，然后定义一个循环创建TIMES个数的线程，每个线程执行一次sub方法，理想情况下，最后的balance应该为0。我们先用比较小的数字进行尝试
+
+> ![](img4/97.png)
+
+在jvm虚拟机中，对静态成员变量的增减操作实际并不是只有一条命令，我们反编译class文件
+
+```java
+ public static void sub();
+    descriptor: ()V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=0, args_size=0
+         0: getstatic     #7                  // Field balance:I
+         3: iconst_1
+         4: isub
+         5: putstatic     #7                  // Field balance:I
+         8: return
+      LineNumberTable:
+        line 11: 0
+        line 12: 8
+
+```
+
+在字节码文件中，sub 方法由四个命令组成，getstatic获取静态成员变量，iconst_1定义字面量1，isub执行减法，putstatic将计算结果复制给静态成员变量。所以其实在jvm中，sub在进行计算时使用的数字是静态成员变量的副本，即使静态成员变量在getstatic之后发生了变更，sub方法中仍会按照原来的值进行计算，而putstatic导致错误的值赋值到变量中。如果我们将TIMES的值调大一些，就会发现最后balance并不为0
+
+> ![](img4/98.png)
+
+而且idea也会提醒我们非原子操作
+
+> ![](img4/99.png)
+
+#### 可见性
+
+```java
+public class Test {
+
+    public static boolean stop = false;
+
+    public static void main(String[] args) throws InterruptedException {
+        new Thread(Test::run).start();
+        Thread.sleep(1000);
+        stop = true;
+        System.out.println("stop is true now!");
+    }
+
+    public static void run() {
+        int i = 0;
+        while (!stop)
+            i++;
+        System.out.println("Stopped!, i = " + i);
+    }
+}
+```
+
+观察如上代码，我们定义了一个成员变量stop，表示循环是否应该停止。又定义了一个方法run，run中定义i记录循环次数，然后开始死循环，最后输出循环次数。然后在主方法中定义一个单独的线程执行run方法，并设置1000毫秒的等待时间，到期后设置stop为true，查看1000ms时间内循环的次数
+
+> ![](img4/100.png)
+
+但实际的结果却很意外，在启动主方法后，程序进入了死循环，即使已经输出了stop is true now!，子线程仍没有停止。这正是因为stop成员变量缺乏可见性，当主线程更新stop的值后，子线程并没有更新自己的stop的值，所以一直认为stop为false，导致循环无法退出。而使用volatile就可以保证成员变量的可见性
+
+```java
+public static volatile boolean stop = false;
+```
+
+> ![](img4/101.png)
+
+##### 根本原因
+
+~~可见性问题的根本原因是，在不同线程的情况下，会由不同的cpu执行代码，cpu在获取静态成员变量时，会从内存中将该变量的值复制到自己的高速缓存中，如果cpu0修改了某个变量的值，但是该值只存在于cpu0的高速缓存中，并没有同步给其他cpu缓存，因此其他cpu只能按照旧值进行运算~~
+
+以上是某些错误的说法，我们可以用示例来证明。如果cpu0只修改了自己的值，那么再定义一个线程去读取stop，查看stop究竟是true还是false。注意需要去掉stop的volatile修饰符
+
+```java
+public static void main(String[] args) throws InterruptedException {
+    new Thread(Test::run).start();
+    Thread.sleep(1000);
+    stop = true;
+    Thread.sleep(100);
+    new Thread(() -> {
+        System.out.println(stop);
+    }).start();
+    System.out.println("stop is true now!");
+}
+```
+
+> ![](img4/102.png)
+
+很显然，第二个线程读取到的stop为true，那有没有可能是因为主线程的问题呢？我们不在主线程中更新stop，而是在子线程中更新stop，然后由主线程读取
+
+```java
+public static void main(String[] args) throws InterruptedException {
+    new Thread(Test::run).start();
+    Thread.sleep(1000);
+    new Thread(() -> stop = true).start();
+    Thread.sleep(100);
+    System.out.println("stop is true now!");
+    System.out.println(stop);
+}
+```
+
+> ![](img4/103.png)
+
+结果仍是true，所以一开始的那种说法是完全错误的。可见性问题的真正来源，是JIT，JIT全称Java In Time Complier即时编译器，是JVM中核心的性能优化组件，JIT会分析字节码中的内容，然后进行进一步的优化，就比如这里的大循环。而JIT的优化，实际是直接将原有的字节码替换为优化后的机器码，如果中间变量被修改，cpu在执行时仍会按照JIT优化后的机器码执行，导致变量没有正确更新
+
+我们可以用多个案例来证明，如果真的是因为JIT优化，那么我们可以减少循环次数，也就是减少等待时间。目前CPU运算速度都非常快，经过实际的测试，即使设置Thread.sleep(1)也会触发JIT优化，因此这里利用System.nanoTime()，设置end = System.nanoTime() + 500_000，然后while (System.nanoTime() < end)进行空转，这样可以略微实现500微秒的延迟
+
+```java
+public static boolean stop = false;
+
+public static void main(String[] args) throws InterruptedException {
+    new Thread(Test::run).start();
+    long end = System.nanoTime() + 500_000; // 500μs
+    while (System.nanoTime() < end) {
+        // 空转
+    }
+    stop = true;
+    System.out.println("stop is true now!");
+}
+```
+
+> ![](img4/104.png)
+
+可以看到，即使没有使用volatile修饰，循环也正确停止了，总计循环64811次
+
+或者我们也可以关闭JIT优化，在jvm参数中添加-Xint，即使延迟1000ms也能正确停止
+
+> ![](img4/105.png)
+
+> ![](img4/106.png)
+
+可以看到最终循环了237815471次，一般循环次数约等于CPU频率，我的cpu频率为4GHz左右，而循环次数仅为cpu频率的一半，也能看到cpu性能确实因为缺少JIT优化而降低
+
+> ![](img4/107.png)
