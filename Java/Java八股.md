@@ -1,6 +1,6 @@
 # Java八股
 
-`更新时间：2026-10-18`
+`更新时间：2026-10-19`
 
 注释解释：
 
@@ -1615,9 +1615,10 @@ wait()的调用必须先获取wait()对象的锁，而sleep()没有这个限制�
 
 volatile如何保证线程安全性？线程安全要考虑三个方面：
 
+- 原子性：一个线程内多行代码以一个整体运行，期间不能有其他线程的代码插队
+
 - 可见性：一个线程对共享变量修改，另一个线程能看到最新结果
 - 有序性：一个线程内代码按编写顺序执行，不能因为cpu优化将代码顺序改变
-- 原子性：一个线程内多行代码以一个整体运行，期间不能有其他线程的代码插队
 
 volatile能保证共享变量的可见性与有序性，但是无法保证其原子性
 
@@ -1783,3 +1784,185 @@ public static void main(String[] args) throws InterruptedException {
 可以看到最终循环了237815471次，一般循环次数约等于CPU频率，我的cpu频率为4GHz左右，而循环次数仅为cpu频率的一半，也能看到cpu性能确实因为缺少JIT优化而降低
 
 > ![](img4/107.png)
+
+#### 有序性
+
+```java
+import org.openjdk.jcstress.annotations.*;
+import org.openjdk.jcstress.infra.results.II_Result;
+
+@JCStressTest
+@Outcome(id = {"0, 0", "0, 1", "1, 1"}, expect = Expect.ACCEPTABLE, desc = "ACCEPTABLE")
+@Outcome(id = {"1, 0"}, expect = Expect.ACCEPTABLE_INTERESTING, desc = "INTERESTING")
+@State
+public class Test {
+
+    int x;
+    int y;
+
+    @Actor
+    public void set() {
+        x = 1;
+        y = 1;
+    }
+
+    @Actor
+    public void get(II_Result result) {
+        result.r1 = y;
+        result.r2 = x;
+    }
+}
+```
+
+使用jcstress编写一个并发测试类，定义两个属性x和y，然后定义两个方法set和get，让两个线程分别执行set和get，可能会出现以下几种结果
+
+- 1, 1：正常结果，set方法比get方法先执行
+- 0, 0：正常结果，get方法比set方法先执行
+- 0, 1：正常结果，如果x = 1先执行，然后执行了get方法，再执行y = 1；或者result.r1 = y先执行，然后执行了set方法，再执行result.r2 = x
+- 1, 0：异常结果，如果不考虑cpu指令顺序变更，不可能出现这种情况
+
+> ![](img4/111.png)
+
+结果中有大约0.01%的结果是1,0，所以cpu指令重排序的现象是真实存在的，并且会对并发安全造成很大的威胁。因此需要使用volatile阻止指令重排序，而这里volatile添加的位置也需要注意，应当添加在y属性上，而不是x属性。volatile的工作原理是增加内存屏障，对于写操作，屏障方向向上，volatile指令上方的其他指令无法穿越屏障到volatile指令之后；对于读操作，屏障方向向下
+
+如果在x上添加volatile修饰符，x之前的写操作不能重排在x后方，但是本来y的写操作就在x后方，所以仍会导致重排；同理，x之后的读操作不能排在x前方，但是y的读操作本来就在x前方，不受volatile影响
+
+> ![](img4/112.png)
+
+1,0的情况仍然存在，所以我们再将volatile添加在y上
+
+> ![](img4/113.png)
+
+由于没有interest结果集，终端并没有返回结果，所以在报告页中查看。可以确定在所有测试结果中，1,0不存在，volatile可以保证命令的有序性
+
+*注：由于内存屏障的单向性，对于volatile属性的写操作，必须在其他属性之后；对于volatile属性的读操作，必须在其他属性之前，否则volatile无效*
+
+### 悲观锁与乐观锁
+
+#### 概念
+
+悲观锁的代表是synchronized和Lock锁，其核心思想是线程只有获取了锁，才有资格去操作共享变量，每次只能有一个线程获取锁成功，获取锁失败的线程都必须等待锁释放。悲观锁线程从运行到阻塞，再从阻塞到唤醒，涉及线程上下文切换，如果频繁发生，则会严重影响性能。不过在Java中，线程在获取synchronized和Lock锁时，如果锁被占用，则会进行几次重试操作，重试失败后才会进入阻塞，减少阻塞机会
+
+乐观锁的代表是AtomicInteger，使用CAS来保证原子性。乐观锁核心思想是不加锁，每次仅有一个线程能够成功修改共享变量，其他失败的线程不需要阻塞等待，而是一直重试直到成功。由于线程一直运行，不需要阻塞，不涉及线程上下文切换，并发性能比悲观锁好得多。但乐观锁需要多核cpu支持，且线程数不超过cpu核心数
+
+*注：现代处理器支持超线程功能，即将一个物理核心划分为多个逻辑核心，对于进程而言一个逻辑核心等于一个cpu*
+
+#### CAS
+
+CAS，全称Compare And Swap，是一种乐观锁思想的原子更新机制，核心逻辑就是在更新数据之前，先判断数据是否被修改，只有当数据没有被修改才进行更新。最常见的场景是秒杀库存场景，假设商品库存仅有100，但是有200个消费者抢购商品
+
+```java
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class Seckill {
+
+    public static volatile int stock = 100;
+
+    public static void main(String[] args) throws InterruptedException {
+        int threadCount = 10;
+        int consumers = 200;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch countDownLatch = new CountDownLatch(consumers);
+
+        for (int i = 0; i < consumers; i++) {
+            executor.submit(() -> {
+                stock--;
+                countDownLatch.countDown();
+            });
+        }
+        countDownLatch.await();
+        executor.shutdown();
+        System.out.println(stock);
+    }
+}
+```
+
+> ![](img4/114.png)
+
+结果显而易见，如果不使用任何锁，一定会出现超卖问题。所以改用AtomicInteger保存stock，并使用updateAndGet原子性比较并赋值
+
+```java
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class Seckill {
+
+    public static AtomicInteger stock = new AtomicInteger(100);
+
+    public static void main(String[] args) throws InterruptedException {
+        int threadCount = 10;
+        int consumers = 200;
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch countDownLatch = new CountDownLatch(consumers);
+
+        for (int i = 0; i < consumers; i++) {
+            executor.submit(() -> {
+                stock.updateAndGet(stock -> stock > 0 ? stock - 1 : stock);
+                countDownLatch.countDown();
+            });
+        }
+        countDownLatch.await();
+        executor.shutdown();
+        System.out.println(stock);
+    }
+}
+```
+
+如果使用AtomicInteger，就可以不用再添加volatile关键字，AtomicInteger的updateAndGet传入的参数是一个java.util.function.IntUnaryOperator，也就是一个方法，该方法会原子性执行，返回值就是AtomicInteger的新值
+
+```java
+public final int updateAndGet(IntUnaryOperator updateFunction) {
+    int prev = get(), next = 0;
+    for (boolean haveNext = false;;) {
+        if (!haveNext)
+            next = updateFunction.applyAsInt(prev);
+        if (weakCompareAndSetVolatile(prev, next))
+            return next;
+        haveNext = (prev == (prev = get()));
+    }
+}
+```
+
+其底层调用了unsafe的weakCompareAndSetInt方法，这就是一个CAS方法
+
+### Hashtable vs ConcurrentHashMap
+
+Hashtable是从jdk1.0版本就存在的数据类型，是最早期的键值对数据结构，底层使用的数据结构与HashMap类似，即数组结合链表。Hashtable继承自Dictionary类，这是Java初期的键值集合类，而且Dictionary的源码仍是抽象类，因为接口类从1.1才引入。Hashtable的迭代器并不是Iterator，而是Enumerator枚举器，Enumerator的性能比Iterator低，所以现代的代码中几乎没有再使用Enumerator
+
+ConcurrentHashMap自1.5版本引入Java，在1.8版本经历了代码重塑，提升了ConcurrentHashMap的并发性能
+
+Hashtable和ConcurrentHashMap都是线程安全的Map集合，Hashtable并发性能低，synchronized是方法级别，锁的范围是整个实例，对于同一个实例，同一时刻仅能有一个线程去进行操作。在1.8之前，ConcurrentHashMap使用了Segment + 数组 + 链表结构，每个Segment一把锁，如果多个线程访问不同的Segment，则不会冲突；在1.8之后，ConcurrentHashMap与HashMap使用相同的数据结构，数组的每个头结点作为锁，如果多个线程访问不同的桶，则不会冲突，大大提高了并发性能
+
+#### Hashtable
+
+在1.2引入Map集合之后，Hashtable也实现了Map类，用于表示Hashtable的归属，在1.5引入泛型后，Hashtable也支持了泛型
+
+```java
+public synchronized V put(K key, V value) {
+    // Make sure the value is not null
+    if (value == null) {
+        throw new NullPointerException();
+    }
+
+    // Makes sure the key is not already in the hashtable.
+    Entry<?,?> tab[] = table;
+    int hash = key.hashCode();
+    int index = (hash & 0x7FFFFFFF) % tab.length;
+    @SuppressWarnings("unchecked")
+    Entry<K,V> entry = (Entry<K,V>)tab[index];
+    for(; entry != null ; entry = entry.next) {
+        if ((entry.hash == hash) && entry.key.equals(key)) {
+            V old = entry.value;
+            entry.value = value;
+            return old;
+        }
+    }
+
+    addEntry(hash, key, value, index);
+    return null;
+}
+```
