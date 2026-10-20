@@ -1,6 +1,6 @@
 # Java八股
 
-`更新时间：2026-10-19`
+`更新时间：2026-10-20`
 
 注释解释：
 
@@ -1966,3 +1966,212 @@ public synchronized V put(K key, V value) {
     return null;
 }
 ```
+
+首先就判断value是否为null，而HashMap允许值为null。然后获取桶数组，计算哈希值，并映射索引。这里先计算了hash & 0x7FFFFFFF是为了缩小hash的范围，hash本身可能为负数，如果直接模tab.length，得到的索引也会是负数。接着再获取索引位置的Entry，如果Entry不为null，遍历Entry链表中所有元素，一旦找到Key相同的Entry，替换原有的Entry。最后执行addEntry(hash, key, value, index)插入
+
+```java
+private void addEntry(int hash, K key, V value, int index) {
+    Entry<?,?> tab[] = table;
+    if (count >= threshold) {
+        // Rehash the table if the threshold is exceeded
+        rehash();
+
+        tab = table;
+        hash = key.hashCode();
+        index = (hash & 0x7FFFFFFF) % tab.length;
+    }
+
+    // Creates the new entry.
+    @SuppressWarnings("unchecked")
+    Entry<K,V> e = (Entry<K,V>) tab[index];
+    tab[index] = new Entry<>(hash, key, value, e);
+    count++;
+    modCount++;
+}
+```
+
+扩容方法调用并不在put中，所以继续跟踪到addEntry，同样先获取桶数组，然后判断count大于等于threshold。count相当于HashMap中的size，用于维护哈希表中的Entry数量，threshold是阈值，当count大于等于阈值时，就需要扩容，所以调用了 rehash()方法，并重新计算索引。接着便根据新索引完成了插入动作，count自增，modCount也自增。如果存在modCount，就可以知道Hashtable的迭代器是fail_fast模式，在并发修改下会抛出异常，这也是hashtable性能低的一个原因
+
+```java
+@SuppressWarnings("unchecked")
+protected void rehash() {
+    int oldCapacity = table.length;
+    Entry<?,?>[] oldMap = table;
+
+    // overflow-conscious code
+    int newCapacity = (oldCapacity << 1) + 1;
+    if (newCapacity - MAX_ARRAY_SIZE > 0) {
+        if (oldCapacity == MAX_ARRAY_SIZE)
+            // Keep running with MAX_ARRAY_SIZE buckets
+            return;
+        newCapacity = MAX_ARRAY_SIZE;
+    }
+    Entry<?,?>[] newMap = new Entry<?,?>[newCapacity];
+
+    modCount++;
+    threshold = (int)Math.min(newCapacity * loadFactor, MAX_ARRAY_SIZE + 1);
+    table = newMap;
+
+    for (int i = oldCapacity ; i-- > 0 ;) {
+        for (Entry<K,V> old = (Entry<K,V>)oldMap[i] ; old != null ; ) {
+            Entry<K,V> e = old;
+            old = old.next;
+
+            int index = (e.hash & 0x7FFFFFFF) % newCapacity;
+            e.next = (Entry<K,V>)newMap[index];
+            newMap[index] = e;
+        }
+    }
+}
+```
+
+首先记录旧数组长度，并保存旧数组，然后计算新的容量，公式为int newCapacity = (oldCapacity << 1) + 1，也就是就容量的二倍加一，如果新容量比MAX_ARRAY_SIZE，即Integer. MAX_VALUE - 8还大，则将其设置为MAX_ARRAY_SIZE。然后创建新的数组
+
+接着自增modCount++，不允许并发扩容。计算新的阈值，取newCapacity * loadFactor和MAX_ARRAY_SIZE + 1中更小的值，loadFactor默认为0.75，但是并不是常量，而是在构造器初始化时传入的。再将新的数组赋值给table
+
+新数组初始化完成后，遍历旧数组，取出旧数组中每个元素，重新计算索引，并插入新数组的对应位置
+
+Hashtable的初始数组长度为11，且创建时初始化，与HashMap、ConcurrentHashMap的懒加载模式不同
+
+```java
+public Hashtable() {
+    this(11, 0.75f);
+}
+```
+
+#### ConcurrentHashMap
+
+ConcurrentHashMap在Java8版本经历了重构，所以我们分别来查看两个版本的实现区别
+
+##### Java7
+
+```java
+public ConcurrentHashMap() {
+    this(DEFAULT_INITIAL_CAPACITY, DEFAULT_LOAD_FACTOR, DEFAULT_CONCURRENCY_LEVEL);
+}
+```
+
+无参构造器调用了兄弟构造器，并传入了三个参数，DEFAULT_INITIAL_CAPACITY默认桶数组容量、DEFAULT_LOAD_FACTOR默认负载因子、DEFAULT_CONCURRENCY_LEVEL默认并发级别。Java7中ConcurrentHashMap中存在一个逻辑结构Segment，一个ConcurrentHashMap由多个Segment组成，每个Segment由多个Entry组成，而并发级别就是标识一个Segment中由多少个Entry组成。而默认的DEFAULT_INITIAL_CAPACITY为16，DEFAULT_CONCURRENCY_LEVEL也为16，所以默认长度的ConcurrentHashMap由一个Segment组成
+
+Segment的大小是控制并发性能的关键指标，ConcurrentHashMap底层对每个Segment加锁，Segment越大，锁的范围也就越大，影响的线程也就越多，对于默认容量的ConcurrentHashMap，锁的范围就是整个ConcurrentHashMap
+
+```java
+@SuppressWarnings("unchecked")
+public V put(K key, V value) {
+    Segment<K,V> s;
+    if (value == null)
+        throw new NullPointerException();
+    int hash = hash(key);
+    int j = (hash >>> segmentShift) & segmentMask;
+    if ((s = (Segment<K,V>)UNSAFE.getObject          // nonvolatile; recheck
+         (segments, (j << SSHIFT) + SBASE)) == null) //  in ensureSegment
+        s = ensureSegment(j);
+    return s.put(key, hash, value, false);
+}
+```
+
+在put方法中，首先定义了一个Segment，也就是元素所属的Segment，然后不允许value为null。HashMap允许value为null，但是ConcurrentHashMap不允许，是为了保证并发安全性。如果允许值为null，无论单线程还是多线程，当get返回null时，都存在两种可能，第一，Key不存在；第二，Key存在，但是值为null。对单线程来说，为了消除二义性，可以执行一次containsKey()来查询Key是否真的存在；但多线程下，containsKey()与get()并不是原子性的，要么额外设计一个conatinsAndGet()原子方法，要么不允许value为null，从而消除二义性
+
+然后计算哈希值，并右移到Segment的范围，避免负数，再与segmentMask逻辑与，得到所在的Segment下标。通过Unsafe的getObject()获取对应Segment，如果Segment不存在，还需要s = ensureSegment(j)创建该Segment。然后执行Segment的put方法
+
+```java
+final V put(K key, int hash, V value, boolean onlyIfAbsent) {
+    HashEntry<K,V> node = tryLock() ? null :
+        scanAndLockForPut(key, hash, value);
+    V oldValue;
+    try {
+        HashEntry<K,V>[] tab = table;
+        int index = (tab.length - 1) & hash;
+        HashEntry<K,V> first = entryAt(tab, index);
+        for (HashEntry<K,V> e = first;;) {
+            if (e != null) {
+                K k;
+                if ((k = e.key) == key ||
+                    (e.hash == hash && key.equals(k))) {
+                    oldValue = e.value;
+                    if (!onlyIfAbsent) {
+                        e.value = value;
+                        ++modCount;
+                    }
+                    break;
+                }
+                e = e.next;
+            }
+            else {
+                if (node != null)
+                    node.setNext(first);
+                else
+                    node = new HashEntry<K,V>(hash, key, value, first);
+                int c = count + 1;
+                if (c > threshold && tab.length < MAXIMUM_CAPACITY)
+                    rehash(node);
+                else
+                    setEntryAt(tab, index, node);
+                ++modCount;
+                count = c;
+                oldValue = null;
+                break;
+            }
+        }
+    } finally {
+        unlock();
+    }
+    return oldValue;
+}
+```
+
+先尝试获取锁，这是Segment的put方法，所以锁的范围就是Segment，这里尝试获取的锁是ReentrantLock。如果获取锁成功，将一个node设置为null，获取锁失败，调用scanAndLockForPut(key, hash, value)，并将返回值赋值给node。scanAndLockForPut(key, hash, value)是Java7的一个非常巧妙的方法，如果获取锁失败，并不会立即再次尝试获取锁，而是先将需要插入的Entry准备好，在获取锁成功后立即插入，提升并发性能
+
+然后才获取Segment中的table，int index = (tab.length - 1) & hash计算索引，获取索引位置的头节点，从头节点遍历整个链表，如果存在相同Key进行替换，不存在则使用头插法插入链表中，并记录插入后的长度。判断c = count + 1是否大于阈值，且数组的长度不能大于MAXIMUM_CAPACITY，不满足任意一个，则执行rehash(node)扩容并插入
+
+最后自增modCount，更新count，释放oldValue，并释放锁
+
+```java
+@SuppressWarnings("unchecked")
+private void rehash(HashEntry<K,V> node) {
+    HashEntry<K,V>[] oldTable = table;
+    int oldCapacity = oldTable.length;
+    int newCapacity = oldCapacity << 1;
+    threshold = (int)(newCapacity * loadFactor);
+    HashEntry<K,V>[] newTable =
+        (HashEntry<K,V>[]) new HashEntry[newCapacity];
+    int sizeMask = newCapacity - 1;
+    for (int i = 0; i < oldCapacity ; i++) {
+        HashEntry<K,V> e = oldTable[i];
+        if (e != null) {
+            HashEntry<K,V> next = e.next;
+            int idx = e.hash & sizeMask;
+            if (next == null)   //  Single node on list
+                newTable[idx] = e;
+            else { // Reuse consecutive sequence at same slot
+                HashEntry<K,V> lastRun = e;
+                int lastIdx = idx;
+                for (HashEntry<K,V> last = next;
+                     last != null;
+                     last = last.next) {
+                    int k = last.hash & sizeMask;
+                    if (k != lastIdx) {
+                        lastIdx = k;
+                        lastRun = last;
+                    }
+                }
+                newTable[lastIdx] = lastRun;
+                // Clone remaining nodes
+                for (HashEntry<K,V> p = e; p != lastRun; p = p.next) {
+                    V v = p.value;
+                    int h = p.hash;
+                    int k = h & sizeMask;
+                    HashEntry<K,V> n = newTable[k];
+                    newTable[k] = new HashEntry<K,V>(h, p.key, v, n);
+                }
+            }
+        }
+    }
+    int nodeIndex = node.hash & sizeMask; // add the new node
+    node.setNext(newTable[nodeIndex]);
+    newTable[nodeIndex] = node;
+    table = newTable;
+}
+```
+
+rehash方法中，
