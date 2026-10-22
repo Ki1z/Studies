@@ -1,6 +1,6 @@
 # Java八股
 
-`更新时间：2026-10-20`
+`更新时间：2026-10-22`
 
 注释解释：
 
@@ -2174,4 +2174,273 @@ private void rehash(HashEntry<K,V> node) {
 }
 ```
 
-rehash方法中，
+rehash方法中，获取旧table以及旧容量，然后设置新容量int newCapacity = oldCapacity << 1，也就是旧容量的二倍，再计算新阈值。容量计算完成后，创建新的table，并设置掩码sizeMask = newCapacity - 1，用于快捷计算桶索引，其原理和HashMap相同。当桶数组长度为2的n次幂时， (cap - 1) & hash等价于 cap % hash，且计算速度更快
+
+接着便利所有桶，取出桶中的头节点，计算idx = e.hash & sizeMask新桶下标，再判断if (next == null)，也就是仅有一个节点，则直接newTable[idx] = e将节点挂载到新数组中。如果是链表，定义两个参数HashEntry<K,V> lastRun = e、int lastIdx = idx，lastRun表示上一个位置与先前元素不同的元素，idx表示上一个位置与先前元素不同的元素的新位置，再遍历除头节点外的链表
+
+我们来好好理解这段代码的含义。lastRun的初始基准点是头节点元素，而idx初始基准点是头节点的新位置，在HashMap中，由于桶数组长度恒为2的n次幂，所以数组扩容后，链表上的元素尽可能有两个新位置，一是原来的索引，二是原来的索引加上旧容量，在HashMap中我们已经分析过这一点。然后for循环遍历除头节点外的链表，目的是寻找最后一组连续的相同位置的元素。在for循环体中，定义了int k = last.hash & sizeMask计算当前遍历元素的新位置，当k != lastIdx时，更新lastIdx = k和lastRun = last。所以，假设整个链表的新位置都与头节点相同，那么遍历结束后，lastRun仍为头节点，此时将链表挂载到新位置就只需要改变指针，避免new新的Entry。如果链表中出现一个新位置与头节点不同的元素，则lastRun从该节点开始记录，该节点后续如果再出现位置不同的元素，则继续变更记录点。所以lastRun可以看作一个相同位置链表的头节点，lastIdx就是lastRun对应的位置
+
+遍历完成后，就执行newTable[lastIdx] = lastRun将最后一个相同位置的连续链表迁移到新数组中，再从e，也就是头指针开始遍历链表，截止到lastRun，因为从lastRun开始的链表已经被迁移了。对于每一个元素，获取其中的value、hash，计算新的位置，然后创建一个新的Entry并插入新数组
+
+最后计算新插入的Entry的索引并插入，将Segment的table赋值为新table，完成扩容
+
+**Segment原型**
+
+Java7的ConcurrentHashMap中有一个特点，在创建新的Segment时，会以Segment[0]作为原型。上文在分析put()方法时提到，如果元素对应的Segment不存在，则需要s = ensureSegment(j)创建该Segment
+
+```java
+@SuppressWarnings("unchecked")
+private Segment<K,V> ensureSegment(int k) {
+    final Segment<K,V>[] ss = this.segments;
+    long u = (k << SSHIFT) + SBASE; // raw offset
+    Segment<K,V> seg;
+    if ((seg = (Segment<K,V>)UNSAFE.getObjectVolatile(ss, u)) == null) {
+        Segment<K,V> proto = ss[0]; // use segment 0 as prototype
+        int cap = proto.table.length;
+        float lf = proto.loadFactor;
+        int threshold = (int)(cap * lf);
+        HashEntry<K,V>[] tab = (HashEntry<K,V>[])new HashEntry[cap];
+        if ((seg = (Segment<K,V>)UNSAFE.getObjectVolatile(ss, u))
+            == null) { // recheck
+            Segment<K,V> s = new Segment<K,V>(lf, threshold, tab);
+            while ((seg = (Segment<K,V>)UNSAFE.getObjectVolatile(ss, u))
+                   == null) {
+                if (UNSAFE.compareAndSwapObject(ss, u, null, seg = s))
+                    break;
+            }
+        }
+    }
+    return seg;
+}
+```
+
+在ensureSegment()方法中，首先定义ss获取当前的Segment数组，然后计算u，u是Segment[k]，也就是当前Segment在虚拟内存中的偏移地址，unsafe直接操作地址，速度比数组访问更快。然后声明一个段，使用UNSAFE.getObjectVolatile(ss, u)访问对应位置的内存，强转为Segment<K,V>，判断是否为null。如果为null，则需要创建Segment
+
+在创建逻辑中，第一步就是Segment<K,V> proto = ss[0]定义Segment[0]为原型，然后获取原型的桶数组长度为容量，获取原型的加载因子和扩容阈值。而后HashEntry<K,V>[] tab = (HashEntry<K,V>[])new HashEntry[cap]依照原型创建桶数组，再执行一次if ((seg = (Segment<K,V>)UNSAFE.getObjectVolatile(ss, u)) == null)确保Segment没有被创建，进而创建Segment，并执行CAS自旋插入
+
+为什么这里有两个if ((seg = (Segment<K,V>)UNSAFE.getObjectVolatile(ss, u)) == null)？实际上这是一种内存优化策略，虽然仅保留一个if ((seg = (Segment<K,V>)UNSAFE.getObjectVolatile(ss, u)) == null)从安全性上来说完全足够，但是ConcurrentHashMap的使用场景是高并发，也就必须考虑高性能。第一个if ((seg = (Segment<K,V>)UNSAFE.getObjectVolatile(ss, u)) == null)是避免从Segment<K,V> proto = ss[0]到HashEntry<K,V>[] tab = (HashEntry<K,V>[])new HashEntry[cap]之间的代码被无意义重复执行，特别是对于HashEntry<K,V>[] tab = (HashEntry<K,V>[])new HashEntry[cap]，因为需要创建新的数组，在高并发场景下会占用大量内存。而第二个if ((seg = (Segment<K,V>)UNSAFE.getObjectVolatile(ss, u)) == null)也是避免内存浪费，如果有一个线程已经执行了Segment<K,V> s = new Segment<K,V>(lf, threshold, tab)，此时可以认为Segment已经创建好了，那么其他线程后续创建的Segment也就毫无意义，所以应当尽量保证少的线程创建对象
+
+而这里的while属于CAS自旋操作，即执行CAS后，需要根据CAS的结果来判断是否应该重试，而且每次重试前需要保证共享数据是最新的，因此while的条件为(seg = (Segment<K,V>)UNSAFE.getObjectVolatile(ss, u)，直到UNSAFE.compareAndSwapObject(ss, u, null, seg = s)插入成功才停止
+
+以上是新建Segment的方法，体现了使用Segment[0]作为原型来创建新Segment。但Segment[0]是如何创建的？我们可以在构造器中找到答案
+
+```java
+@SuppressWarnings("unchecked")
+public ConcurrentHashMap(int initialCapacity,
+                         float loadFactor, int concurrencyLevel) {
+    if (!(loadFactor > 0) || initialCapacity < 0 || concurrencyLevel <= 0)
+        throw new IllegalArgumentException();
+    if (concurrencyLevel > MAX_SEGMENTS)
+        concurrencyLevel = MAX_SEGMENTS;
+    // Find power-of-two sizes best matching arguments
+    int sshift = 0;
+    int ssize = 1;
+    while (ssize < concurrencyLevel) {
+        ++sshift;
+        ssize <<= 1;
+    }
+    this.segmentShift = 32 - sshift;
+    this.segmentMask = ssize - 1;
+    if (initialCapacity > MAXIMUM_CAPACITY)
+        initialCapacity = MAXIMUM_CAPACITY;
+    int c = initialCapacity / ssize;
+    if (c * ssize < initialCapacity)
+        ++c;
+    int cap = MIN_SEGMENT_TABLE_CAPACITY;
+    while (cap < c)
+        cap <<= 1;
+    // create segments and segments[0]
+    Segment<K,V> s0 =
+        new Segment<K,V>(loadFactor, (int)(cap * loadFactor),
+                         (HashEntry<K,V>[])new HashEntry[cap]);
+    Segment<K,V>[] ss = (Segment<K,V>[])new Segment[ssize];
+    UNSAFE.putOrderedObject(ss, SBASE, s0); // ordered write of segments[0]
+    this.segments = ss;
+}
+```
+
+定义初始sshift为0，初始ssize为1，然后根据concurrencyLevel设置sshift和ssize，concurrencyLevel初始值为16，ssize每次循环左移一位，也就是乘以二，总共循环4次，ssize也为16，sshift为4。然后计算this.segmentShift = 32 - sshift，因为segmentShift是需要右移的位数，所以需要用int的位数减去ssize的位数，并计算掩码this.segmentMask = ssize - 1。ssize是Segment数组的大小，而不是Segment自己的table的大小
+
+然后判断初始容量，如果大于MAXIMUM_CAPACITY，则设置为上限MAXIMUM_CAPACITY。接着计算int c = initialCapacity / ssize，initialCapacity是整个ConcurrentHashMap的总容量，而ssize是Segment数组的长度，用总容量除以段数组长度，就可以得到每个段的容量，即table长度。不过整数除法运算是截断形式的，如果得到的c是个小数，那么在转换为int后，小数部分会省略，导致总容量小于需要的初始容量，因此还需要判断if (c * ssize < initialCapacity)，然后自增c，让c向上取整
+
+定义cap，初始值为MIN_SEGMENT_TABLE_CAPACITY，并与c进行比较，c表示的是每个段允许的最小容量，因此如果cap比c小，需要让cap左移直到大于等于c。MIN_SEGMENT_TABLE_CAPACITY默认为2，而c默认为1，因此每个段默认的桶数组长度为2
+
+最后就是创建Segment[0]了，传入各种必要参数loadFactor负载因子、(int)(cap * loadFactor)扩容阈值、(HashEntry<K,V>[])new HashEntry[cap]桶数组。然后创建Segment数组，长度为ssize，并使用Unsafe直接从内存中将Segment[0]设置为第一个元素，设置this.segments为刚刚初始化的Segment数组
+
+*注：由于ensureSegment方法中创建其他Segment是基于Segment[0]，因此如果Segment[0]的容量扩大，新创建的Segment容量也会扩大*
+
+##### Java8+
+
+```java
+public ConcurrentHashMap() {
+}
+
+public ConcurrentHashMap(int initialCapacity) {
+    this(initialCapacity, LOAD_FACTOR, 1);
+}
+
+public ConcurrentHashMap(int initialCapacity,
+                         float loadFactor, int concurrencyLevel) {
+    if (!(loadFactor > 0.0f) || initialCapacity < 0 || concurrencyLevel <= 0)
+        throw new IllegalArgumentException();
+    if (initialCapacity < concurrencyLevel)   // Use at least as many bins
+        initialCapacity = concurrencyLevel;   // as estimated threads
+    long size = (long)(1.0 + (long)initialCapacity / loadFactor);
+    int cap = (size >= (long)MAXIMUM_CAPACITY) ?
+        MAXIMUM_CAPACITY : tableSizeFor((int)size);
+    this.sizeCtl = cap;
+}
+```
+
+在Java8中，Segment被废除，整个ConcurrentHashMap都采用一个桶数组，但concurrencyLevel仍保留在构造器中。首先判断initialCapacity是否小于concurrencyLevel，如果initialCapacity小于concurrencyLevel，则将initialCapacity设置为concurrencyLevel。计算初始数组长度long size = (long)(1.0 + (long)initialCapacity / loadFactor)，额外加一也是为了向上取整。注意这里使用的是除法，HashMap必须保证负载因子小于等于loadFactor，也就是 size / table.length <= loadFactor。判断size是否大于MAXIMUM_CAPACITY，如果大于，则设置为MAXIMUM_CAPACITY，否则直接执行tableSizeFor(size)，tableSizeFor()会返回不小于size的二次幂，最后将计算得到的cap赋值给this.sizeCtl
+
+sizeCtl在ConcurrentHashMap不同声明周期阶段表示的含义不同，当出于构造器初始化时，表示初始桶数组的最大容量。从源码中可以看出，即使传入了initialCapacity，ConcurrentHashMap的桶数组仍没有创建，无参构造器的代码块甚至是空的；而jdk1.7版本中默认会创建一个Segment和长度为2的桶数组
+
+```java
+public V put(K key, V value) {
+    return putVal(key, value, false);
+}
+```
+
+```java
+final V putVal(K key, V value, boolean onlyIfAbsent) {
+    if (key == null || value == null) throw new NullPointerException();
+    int hash = spread(key.hashCode());
+    int binCount = 0;
+    for (Node<K,V>[] tab = table;;) {
+        Node<K,V> f; int n, i, fh; K fk; V fv;
+        if (tab == null || (n = tab.length) == 0)
+            tab = initTable();
+        else if ((f = tabAt(tab, i = (n - 1) & hash)) == null) {
+            if (casTabAt(tab, i, null, new Node<K,V>(hash, key, value)))
+                break;                   // no lock when adding to empty bin
+        }
+        else if ((fh = f.hash) == MOVED)
+            tab = helpTransfer(tab, f);
+        else if (onlyIfAbsent // check first node without acquiring lock
+                 && fh == hash
+                 && ((fk = f.key) == key || (fk != null && key.equals(fk)))
+                 && (fv = f.val) != null)
+            return fv;
+        else {
+            V oldVal = null;
+            synchronized (f) {
+                if (tabAt(tab, i) == f) {
+                    if (fh >= 0) {
+                        binCount = 1;
+                        for (Node<K,V> e = f;; ++binCount) {
+                            K ek;
+                            if (e.hash == hash &&
+                                ((ek = e.key) == key ||
+                                 (ek != null && key.equals(ek)))) {
+                                oldVal = e.val;
+                                if (!onlyIfAbsent)
+                                    e.val = value;
+                                break;
+                            }
+                            Node<K,V> pred = e;
+                            if ((e = e.next) == null) {
+                                pred.next = new Node<K,V>(hash, key, value);
+                                break;
+                            }
+                        }
+                    }
+                    else if (f instanceof TreeBin) {
+                        Node<K,V> p;
+                        binCount = 2;
+                        if ((p = ((TreeBin<K,V>)f).putTreeVal(hash, key,
+                                                       value)) != null) {
+                            oldVal = p.val;
+                            if (!onlyIfAbsent)
+                                p.val = value;
+                        }
+                    }
+                    else if (f instanceof ReservationNode)
+                        throw new IllegalStateException("Recursive update");
+                }
+            }
+            if (binCount != 0) {
+                if (binCount >= TREEIFY_THRESHOLD)
+                    treeifyBin(tab, i);
+                if (oldVal != null)
+                    return oldVal;
+                break;
+            }
+        }
+    }
+    addCount(1L, binCount);
+    return null;
+}
+```
+
+ConcurrentHashMap不允许Key和value为null，否则会抛出空指针异常。然后通过spread(key.hashCode())计算Key的哈希值，spread就是(h ^ (h >>> 16)) & HASH_BITS的封装方法，一般称为二次哈希，让对象哈希值的高位继续参与混淆，得到分布更均匀的哈希值，并记录一个int binCount = 0
+
+然后遍历桶数组，如果table为null或者table长度为0，则初始化数组；如果table存在，则f = tabAt(tab, i = (n - 1) & hash)取出插入元素对应位置的节点，如果节点为null，则通过casTabAt(tab, i, null, new Node<K,V>(hash, key, value))执行CAS插入，空槽插入元素不需要加锁
+
+如果桶中存在元素，获取其哈希值，判断是否是MOVED，因为ConcurrentHashMap是为并发设计的，在并发插入时可能出现某个线程正在进行扩容，所以需要一个标识符来表示是否正在扩容，而MOVED则是扩容时正在转移元素的标志。当前线程则执行helpTransfer(tab, f)并发协助元素迁移，最后获取新的table。如果onlyIfAbsent标志位是true，则直接返回存在的值，不过onlyIfAbsent一般都为false，需要执行替换逻辑
+
+这就需要加锁了，因为桶中存储的是一个链表或者红黑树，需要保证插入时其他线程无法对链表或树进行修改。首先判断if (tabAt(tab, i) == f)，这一步是DCL，保证在获取锁的时候没有其他线程将头节点进行修改。判断fh是否大于0，fh有几个特殊值
+
+```java
+/*
+ * Encodings for Node hash fields. See above for explanation.
+ */
+static final int MOVED     = -1; // hash for forwarding nodes
+static final int TREEBIN   = -2; // hash for roots of trees
+static final int RESERVED  = -3; // hash for transient reservations
+static final int HASH_BITS = 0x7fffffff; // usable bits of normal node hash
+```
+
+- MOVED：待转移的节点
+- TREEBIN：红黑树节点
+- RESERVED：临时占位节点
+- HASH_BITS：哈希掩码，用于Key的二次哈希，将哈希值映射在正数范围
+
+所以如果是正数，则表示正常Key哈希值，否则需要判断节点类型。对于正常节点，binCount设置为1，代表链表中的节点数量。然后从头节点开始遍历链表，如果if (e.hash == hash && ((ek = e.key) == key || (ek != null && key.equals(ek))))，则表示Key重复，oldVal = e.val保留旧value，根据onlyIfAbsent的值选择执行e.val = value覆盖旧值。如果Key不存在，再e = e.next移动指针，直到if ((e = e.next) == null)，pred.next = new Node<K,V>(hash, key, value)创建新节点，挂载到尾节点之后
+
+对于else if (f instanceof TreeBin)红黑树节点，执行树节点的插入逻辑，并设置binCount为2；对于占位节点，不应该将其视为一个节点，抛出IllegalStateException。在插入完成后，通过binCount判断链表是否需要树化，因为TreeNode的binCount始终为2，因此不会被再次树化
+
+最后执行addCount(1L, binCount)线程安全地自增size，并返回null，完成插入
+
+```java
+private final void addCount(long x, int check) {
+    CounterCell[] cs; long b, s;
+    if ((cs = counterCells) != null ||
+        !U.compareAndSetLong(this, BASECOUNT, b = baseCount, s = b + x)) {
+        CounterCell c; long v; int m;
+        boolean uncontended = true;
+        if (cs == null || (m = cs.length - 1) < 0 ||
+            (c = cs[ThreadLocalRandom.getProbe() & m]) == null ||
+            !(uncontended =
+              U.compareAndSetLong(c, CELLVALUE, v = c.value, v + x))) {
+            fullAddCount(x, uncontended);
+            return;
+        }
+        if (check <= 1)
+            return;
+        s = sumCount();
+    }
+    if (check >= 0) {
+        Node<K,V>[] tab, nt; int n, sc;
+        while (s >= (long)(sc = sizeCtl) && (tab = table) != null &&
+               (n = tab.length) < MAXIMUM_CAPACITY) {
+            int rs = resizeStamp(n) << RESIZE_STAMP_SHIFT;
+            if (sc < 0) {
+                if (sc == rs + MAX_RESIZERS || sc == rs + 1 ||
+                    (nt = nextTable) == null || transferIndex <= 0)
+                    break;
+                if (U.compareAndSetInt(this, SIZECTL, sc, sc + 1))
+                    transfer(tab, nt);
+            }
+            else if (U.compareAndSetInt(this, SIZECTL, sc, rs + 2))
+                transfer(tab, null);
+            s = sumCount();
+        }
+    }
+}
+```
+
+CounterCell[]是ConcurrentHashMap中的高性能计数器组，当counterCells为null时，先尝试U.compareAndSetLong(this, BASECOUNT, b = baseCount, s = b + x)进行CAS更新，如果counterCells不为null，则直接使用counterCells更新。如果cs为null，或者cs长度为0，或者当前线程的counterCell暂未初始化，亦或者uncontended = U.compareAndSetLong(c, CELLVALUE, v = c.value, v + x) CAS更新失败，也就是有竞争，满足上述四个条件任意一个，都会进入fullAddCount(x, uncontended)，fullAddCount(x, uncontended)属于兜底更新策略。如果都不满足，则判断check是否小于等于1，如果check小于等于1，表示不需要精确size，直接返回，否则执行sumCount()。sumCount()是一个粗略计数方法，统计baseCount和每个counterCell中的值，加起来约等于size，但在并发状态下可能某些线程正在执行put或者remove，会导致实际size变化，sumCount()无法立即获取这些变化
+
+再判断是否大于等于0，实际上是判断是否大于1，因为上文中先判断if (check <= 1)，满足直接return。满足这一个if就表示需要检查resize，使用while循环，条件是s >= (long)(sc = sizeCtl)，sizeCtl在执行put时会被initTable()转换为cap \* loadFactor，所以此时并不代表桶数组长度了，而是扩容阈值。只有当当前实际容量大于阈值、且table不为null、table数组的长度小于最大容量时才进行扩容
+
