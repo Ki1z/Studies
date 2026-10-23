@@ -1,6 +1,6 @@
 # Java八股
 
-`更新时间：2026-10-22`
+`更新时间：2026-10-23`
 
 注释解释：
 
@@ -2294,6 +2294,30 @@ public ConcurrentHashMap(int initialCapacity,
 
 在Java8中，Segment被废除，整个ConcurrentHashMap都采用一个桶数组，但concurrencyLevel仍保留在构造器中。首先判断initialCapacity是否小于concurrencyLevel，如果initialCapacity小于concurrencyLevel，则将initialCapacity设置为concurrencyLevel。计算初始数组长度long size = (long)(1.0 + (long)initialCapacity / loadFactor)，额外加一也是为了向上取整。注意这里使用的是除法，HashMap必须保证负载因子小于等于loadFactor，也就是 size / table.length <= loadFactor。判断size是否大于MAXIMUM_CAPACITY，如果大于，则设置为MAXIMUM_CAPACITY，否则直接执行tableSizeFor(size)，tableSizeFor()会返回不小于size的二次幂，最后将计算得到的cap赋值给this.sizeCtl
 
+> [!Caution]
+>
+> 初始化ConcurrentHashMap时不指定容量，则初始容量为16；如果指定初始容量16，则实际初始容量为32
+
+```java
+public static void main(String[] args) throws Exception {
+    ConcurrentHashMap map1 = new ConcurrentHashMap();
+    map1.put(1, 1);
+    System.out.println(getTableLength(map1));
+    ConcurrentHashMap map2 = new ConcurrentHashMap(16);
+    map2.put(1, 1);
+    System.out.println(getTableLength(map2));
+}
+
+public static int getTableLength(ConcurrentHashMap<?, ?> map) throws Exception {
+    Field tableField = ConcurrentHashMap.class.getDeclaredField("table");
+    tableField.setAccessible(true);
+    Object table = tableField.get(map);
+    return java.lang.reflect.Array.getLength(table);
+}
+```
+
+> ![](img3/29.png)
+
 sizeCtl在ConcurrentHashMap不同声明周期阶段表示的含义不同，当出于构造器初始化时，表示初始桶数组的最大容量。从源码中可以看出，即使传入了initialCapacity，ConcurrentHashMap的桶数组仍没有创建，无参构造器的代码块甚至是空的；而jdk1.7版本中默认会创建一个Segment和长度为2的桶数组
 
 ```java
@@ -2442,5 +2466,154 @@ private final void addCount(long x, int check) {
 
 CounterCell[]是ConcurrentHashMap中的高性能计数器组，当counterCells为null时，先尝试U.compareAndSetLong(this, BASECOUNT, b = baseCount, s = b + x)进行CAS更新，如果counterCells不为null，则直接使用counterCells更新。如果cs为null，或者cs长度为0，或者当前线程的counterCell暂未初始化，亦或者uncontended = U.compareAndSetLong(c, CELLVALUE, v = c.value, v + x) CAS更新失败，也就是有竞争，满足上述四个条件任意一个，都会进入fullAddCount(x, uncontended)，fullAddCount(x, uncontended)属于兜底更新策略。如果都不满足，则判断check是否小于等于1，如果check小于等于1，表示不需要精确size，直接返回，否则执行sumCount()。sumCount()是一个粗略计数方法，统计baseCount和每个counterCell中的值，加起来约等于size，但在并发状态下可能某些线程正在执行put或者remove，会导致实际size变化，sumCount()无法立即获取这些变化
 
-再判断是否大于等于0，实际上是判断是否大于1，因为上文中先判断if (check <= 1)，满足直接return。满足这一个if就表示需要检查resize，使用while循环，条件是s >= (long)(sc = sizeCtl)，sizeCtl在执行put时会被initTable()转换为cap \* loadFactor，所以此时并不代表桶数组长度了，而是扩容阈值。只有当当前实际容量大于阈值、且table不为null、table数组的长度小于最大容量时才进行扩容
+再判断是否大于等于0，实际上是判断是否大于1，因为上文中先判断if (check <= 1)，满足直接return。满足这一个if就表示需要检查resize，使用while循环，条件是s >= (long)(sc = sizeCtl)，sizeCtl在执行put时会被initTable()转换为cap \* loadFactor，所以此时并不代表桶数组长度了，而是扩容阈值。只有当前实际容量大于阈值、且table不为null、table数组的长度小于最大容量时才进行扩容
+
+进入扩容流程后，int rs = resizeStamp(n) << RESIZE_STAMP_SHIFT先生成一个扩容戳，或者是扩容版本号，防止不同轮次的扩容相互干扰。再判断sc，也就是sizeCtl的值，sc小于0，表示当前有线程正在执行扩容。在第一次扩容时，sizeCtl仍表示阈值，所以if (sc < 0)一定为false，从而执行U.compareAndSetInt(this, SIZECTL, sc, rs + 2)，将sizeCtl更新为rs + 2，新sc高16位是扩容版本号，低16位就是正在扩容的线程计数 + 1。sc使用int保存，所以一定会溢出导致为负数，在第二个线程访问时，if (sc < 0)为true，再判断sc == rs + MAX_RESIZERS或者sc == rs + 1或者(nt = nextTable) == null以及transferIndex <= 0，任意一个满足，则不能让线程加入扩容，直接break
+
+我们知道，sc在扩容时，高位表示版本号，低位是正在扩容的线程计数 + 1，如果sc == rs + MAX_RESIZERS，则表示扩容时的线程数已经超过了MAX_RESIZERS，MAX_RESIZERS为65535，刚好16位，不会影响sc高位的版本号。当第一个线程扩容时，sc = rs + 2，如果sc == rs + 1，则表示一个扩容线程都没有了，可能处于即将完成的阶段，也就不应该加入扩容。如果(nt = nextTable) == null，说明扩容时数据迁移到的另一张表还没有初始化，不应该立即扩容。transferIndex是多线程扩容时剩余桶索引指针，扩容开始时为桶数组最后一个索引位置，每个线程来执行扩容操作时，从指针处取得一段索引，然后指针向前移动。如果transferIndex <= 0，则表示桶数组中所有桶都已经分配完毕，不需要再进行数据迁移了。然后重新计算元素个数，供下次遍历判断是否需要继续扩容
+
+### ThreadLocal
+
+ThreadLocal可以实现资源对象的线程隔离，让每个线程各自使用自己的资源对象，可以直接避免资源竞争引发的线程安全问题。相对于加锁、CAS等，ThreadLocal采用了完全相反的并发安全思想。相较于局部变量，ThreadLocal实现了线程内的资源共享，可以跨越方法和类
+
+实际起线程隔离作用的是每个线程自己的ThreadLocalMap，存储了所有的ThreadLocal对象。在每个ThreadLocalMap中，以ThreadLocal对象自己为Key。所以对于相同ThreadLocal对象，每次get都会取得相同值
+
+```java
+static class ThreadLocalMap {
+    static class Entry extends WeakReference<ThreadLocal<?>> {
+        /** The value associated with this ThreadLocal. */
+        Object value;
+
+        Entry(ThreadLocal<?> k, Object v) {
+            super(k);
+            value = v;
+        }
+    }
+    
+    private static final int INITIAL_CAPACITY = 16;
+    private Entry[] table;
+    private int size = 0;
+    private int threshold; // Default to 0
+
+    private void setThreshold(int len) {
+        threshold = len * 2 / 3;
+    }
+}
+```
+
+从源代码可以看出，ThreadLocalMap每一个Entry的键类型为ThreadLocal，值为Object。ThreadLocalMap初始长度为16，负载因子约为0.67而不是0.75。而且ThreadLocalMap也属于懒加载模式，只有在第一次set时才会创建。ThreadLocalMap扩容与HashMap类似，将容量扩展为原来的二倍，所有Key重新计算索引
+
+如果Key不同但哈希冲突，ThreadLocalMap采用开放寻址法，将冲突的元素插入索引后方第一个空位置。ThreadLocal的哈希计算也很特殊，在private void set(ThreadLocal<?> key, Object value)中，索引i计算方式为
+
+```java
+int len = tab.length;
+int i = key.threadLocalHashCode & (len-1);
+```
+
+每个ThreadLocal对象中，都会维护一个threadLocalHashCode
+
+```java
+private final int threadLocalHashCode = nextHashCode();
+
+private static int nextHashCode() {
+    return nextHashCode.getAndAdd(HASH_INCREMENT);
+}
+
+private static AtomicInteger nextHashCode =
+    new AtomicInteger();
+
+private static final int HASH_INCREMENT = 0x61c88647;
+```
+
+创建一个新ThreadLocal后，会随之创建一个新的nextHashCode，类型为AtomicInteger，初始值0。插入第一个Key时，调用nextHashCode.getAndAdd(HASH_INCREMENT)，得到0，并让nextHashCode加上0x61c88647。0与任意数与运算都为0，所以第一个元素一定会插入索引0
+
+为什么HASH_INCREMENT = 0x61c88647？0x61c88647是在32位整数上的黄金分割比的定点近似，使用这个值计算索引会在数组中形成近似等距跳跃的效果。ThreadLocalMap中元素索引遵循以下规律
+
+```index
+7 14 5 12 3 10 1 8 15 6 13 4 11 2 9
+```
+
+```java
+public static void main(String[] args) throws Exception {
+    ThreadLocal t1 = new ThreadLocal<>();
+    ThreadLocal t2 = new ThreadLocal<>();
+    ThreadLocal t3 = new ThreadLocal<>();
+    t1.set(1);
+    t2.set(2);
+    t3.set(3);
+    Map<ThreadLocal<?>, Integer> indexes = getThreadLocalMapIndexes();
+    indexes.forEach((k, v) ->
+            System.out.println("ThreadLocal: " + k + " -> index: " + v));
+}
+
+public static Map<ThreadLocal<?>, Integer> getThreadLocalMapIndexes() {
+    Map<ThreadLocal<?>, Integer> result = new HashMap<>();
+
+    try {
+        Thread currentThread = Thread.currentThread();
+
+        // 1. 获取 Thread.threadLocals
+        Field threadLocalsField = Thread.class.getDeclaredField("threadLocals");
+        threadLocalsField.setAccessible(true);
+
+        Object threadLocalMap = threadLocalsField.get(currentThread);
+        if (threadLocalMap == null) {
+            return result;
+        }
+
+        // 2. 获取 ThreadLocalMap.table
+        Class<?> tlmClass = threadLocalMap.getClass();
+        Field tableField = tlmClass.getDeclaredField("table");
+        tableField.setAccessible(true);
+
+        Object[] table = (Object[]) tableField.get(threadLocalMap);
+        if (table == null) {
+            return result;
+        }
+
+        // 3. 遍历 table
+        for (int i = 0; i < table.length; i++) {
+            Object entry = table[i];
+            if (entry == null) continue;
+
+            // key（ThreadLocal 弱引用）
+            Object key = ((Reference<?>) entry).get();
+
+            // value
+            Field valueField = entry.getClass().getDeclaredField("value");
+            valueField.setAccessible(true);
+            Object value = valueField.get(entry);
+
+            System.out.println("index=" + i + ", key=" + key + ", value=" + value);
+        }
+
+    } catch (Exception e) {
+        throw new RuntimeException("Failed to inspect ThreadLocalMap", e);
+    }
+
+    return result;
+}
+```
+
+> ![](img3/30.png)
+
+JDK也会使用ThreadLocal，所以ThreadLocalMap中已经存在一些其他对象。仅观察1,2,3的索引位置，分别是8,15,6，与上文列出的索引顺序相同，那么如果再插入一个元素，索引位置必定会是13
+
+> ![](img3/31.png)
+
+#### 弱引用
+
+Java弱引用是一种不会阻止对象被垃圾回收的引用类型，常用于缓存和规范化映射等场景。一般定义的局部变量、属性都属于强引用，在GC时不会被垃圾回收。ThreadLocalMap中的Key设计为弱引用，是因为某些线程，如线程池中的核心线程通常会运行很长时间，而ThreadLocalMap中的Key并不一定会一直访问，可能在访问一次后就再也不使用了。这时候如果不进行垃圾回收，就直接浪费了一部分内存
+
+但是ThreadLocalMap的Entry中，仅有Key时弱引用，value仍是强引用。value是业务对象，如果value设置为弱引用，很容易导致业务异常。例如向ThreadLocal中set一个new创建的ArrayList，一旦GC发生，弱引用全部被回收，调用get时，返回值就成了null，而不是new创建的ArrayList，这是不可接受的
+
+value的垃圾回收会在Key为null时进行，有如下几种情况
+
+- get一个Key，发现Key为null时
+- set插入新元素时，会使用启发式扫描，清除临近位置的null Key。启发式扫描是基于set位置附近查找null Key，启发次数与扫描元素个数取决于数组长度和是否发现null Key
+- 执行remove时强制回收
+
+多数情况下ThreadLocal会作为类静态属性，用于保存线程上下文，如之前项目中的用户登录信息。这种情况下，即使Key为弱引用，由于静态成员属性的强引用，GC时也不会回收ThreadLocal，get和set时也不会作为null Key。这时候就需要调用ThreadLocal的remove方法，强制完成键值的内存释放，避免内存泄漏
+
+## JVM
 
