@@ -1,6 +1,6 @@
 # Java八股
 
-`更新时间：2026-10-24`
+`更新时间：2026-10-25`
 
 注释解释：
 
@@ -2716,14 +2716,6 @@ JVM垃圾回收大多采用分代回收思想，理论依据是大部分对象�
 
 根据垃圾回收的规模可以分为Minor GC、Major GC、Mixed GC和Full GC。Minor GC仅回收新生代中的垃圾对象，通常速度快，频率高；Major GC是发生在老年代中的垃圾回收，一般在Minor GC晋升失败，也就是老年代空间不足时触发；Mixed GC是G1垃圾回收器特有的GC，结合了Minor GC和Major GC，会回收新生代和部分老年代区域；Full GC则是全堆回收，包括新生代、老年代，以及永生代或者元空间
 
-目前JVM中常用的垃圾回收器有Serial、ParNew、Parallel、Scavenge、Serial Old、Parallel Old、CMS、G1和ZGC
-
-| 回收区域         | 垃圾回收器                         | 特点                          |
-| ---------------- | ---------------------------------- | ----------------------------- |
-| Young Generation | Serial、ParNew、Parallel、Scavenge | 复制算法，回收频繁            |
-| Old Gerneration  | Serial Old、Parallel Old、CMS      | 标记整理或者标记清除算法      |
-| Heap             | G1、ZGC                            | Region 化、低延迟、高可扩展性 |
-
 ##### 三色标记
 
 三色标记是标记-\*算法的关键，在标记阶段中负责找到不能被回收的对象。三色标记的基本原理是设定三个不同的颜色Dark黑色、Gray灰色、White白色，当一个类没有被扫描时，默认是白色的；如果开始扫描当前类，搜索类中的其他引用，则变成灰色；如果类中的所有其他引用全部处理完毕，那么类就可以被标记为黑色
@@ -2739,3 +2731,287 @@ JVM垃圾回收大多采用分代回收思想，理论依据是大部分对象�
 - Incremental Update：增量更新，只要赋值发生，被赋值的对象就会被记录。当用户线程在GC时为黑色类新增或者删除引用，那么GC会重新标记被新增的黑色类为灰色，在扫描完成后，禁止用户线程操作，并重新扫描这些灰色类，然后再进行清除
 - Snapshot At The Beginning：初始快照，直接记录每个新增或者被删除引用的对象，然后暂定用户线程，在重新标记阶段将这些记录的关系标记对应颜色
 
+#### 垃圾回收器
+
+目前JVM中常用的垃圾回收器有Serial、ParNew、Parallel、Scavenge、Serial Old、Parallel Old、CMS、G1和ZGC
+
+| 回收区域         | 垃圾回收器                         | 特点                          |
+| ---------------- | ---------------------------------- | ----------------------------- |
+| Young Generation | Serial、ParNew、Parallel、Scavenge | 复制算法，回收频繁            |
+| Old Gerneration  | Serial Old、Parallel Old、CMS      | 标记整理或者标记清除算法      |
+| Heap             | G1、ZGC                            | Region 化、低延迟、高可扩展性 |
+
+##### G1
+
+G1从JDK9开始成为了JDK默认的垃圾回收器，G1相对其他垃圾回收器可以兼顾响应时间与吞吐量。其特点是将堆划分为了多个区域，每个区域都可以充当Eden、Survivor、Old，以及一个特殊的区域Humongous。G1采用标记复制算法，因此针对大对象的处理比较麻烦，就定义了Humongous区专门存储大对象，Humongous是一块连续区域，在复制大对象时性能更优
+
+G1的工作流程一般如下
+
+- 新生代回收：Eden内存不足，采用标记复制算法，并STW(Stop The Work)
+
+- 并发标记：当老年代内存占比超过45%以上，则触发并发标记，标记老代年中的存活的对象，采用原始快照保证并发标记安全，重新标记时需要STW
+- 混合收集：并发标记完成后，开始混合收集，参与复制的包括Eden、Survivor和Old，其中Old会根据暂停实践目标，选择部分回收价值高的区域，复制时STW
+- Full GC：如果并发失败，收集速度小于新对象创建速度，直接进入Full GC保底策略，暂停时间较长
+
+### 类加载
+
+Java类加载一般分为三个阶段
+
+1. 加载
+
+- 将类的字节码载入方法区，并创建类.class对象
+- 如果此类的父类或者实现的接口没有加载，需要先加载父类或者接口
+- 加载是懒惰执行，只有在使用类的时候才会加载
+
+2. 链接
+
+- 验证类是否符合Class规范，进行合法性、安全性检查
+- 为static变量分配空间，并设置默认值
+- 将常量池的符号引用解析为直接引用
+
+3. 初始化
+
+- 执行静态代码块，为非final的静态变量复制
+
+- 初始化也是懒惰执行
+
+创建新的类对象时，会直接触发类加载和类初始化两个步骤，而如果仅访问类.class，只会加载类，不会进行类初始化
+
+```java
+public static void main(String[] args) throws Exception {
+    System.out.println("未使用Student");
+    System.in.read();
+
+    System.out.println(Student.class);
+    System.out.println("已加载Student");
+    System.in.read();
+
+    Student stu = new Student();
+    System.out.println("已初始化Student");
+    System.in.read();
+}
+```
+
+我们利用jhsdb来观察每个步骤加载的类，System.in.read()用于阻塞线程
+
+> ![](img3/35.png)
+>
+> ![](img3/34.png)
+
+第一阶段，没有使用Student.class，所以在Class Browser中无法找到Student
+
+> ![](img3/36.png)
+>
+> ![](img3/37.png)
+
+第二阶段，打印Student.class，触发了类加载，因此Class Browser中出现了Student及其类信息。在hsdb中，可以使用scanoops来查找某个对象，现在类已经加载，但是没有初始化，所以Eden中应当不存在对应实例。先通过g1regiondetails确定堆空间分布
+
+> ![](img3/39.png)
+
+目前划分了四个Eden区，分别进行查找
+
+> ![](img3/40.png)
+
+结果都为空，然后初始化类，创建Student实例，再次查询
+
+> ![](img3/42.png)
+>
+> ![](img3/41.png)
+
+最终找到了Student实例，位于0x000000071a438648
+
+#### 类初始化方法
+
+编译器会将所有的静态代码块和静态变量的赋值语句合并为一个static方法，这个方法会在类初始化阶段调用。在Student类中添加三个静态成员变量，一个设置为final，并设置一个静态代码块
+
+```java
+@lombok.Data
+public class Student {
+    public static int id = 1;
+
+    static {
+        System.out.println("Student is instantiated");
+    }
+
+    public static String name = "Ki1z";
+    public static final String POSITION = "PRESIDENT";
+}
+```
+
+使用javac反编译Student.class
+
+```class
+static {};
+    descriptor: ()V
+    flags: (0x0008) ACC_STATIC
+    Code:
+      stack=2, locals=0, args_size=0
+         0: iconst_1
+         1: putstatic     #15                 // Field id:I
+         4: getstatic     #19                 // Field java/lang/System.out:Ljava/io/PrintStream;
+         7: ldc           #25                 // String Student is instantiated
+         9: invokevirtual #27                 // Method java/io/PrintStream.println:(Ljava/lang/String;)V
+        12: ldc           #33                 // String Ki1z
+        14: putstatic     #35                 // Field name:Ljava/lang/String;
+        17: return
+      LineNumberTable:
+        line 5: 0
+        line 8: 4
+        line 11: 12
+
+```
+
+在static中实际执行了8条语句，分别是iconst_1，定义字面量1；putstatic     #15将字面量1赋值给#15，也就是属性id；getstatic     #19获取静态变量System.out以及输出流PrintStream；ldc           #25准备字符串Student is instantiated；invokevirtual #27执行方法调用，打印字符串；ldc           #33再准备字符串Ki1z；putstatic     #35将字符串Ki1z赋值给name属性；最后return返回
+
+#### final
+
+不难发现，其中并没有POSITION字段的赋值语句。final修饰的静态成员变量赋值发生在类初始化之前，在声明的时候直接赋值，不需要额外的赋值动作
+
+```class
+public static final java.lang.String POSITION;
+    descriptor: Ljava/lang/String;
+    flags: (0x0019) ACC_PUBLIC, ACC_STATIC, ACC_FINAL
+    ConstantValue: String PRESIDENT
+```
+
+直接访问final修饰的基本类型时，也不会触发类的加载。我们为Student新增一个属性
+
+```java
+public static final int SALARY = 100000;
+```
+
+直接反编译main方法
+
+```class
+ public static void main(java.lang.String[]) throws java.lang.Exception;
+    descriptor: ([Ljava/lang/String;)V
+    flags: (0x0009) ACC_PUBLIC, ACC_STATIC
+    Code:
+      stack=2, locals=1, args_size=1
+         0: getstatic     #7                  // Field java/lang/System.out:Ljava/io/PrintStream;
+         3: ldc           #15                 // int 100000
+         5: invokevirtual #16                 // Method java/io/PrintStream.println:(I)V
+         8: return
+      LineNumberTable:
+        line 14: 0
+        line 15: 8
+      LocalVariableTable:
+        Start  Length  Slot  Name   Signature
+            0       9     0  args   [Ljava/lang/String;
+    Exceptions:
+      throws java.lang.Exception
+
+```
+
+在执行的命令中，根本没有任何涉及Student类的信息，而是直接使用ldc从常量池加载了一个常量来进行赋值。每个类都有自己的常量池，#X就表示常量的序号
+
+```class
+Constant pool:
+   #1 = Methodref          #2.#3          // java/lang/Object."<init>":()V
+   #2 = Class              #4             // java/lang/Object
+   #3 = NameAndType        #5:#6          // "<init>":()V
+   #4 = Utf8               java/lang/Object
+   #5 = Utf8               <init>
+   #6 = Utf8               ()V
+   #7 = Fieldref           #8.#9          // java/lang/System.out:Ljava/io/PrintStream;
+   #8 = Class              #10            // java/lang/System
+   #9 = NameAndType        #11:#12        // out:Ljava/io/PrintStream;
+  #10 = Utf8               java/lang/System
+  #11 = Utf8               out
+  #12 = Utf8               Ljava/io/PrintStream;
+  #13 = Class              #14            // com/eiousee/exam/Student
+  #14 = Utf8               com/eiousee/exam/Student
+  #15 = Integer            100000
+  #16 = Methodref          #17.#18        // java/io/PrintStream.println:(I)V
+```
+
+如果final修饰的是引用类型，仍需要加载并初始化目标类才行
+
+*注：JVM中int取值-1\~5采用iconst，-128\~127采用bipush，-32768\~32767采用sipush，-2147483648~2147483647采用ldc*
+
+#### 解析
+
+在链接阶段中最后一步是将常量池的符号引用解析为直接引用，又被称为解析，但解析实际上并不是一次性完成的，而是当前类需要使用哪些类，在使用时才进行解析。我们在A类中定义一个内部类，通过调用前后查看A类的常量池来判断是否被解析
+
+```java
+public class A {
+
+    static class B {}
+
+    public static void main(String[] args) throws Exception {
+        System.in.read();
+        B b = new B();
+        System.in.read();
+    }
+}
+```
+
+> ![](img3/43.png)
+
+在常量池的第19号元素发现了B类，此时类型为JVM_CONSTANT_UnresolvedClass未解析类。然后我们继续执行B b = new B()，再查看常量池
+
+> ![](img3/44.png)    
+
+由于B类已经加载，A的常量池也由符号引用变成为了直接引用
+
+#### 双亲委派
+
+双亲委派是JVM类加载器的一种工作模式，指优先委派上级类加载器进行加载，如果上级类加载器能找到这个类，则由上级加载，加载后该类对下级加载器也可见；如果找不到这个类，则下发加载资格，由下级加载器执行加载。下级类加载器加载的类对上级不可见
+
+常见加载器如下
+
+| 名称                    | 加载的类范围          | 说明                        |
+| ----------------------- | --------------------- | --------------------------- |
+| Bootstrap ClassLoader   | JAVA_HOME/jre/lib     | 无法直接访问                |
+| Extension ClassLoader   | JAVA_HOME/jre/lib/ext | 上级为Bootstrap，显示为null |
+| Application ClassLoader | classpath             | 上级为Extension             |
+| 自定义类加载器          | 自定义                | 上级为Application           |
+
+所以对于任何类的加载，一定会先通过Bootstrap，然后逐级向下寻找。双亲委派机制的目的是让上级类加载器中的类对下级共享，让开发者的类能够访问JDK提供的核心类；同时让类的加载有优先次序，保证核心类优先加载
+
+### 引用
+
+Java中引用分为强引用、软引用、弱引用和虚引用四类
+
+- 强引用：普通变量赋值即为强引用，如A a = new A()。通过GC Root的引用链，如果强引用无法链接到该对象，该对象才能被回收
+- 软引用 SoftReference：通过SoftReference类创建的特殊引用类型，如果仅有软引用该对象时，首次垃圾回收不会回收该对象，但是如果内存仍然不足，进行第二次垃圾回收就会释放对象。软引用自身为强引用，释放时需要配合引用队列来释放，典型的例子是反射数据
+- 弱引用 WeakReference：通过WeakReference类创建的特殊引用类型，如果仅有弱引用引用该对象，只要发生垃圾回收，会立刻释放该对象。与软引用相同，弱引用自身需要配合引用队列来释放，典型例子是ThreadLocalMap中的Entry对象
+- 虚引用 PhantomReference：通过PhantomReference类创建的特殊引用类型，必须配合引用队列一起使用，当虚引用引用的对象被回收时，会将虚引用对象入队，由Reference Handler线程释放其他关联的外部资源，典型的例子是Cleaner释放DirectByteBuffer占用的直接内存
+
+#### 虚引用
+
+通过一个例子来认识虚引用工作方式。我们创建一个自定义虚引用类，并定义一个释放资源的方法，然后创建引用队列，向队列中插入几个虚引用对象，再执行一次垃圾回收，观察队列情况
+
+```java
+public static void main(String[] args) throws Exception {
+    ReferenceQueue<String> referenceQueue = new ReferenceQueue<>();
+    List<MyResource> list = new ArrayList<>();
+    list.add(new MyResource(new String("a"), referenceQueue, 1));
+    list.add(new MyResource("b", referenceQueue, 2));
+    list.add(new MyResource(new String("c"), referenceQueue, 3));
+    // 回收
+    System.gc();
+    Thread.sleep(100);
+    Object ref;
+    while ((ref = referenceQueue.poll()) != null) {
+        if (ref instanceof MyResource resource)
+            resource.clean();
+    }
+}
+
+static class MyResource extends PhantomReference<String> {
+
+    private final int id;
+
+    public MyResource (String reference, ReferenceQueue<String> queue, int id) {
+        super(reference, queue);
+        this.id = id;
+    }
+
+    public void clean() {
+        System.out.println("Resource " + id + " has been recycled");
+    }
+}
+```
+
+> ![](img3/45.png)
