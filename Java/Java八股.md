@@ -1,6 +1,6 @@
 # Java八股
 
-`更新时间：2026-10-25`
+`更新时间：2026-10-26`
 
 注释解释：
 
@@ -3015,3 +3015,38 @@ static class MyResource extends PhantomReference<String> {
 ```
 
 > ![](img3/45.png)
+
+为什么b没有被回收？因为b的字符串并不是使用new关键字创建的，而是使用字面量，字面量会在JVM字符串常量池中存储一份，并且设置强引用，因此无法进行回收
+
+#### Cleaner
+
+虚引用、软引用、弱引用的目的都是方便开发人员定位哪些Java对象需要回收，从而对它们关联的资源进行进一步清理。为了简化api，从Java9开始引入了Cleaner
+
+Cleaner的使用非常简单，先通过静态方法create()获取一个Cleaner对象，然后调用对象的register注册需要自动清理的对象与回调方法即可。回调方法一般就是其他资源的手动回收逻辑
+
+```java
+public static void main(String[] args) throws Exception {
+    Cleaner cleaner = Cleaner.create();
+    // 注册一些对象，使用完成后释放
+    cleaner.register(new String("1"), () -> System.out.println("clean 1"));
+    cleaner.register("2", () -> System.out.println("clean 2"));
+    cleaner.register(new String("3"), () -> System.out.println("clean 3"));
+    System.gc();
+    System.in.read();
+}
+```
+
+> ![](img3/46.png)
+
+同样地，由于2是字面量，由字符串常量池强引用，所以无法回收，无法调用回调方法
+
+### finalize
+
+在Java中finalize()方法是一个由Object类定义的方法，用于在对象被垃圾回收器回收之前执行一些清理工作，可以被子类重写。但finalize并不保证一定执行，而且finalize非常影响性能，严重时甚至会引起OOM，从Java9开始被标注为@Deprecated，不建议使用
+
+finalize方法的调用次序取决于对象回收顺序，定义在前的对象回收时间不一定会早于定义在后的对象；finalize方法执行通过专门的Finalizer线程；如果finalize方法抛出异常，异常会被直接忽略
+
+重写finalize方法的对象在第一次垃圾回收时并不会回收，需要等待FinalizerThread调用完finalize，将其从第一个unfinalized队列移除后，第二次垃圾回收才能够真正释放内存。垃圾回收被来就因为内存不足引起，而finalize调用又很慢，不能及时释放内存，对象释放不及时就会逐渐移入老年代，而老年代垃圾累计过多容易引起Full GC，Full GC后释放速度如果仍然跟不上创建新对象的速度，就会导致OOM
+
+但是Finalizer线程的优先级高于普通线程，普通线程优先级为5，Finalizer优先级为8，Finalizer跟不上普通线程的根本原因是执行速度慢
+
