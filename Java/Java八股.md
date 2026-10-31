@@ -1,6 +1,6 @@
 # Java八股
 
-`更新时间：2026-10-30`
+`更新时间：2026-10-31`
 
 注释解释：
 
@@ -3432,7 +3432,223 @@ ReadView生成基于快照读，所以在Read Commited模式中，事务的每�
 
 ## Spring
 
+### Bean线程安全
 
+Spring中的Bean一般在IOC容器中仅有一个实例，所以是单例的，但是如果Bean的定义为prototype模式，则一个Bean可以有多个实例，而且Bean不是线程安全的，例如如下代码片段
 
+```java
+@Restcontroller
+@RequestMapping("/user")
+public class UserController {
+	private int count;
+    
+    @Autowired
+    private UserService userService;
+    
+    @GetMapping("/getById/{id}")
+    public User getById(@PathVariable("id") Integer id) {
+        count++;
+        System.out.println(count);
+        return userService.getById(id);
+	}
+}
+```
 
+这里的类属性count就不是线程安全的，在高并发情况下，执行count++时，count的值不会立即更新到所有线程中。对于Spring Bean来说，无状态的单例Bean一般认为是线程安全的，所以在定义Spring Bean的时候，就需要额外保证Bean中没有可更改的状态字段，如果业务需要，则必须考虑线程安全问题，使用多例或者锁来解决
+
+### Bean生命周期
+
+**BeanDefinition**
+
+Spring容器在进行实例化时，会将xml配置的\<bean\>标签中的信息封装为一个BeanDefinition对象，Spring根据BeanDefinition来创建Bean对象，里面有很多的属性用来描述Bean，如下
+
+```xml
+<bean id="userDao" class="com.eiousee.dao.impl.UserDaoImpl" lazy-init="true"/>
+<bean id="userService" class="com.eiousee.service.UserServiceImpl" scope="singleton">
+    <property name="userDao" ref="userDao"></property>
+</bean>
+```
+
+在BeanDefinition获取定义信息就绪后，首先调用构造器实例化Bean对象，然后根据IOC注入到需要的Bean中。接着是Aware接口，用于扩展Bean，以及BeanPostProcessor#before后置处理器，用于增强Bean功能，在初始化方法之前调用。然后调用Bean的初始化方法，之后是第二个后置处理器BeanPostProcessor#after，这一步完成后，才能认为一个Bean初始化完成。在Bean使用完成后，如果定义了PreDest方法，则会在Bean销毁前调用这个方法
+
+定义一个UserBean来验证这个过程，其中BeanPostProcessor需要额外定义一个类并实现BeanPostProcessor
+
+```java
+package com.eiousee.exam;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.BeanFactory;
+import org.springframework.beans.factory.BeanFactoryAware;
+import org.springframework.beans.factory.BeanNameAware;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
+import org.springframework.stereotype.Component;
+
+@Component
+@Slf4j
+public class User implements BeanNameAware, BeanFactoryAware, ApplicationContextAware, InitializingBean {
+
+    public User() {
+        log.info("构造器");
+    }
+
+    private String name;
+
+    @Value("张三")
+    public void setName(String name) {
+        log.info("依赖注入");
+    }
+
+    @Override
+    public void setBeanFactory(BeanFactory beanFactory) throws BeansException {
+        log.info("Aware - BeanFactoryAware");
+    }
+
+    @Override
+    public void setBeanName(String name) {
+        log.info("Aware - BeanNameAware");
+    }
+
+    @PostConstruct
+    public void init() {
+        log.info("初始化方法 - 自定义init");
+    }
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        log.info("初始化方法 - InitializingBean");
+    }
+
+    @Override
+    public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+        log.info("Aware - ApplicationContextAware");
+    }
+}
+```
+
+```java
+package com.eiousee.exam;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeansException;
+import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.stereotype.Component;
+
+import java.util.Objects;
+
+@Component
+@Slf4j
+public class MyProcessor implements BeanPostProcessor {
+    @Override
+    public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
+        if (Objects.equals(beanName, "user"))
+            log.info("BeanPostProcessor#before");
+        return bean;
+    }
+
+    @Override
+    public Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {
+        if (Objects.equals(beanName, "user"))
+            log.info("BeanPostProcessor#after");
+        return bean;
+    }
+}
+```
+
+> ![](img3/64.png)
+
+### AOP
+
+AOP面向切面编程，用于将一些与业务无关，但却对多个对象产生影响的公共行为和逻辑，抽取并封装为一个可重用的模块，这个模块被命名为Aspect切面，减少系统中的重复代码，降低模块间的耦合度，同时提高系统的可维护性
+
+常见的AOP使用场景有记录操作日志、缓存处理和Spring中内置的事务处理等
+
+Spring事务支持编程式事务和声明式事务管理两种方式，编程式事务需要使用TransactionTemplate来实现，对业务代码有侵入性，项目中很少使用。而声明式事务就是建立在AOP之上，其本质是通过AOP功能，对方法前后进行拦截，将事务处理的功能编织到拦截的方法中，也就是目标方法开始之前加入一个事务，在执行完目标方法之后根据执行情况提交或者回滚事务
+
+### 事务失效
+
+Spring中事务失效的场景一般有三种，异常被捕获、抛出检查异常、非public方法
+
+**异常被捕获**
+
+Spring事务回滚依赖于程序抛出的异常，如果开发人员手动将异常捕获，Spring无法获取异常，那么就会导致事务失效。例如以下代码
+
+```java
+@Transactional
+public void update(Long id) {
+    try {
+        // 执行一些操作
+        xxxxx;
+
+        // 模拟异常
+        int a = 1 / 0;
+
+        // 执行另一些操作
+        xxxx;
+    } catch (Exception e) {
+        e.printStackTrace();
+    }
+}
+```
+
+0不能为除数，所以一定会抛出除零异常，但由于开发者自己使用try-catch捕获了异常，并且没有继续向外抛出，所以Spring事务就无法捕获到这个异常，a = 1 / 0之前的操作没有回滚，导致严重的数据不一致
+
+**抛出检查异常**
+
+Java中异常根据异常出现位置分为检查异常和非检查异常，检查异常是指程序本身无法控制的外部问题，一般是由于文件缺失、网络连接失败、数据库查询错误等。常见的检查异常有IOException、SQLException、ClassNotFoundException、FileNotFoundException等，检查异常必须进行处理或抛出，否则编译时会报错
+
+Spring事务默认只会回滚非检查异常，如果需要回滚检查异常，则需要在注解中显式声明回滚触发类型，如果设置为父类，其子类也会触发，如设置为最高级异常@Transactional(rollbackFor = Exception.class)，所有异常都会导致回滚
+
+**非public方法**
+
+Spring事务管理的方法访问权限必须是public的，Spring事务底层是AOP，而AOP又基于动态代理，JDK动态代理只能代理接口中的public方法。从技术上来说Spring事务完全可以利用其他方式代理非public方法，但是这可能导致额外的一致性问题，提高复杂度，避免事务非预期生效
+
+### 循环依赖
+
+循环依赖是Spring中老生常谈的问题，是一种在Spring开发中非常容易遇到的现象。循环依赖是指一个Bean需要注入另一个Bean，但另一个Bean也需要注入这一个Bean，SpringBean的初始化是在依赖注入完成后进行的，所以如果出现循环依赖，就会导致两个Bean互相等待对方完成初始化，但双方又因为没有对方注入从而无法完成初始化的死锁问题
+
+#### 三级缓存
+
+Spring自己解决循环依赖是通过三级缓存，例如@Autowired注入和Setter注入。三级缓存是指DefaultSingletonBeanRegistry类中定义的三个常量Map，分别是
+
+```java
+private final Map<String, Object> singletonObjects = new ConcurrentHashMap(256);
+private final Map<String, ObjectFactory<?>> singletonFactories = new HashMap(16);
+private final Map<String, Object> earlySingletonObjects = new ConcurrentHashMap(16);
+```
+
+| 缓存名称 | 源码名称              | 作用                                                         |
+| -------- | --------------------- | ------------------------------------------------------------ |
+| 一级缓存 | singletonObjects      | 单例池，缓存已经经历了完整的生命周期，已经初始化完成的Bean对象 |
+| 二级缓存 | earlySingletonObjects | 缓存早期的，还没有完全初始化的Bean对象                       |
+| 三级缓存 | singletonFactories    | 缓存的是ObjectFactory对象工厂，用于创建对应的对象            |
+
+对于普通Bean的循环依赖，Spring在发生循环依赖时，将二级缓存中的Bean对象注入到对应Bean中，以完整创建其中至少一个Bean，待这一个Bean完整创建后，再将一级缓存中的此Bean注入到仍在二级缓存中的Bean，这样阻断循环依赖的链条，从而完成所有Bean的创建
+
+而对于代理对象Bean，一般会生成一个BeanFactory到三级缓存中，在其他Bean需要这个Bean时，通过BeanFactory生成一个该Bean到二级缓存中，然后再注入到其他Bean，完成其他Bean的创建，最后回注，创建完整的Bean，并存入单例池
+
+#### @Lazy
+
+Spring三级缓存能解决大部分的循环依赖问题，但是无法解决构造器注入引起的循环依赖。从Bean声明周期可以看出，构造器调用早于依赖注入，根本无法使用三级缓存。而@Lazy注解能解决构造器注入问题，@Lazy的本质是在构造器注入时创建一个代理对象，让其中一个Bean在初始化时先使用这个代理对象，待初始化完成后，再对@Lazy的Bean进行初始化
+
+### Spring MVC执行流程
+
+**视图阶段**
+
+视图阶段时指早期Java Web的JSP阶段，当时前后端分离开发还没有普及。在视图阶段，浏览器发送请求后，会先到达DispatcherServlet前端控制器，前端控制器负责将请求转发到各个响应组件，最后将响应返回给浏览器。第一个组件是HandlerMapping处理器映射器，处理器映射器负责将请求路径与执行类和方法关联起来，相当于一个网关，匹配到对应数据后，处理器映射器会将处理器执行链返回给前端控制器，再由前端控制器转发到下一个组件
+
+第二个组件是HandlerAdaptor处理器适配器，处理器执行链中不一定只有方法，还可能包含过滤器，所以由处理器适配器来匹配对应的方法。处理器适配器中有多重数据类型转换器，用来处理方法参数和返回值，然后再交给真正的处理器Handler执行。处理器执行完成后返回给处理器适配器，返回结果被称为ModelAndView，处理器适配器进一步返回到前端控制器
+
+前端控制器再将ModelAndView发送给第三个组件ViewResolver视图解析器，将逻辑视图转换为真正的视图，返回View对象给前端控制器，前端控制器将View对象中的内容填充到JSP页面中，最后返回响应到浏览器
+
+**前后端分离阶段**
+
+前后端分离阶段的执行流程其实与视图阶段相差无几，只是砍掉了视图与渲染。在前后端分离阶段，处理器Handler或者说Controller在处理完成数据后，不再生成ModelAndView，而是通过HttpMessaGeConvert将返回结果直接转换为JSON数据，然后交给前端通知器响应给浏览器
+
+### SpringBoot自动配置原理
 
