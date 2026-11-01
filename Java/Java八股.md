@@ -1,6 +1,6 @@
 # Java八股
 
-`更新时间：2026-10-31`
+`更新时间：2026-11-01`
 
 注释解释：
 
@@ -3651,4 +3651,253 @@ Spring三级缓存能解决大部分的循环依赖问题，但是无法解决�
 前后端分离阶段的执行流程其实与视图阶段相差无几，只是砍掉了视图与渲染。在前后端分离阶段，处理器Handler或者说Controller在处理完成数据后，不再生成ModelAndView，而是通过HttpMessaGeConvert将返回结果直接转换为JSON数据，然后交给前端通知器响应给浏览器
 
 ### SpringBoot自动配置原理
+
+在SpringBoot项目启动类中，有一个@SpringBootApplication注解
+
+```java
+@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Inherited
+@SpringBootConfiguration
+@EnableAutoConfiguration
+@ComponentScan(
+    excludeFilters = {@Filter(
+    type = FilterType.CUSTOM,
+    classes = {TypeExcludeFilter.class}
+), @Filter(
+    type = FilterType.CUSTOM,
+    classes = {AutoConfigurationExcludeFilter.class}
+)}
+)
+public @interface SpringBootApplication {...}
+```
+
+上方的四个注解是元注解，这四个注解与SpringBoot自动装配原理没有什么关系，其中最重要的是@EnableAutoConfiguration开启自动装配
+
+```java
+@Target({ElementType.TYPE})
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Inherited
+@AutoConfigurationPackage
+@Import({AutoConfigurationImportSelector.class})
+public @interface EnableAutoConfiguration {
+    String ENABLED_OVERRIDE_PROPERTY = "spring.boot.enableautoconfiguration";
+
+    Class<?>[] exclude() default {};
+
+    String[] excludeName() default {};
+}
+```
+
+在EnableAutoConfiguration中使用了@Import导入一个自动装配选择器AutoConfigurationImportSelector，这个选择器选择的Bean就可以自动装配到Spring的IOC容器中
+
+```java
+protected List<String> getCandidateConfigurations(AnnotationMetadata metadata, AnnotationAttributes attributes) {
+    List<String> configurations = ImportCandidates.load(AutoConfiguration.class, this.getBeanClassLoader()).getCandidates();
+    Assert.notEmpty(configurations, "No auto configuration classes found in META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports. If you are using a custom packaging, make sure that file is correct.");
+    return configurations;
+}
+```
+
+在AutoConfigurationImportSelector中有一个getCandidateConfigurations方法，用于获取候选配置，其中的报错提到，“在META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports中没有找到自动装配类”，换句话说，Spring的默认自动装配类肯定就存储在这个文件中，所以我们查找第三方包，检查是否存在这个文件
+
+> ![](img3/65.png)
+
+可以看到，SpringBoot的自动装配包中就存在这个文件，打开访问其内容
+
+```imports
+org.springframework.boot.autoconfigure.admin.SpringApplicationAdminJmxAutoConfiguration
+org.springframework.boot.autoconfigure.aop.AopAutoConfiguration
+org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+org.springframework.boot.autoconfigure.batch.BatchAutoConfiguration
+org.springframework.boot.autoconfigure.cache.CacheAutoConfiguration
+org.springframework.boot.autoconfigure.cassandra.CassandraAutoConfiguration
+org.springframework.boot.autoconfigure.context.ConfigurationPropertiesAutoConfiguration
+org.springframework.boot.autoconfigure.context.LifecycleAutoConfiguration
+org.springframework.boot.autoconfigure.context.MessageSourceAutoConfiguration
+org.springframework.boot.autoconfigure.context.PropertyPlaceholderAutoConfiguration
+org.springframework.boot.autoconfigure.couchbase.CouchbaseAutoConfiguration
+org.springframework.boot.autoconfigure.dao.PersistenceExceptionTranslationAutoConfiguration
+org.springframework.boot.autoconfigure.data.cassandra.CassandraDataAutoConfiguration
+org.springframework.boot.autoconfigure.data.cassandra.CassandraReactiveDataAutoConfiguration
+org.springframework.boot.autoconfigure.data.cassandra.CassandraReactiveRepositoriesAutoConfiguration
+org.springframework.boot.autoconfigure.data.cassandra.CassandraRepositoriesAutoConfiguration
+org.springframework.boot.autoconfigure.data.couchbase.CouchbaseDataAutoConfiguration
+org.springframework.boot.autoconfigure.data.couchbase.CouchbaseReactiveDataAutoConfiguration
+org.springframework.boot.autoconfigure.data.couchbase.CouchbaseReactiveRepositoriesAutoConfiguration
+org.springframework.boot.autoconfigure.data.couchbase.CouchbaseRepositoriesAutoConfiguration
+org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchDataAutoConfiguration
+org.springframework.boot.autoconfigure.data.elasticsearch.ElasticsearchRepositoriesAutoConfiguration
+org.springframework.boot.autoconfigure.data.elasticsearch.ReactiveElasticsearchRepositoriesAutoConfiguration
+...
+```
+
+这些就是SpringBoot需要加载的自动配置类，打开其中一个进行查看
+
+```java
+@AutoConfiguration
+@ConditionalOnClass({RabbitTemplate.class, Channel.class})
+@EnableConfigurationProperties({RabbitProperties.class})
+@Import({RabbitAnnotationDrivenConfiguration.class, RabbitStreamConfiguration.class})
+public class RabbitAutoConfiguration {...}
+```
+
+例如我们打开的是Spring AMQP的自动装配类，其中就有一个特别重要的注解@ConditionalOnClass，只有当对应的类加载后，才自动装配这个类中的其他Bean。这其实是懒惰加载，避免出现大量的Bean都自动加载，但是实际只能够使用小部分Bean，从而导致的性能浪费。只有在项目中引入了AMQP的起不依赖后，项目才会加载RabbitTemplate和Channel，从而SpringBoot也就能自动装配对应的Bean
+
+但是SpringBoot3和SpringBoot2的自动装配文件的位置不同，这里演示的是SpringBoot3，SpringBoot2中的自动装配文件的位置是META-INF/spring.factories
+
+那么SpringBoot启动类上的其他两个注解@ComponentScan和@SpringBootConfiguration有什么用？
+
+- @SpringBootConfiguration：@Configuration的包装注解，换名称只是为了标明启动类属性，我们知道@Configuration中可以定义Bean，所以在启动类中也可以定义Bean，但是@SpringBootConfiguration不负责装配
+- @ComponentScan：刚才提到@SpringBootConfiguration不负责装配Bean到IOC容器，而这个工作就由@ComponentScan负责，启动类的@ComponentScan默认会扫描自己所在包及其子包，只要发现@Component或者@Bean，就会将其作为Bean加载到IOC容器中
+
+### 常见注解
+
+**元注解**
+
+| 注解        | 说明                                                         |
+| ----------- | ------------------------------------------------------------ |
+| @Target     | 用于注解可以应用的程序员素类型，值一般为ElementType枚举类，常用的有ElementType.METHOD方法注解、ElementType.FIELD字段注解等等，Target可以传入数组，以实现在多个位置注解 |
+| @Retention  | 保留声明周期，值为RetentionPolicy枚举类，仅有RetentionPolicy.RESOURCE源码阶段，RetentionPolicy.CLASS字节码阶段、RetentionPolicy.RUNTIME运行时阶段，最常用的是RUNTIME |
+| @Documented | 该注解可以被包含在JavaDoc文档中，javadoc是规范化的注释，用于写明某个方法或属性的具体内容及其设计细节 |
+| @Inherited  | 该注解具有继承性，使用注解的类的子类也会自动继承该注解       |
+
+**Spring**
+
+| 注解                                           | 作用位置 | 说明                                                         |
+| ---------------------------------------------- | -------- | ------------------------------------------------------------ |
+| @Component、@Controller、@Service、@Repository | 类       | 用于标明该类是一个Bean                                       |
+| @Autowired                                     | 属性     | 用于根据类型自动注入                                         |
+| @Qualifier                                     | 属性     | 结合@Autowired使用，根据Bean名称自动注入                     |
+| @Scope                                         | -        | 标注Bean的作用范围                                           |
+| @Configuration                                 | 类       | 指定当前类是一个配置类，可以定义Bean或其他用处               |
+| @ComponentScan                                 | 类       | 用于指定Spring在初始化容器时需要扫描的包，以@Configuration为基准 |
+| @Bean                                          | 方法     | 将该方法的返回值定义为Bean，装配到IOC容器中                  |
+| @Import                                        | 类       | 使用@Import导入的类会被作为Bean加载到IOC容器中               |
+| @Aspect、@Before、@After、@Around、@Pointcut   | -        | 用于AOP面向切面编程                                          |
+
+**Spring MVC**
+
+| 注解                                                   | 作用位置 | 说明                                                         |
+| ------------------------------------------------------ | -------- | ------------------------------------------------------------ |
+| @RequestMapping                                        | -        | 用于映射请求路径，可以定义在类或者方法上，如果用于类上，则表示该类中的所有方法都是以该地址作为父路径 |
+| @RequestBody                                           | 参数     | 实现接受HTTP请求的JSON数据，将JSON数据封装为对应类型的Java对象 |
+| @RequestParam                                          | 参数     | 指定请求参数的名称，关联请求参数与Java方法参数               |
+| @PathVariable                                          | 参数     | 从请求路径中获取请求参数，匹配大括号内的字符                 |
+| @ResponseBody                                          | 类       | 将Controller方法返回的对象转换为JSON对象                     |
+| @RequestHeader                                         | 参数     | 获取指定的请求头数据                                         |
+| @RestController                                        | 类       | @Controller和@ResponseBody的结合                             |
+| @GetMapping、@PostMapping、@DeleteMapping、@PutMapping | -        | @RequestMapping的衍生注解，用于限定请求方法                  |
+
+## Mybatis
+
+### 执行流程
+
+Mybatis是目前Spring项目中最流行的持久层框架，理解Mybatis执行流程，主要目的是理解各个组件的关系，SQL的参数映射、解析、执行和结果处理的全部过程
+
+首先Mybatis会加载配置文件，也就是mybatis-config.xml，在Spring项目中，所有配置由Spring管理，因此一般在Spring的application.yml中配置Mybatis的内容，但是这里只考虑原生Mybatis
+
+在mybatis-config.xml中，通过\<environments\>标签配置数据库环境，\<dataSource\>设置数据源，\<property>设置数据库连接信息，如驱动、连接地址、用户名、密码等；同时通过\<mappers>标签设置其他内容，如xml映射文件，mapper类映射包名等
+
+mybatis操作数据库主要通过SqlSession对象，所以会先创建一个SqlSessionFactory构建工厂，全局仅有一个。通过SqlSessionFactory创建SqlSession，每次操作都会创建一个SqlSession对象。但是SqlSession不直接操作数据库，而是交给Executor执行器，执行器负责封装jdbc操作，是真正执行数据库操作的接口，也负责查询缓存的维护
+
+Executor在执行数据库操作之前需要先读取MappedStatement对象，MappedStatement存储了此次执行的相关数据，如具体的mapper映射文件、mapper方法全限定名、具体SQL语句、返回值封装类型等等。完成参数类型的转换后，Executor执行数据库操作，并将返回值通过类型转换器转换为指定的Java类型，最后返回给Java方法
+
+### 延迟加载
+
+假设有两个实体类，分别存储在两张不同的数据表中，一个类的属性中需要引用另一个类。在查询数据库时，把所有数据全部一次性查询出来，这叫做立即加载；如果先查询主类，当需要的使用才查询引用类，这就是延迟加载
+
+mybatis支持延迟加载，但是默认没有启用。mybatis延迟加载的底层原理是使用CGLIB创建目标对象的代理对象，当目标对象调用get引用类时，进入拦截器invoke方法，发现引用类的值为null，因此执行sql查询对应内容，然后再调用set将返回值回填
+
+mybatis延迟加载的前提是在xml文件中定义了相关的查询语句，如下
+
+```xml
+<resultMap id="userResultMap" type="com.eiousee.entity.User" autoMapping="true">
+    <id property="id" column="id"></id>
+    <result property="username" column="username"></result>
+    <result property="gender" column="gender"></result>
+    <collection property="orderList" ofType="com.eiousee.entity.Order"
+                select="com.eiousee.mapper.OrderMapper.findByUid"
+                column="id" fetchType="lazy">
+    </collection>
+</resultMap>
+<select id="selectById" resultMap="userResultMap">
+    SELECT *
+    FROM users
+	WHERE id = #{id}
+</select>
+```
+
+在自定义ResultMap中，可以定义collection标签，表示当前属性值为一个集合，然后ofType设置集合中每个对象的类型，并设置select查询该字段调用的方法，column是该字段查询使用的条件，fetchType则是加载模式，lazy表示延迟加载。这样，如果不调用User对象的getOrderList()方法，OrderMapper.findByUid()方法也就不会执行
+
+在mybatis的配置文件中可以通过lazyLoadingEnable来设置是否启用延迟加载。mybatis并不关心两次查询是否是同一事务，mybatis只保证无论延迟加载还是立即加载，都使用同一个SqlSession对象发送SQL，如果之前的SqlSession被回收了，还会抛出LazyInitializationException
+
+### Mybatis缓存
+
+Mybatis为了提高数据库查询性能，也设计了缓存机制，分为两级缓存
+
+**一级缓存**
+
+一级缓存基于PerpetualCache类的HashMap本地缓存，其存储作用域为Session，同一个SqlSession内共享。当Session进行flush或者close之后，该Session中的所有Cache就会清空。Mybatis默认打开一级缓存
+
+**二级缓存**
+
+二级缓存也是采用PerpetualCache的HashMap，但是作用域是基于namespace和mapper作用域，并不依赖于SqlSession。二级缓存需要缓存的数据必须实现Serializable接口
+
+对于缓存数据更新机制，当某一个作用域进行了新增、修改、删除操作后，默认该作用域下所有SELECT缓存都会被清空。只有会话提交或者关闭以后，一级缓存中的数据才会转移到二级缓存中
+
+由于mybatis二级缓存作用域较大，而且mybatis在使用缓存时不检查当前数据库，如果通过非mybatis手段修改数据库中的数据，mybatis无法得知数据库更新情况，非常容易导致数据不一致。所以大多数生产场景都会直接关闭二级缓存，避免业务异常
+
+## 微服务
+
+### 微服务五大组件
+
+- 服务注册与发现：微服务启动后，把自己的地址注册到注册中心；其他服务从注册中心拉取可用服务列表。目前主流的是Eureka、Nacos等
+- 服务调用：让服务之间像调用本地方法一样发起 HTTP 或 RPC 请，简化 RestTemplate 等底层 HTTP 调用，自动处理 URL、序列化、负载均衡。常见的有OpenFeign和Dubbo
+- 负载均衡：在多个服务实例之间分配请求，避免单点压力过大。常见的有Ribbon和Spring Cloud LoadBalancer
+- 服务熔断与降级：依赖服务故障时，快速失败，防止雪崩；主逻辑不可用时，返回兜底数据或友好提示；避免一个服务挂掉导致整条调用链崩溃。常见的有Hystrix、Sentinel和Resilience4j
+- 服务网关：所有请求的入口，负责路由、鉴权、限流、日志、跨域等。统一入口，避免每个服务都做安全、监控等通用逻辑。主流的是Zuul和Spring Cloud Gateway
+
+### 服务注册与发现
+
+- 服务注册：服务提供者需要把自己的信息注册到注册中心，由注册中心来保存这些信息，比如服务名称、ip、端口等等
+- 服务发现：消费者向注册中心拉取服务列表信息，如果服务提供者有集群，则消费者会利用负载均衡算法，选择一个发起调用
+- 服务监控：服务提供者会每隔30秒向注册中心发送心跳，报告健康状态，如果注册中心没接收到心跳，则认为该服务下线，将其从服务列表剔除
+
+#### Eureka与Nacos
+
+**核心定位**
+
+| 产品   | 主要功能                 | 出身     | 当前状态                 |
+| ------ | ------------------------ | -------- | ------------------------ |
+| Eureka | 服务注册与发现           | Netflix  | 已停更，处于长期维护模式 |
+| Nacos  | 服务注册与发现、配置管理 | 阿里巴巴 | 持续更新                 |
+
+在服务监控方面，Eureka基于心跳机制，服务每30秒向Eureka发送心跳，如果Eureka超过90秒没有收到心跳，则认为服务下线。Nacos将实例分为临时实例和非临时实例，临时实例依然基于心跳机制，而非临时实例是由Nacos主动检测提供者状态。临时实例心跳不正常会被剔除，但非临时实例不会。Nacos在服务列表变更后，会主动向所有客户端推送新的服务列表，服务列表更新更及时
+
+在集群方面，Nacos默认采用AP模式，Eureka默认也采用AP模式，但是如果存在非临时实例，Nacos会改用CP模式，优先保证一致性。Nacos的配置中心也采用CP模式
+
+### 负载均衡
+
+#### Ribbon负载均衡流程
+
+假设一个服务通过OpenFeign向另一个服务发起远程调用，但另一个服务是由一个集群组成的，这就需要Ribbon来进行负载均衡。Ribbon首先从注册中心拉取对应服务的服务列表，Ribbon再根据负载均衡策略去选择其中一个服务实例，然后通过Feign发起远程调用
+
+**负载均衡策略**
+
+| 策略                      | 说明                                                         |
+| ------------------------- | ------------------------------------------------------------ |
+| RoundRobinRule            | 简单轮询服务列表来选择服务器                                 |
+| WeightedResponseTimeRule  | 按照权重来选择服务器，响应时间越长，权重越小                 |
+| RandomRule                | 随机选择一个可用的服务器                                     |
+| BestAvailableRule         | 忽略短路的服务器，并选择并发数较低的服务器                   |
+| RetryRule                 | 重试机制的选择逻辑，会一直重试该服务直到成功                 |
+| AvailabilityFilteringRule | 可用性敏感策略，先过滤非健康的，再选择连接数较小的实例       |
+| ZoneAvoidanceRule         | 以区域可用的服务器为基础进行服务器的选择，使用Zone对服务器进行分类，这个Zone可以理解为一个机房或者机架，然后再对Zone内的多个服务做轮询 |
+
+如果想要自定义一个负载均衡策略，可以编写一个类，实现IRule接口，然后通过配置类声明为一个Bean。这种方式是全局生效的，如果仅需某一类型的服务使用自定义策略，可以在application.yml配置文件中设置\<service-name​\>​\:ribbon:NFLoadBalancerRuleClassName
+
+### 服务雪崩
 
