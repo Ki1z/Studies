@@ -1,6 +1,6 @@
 # Java八股
 
-`更新时间：2026-11-01`
+`更新时间：2026-11-02`
 
 注释解释：
 
@@ -13,6 +13,75 @@
 *注：该笔记内的可选项和参数均不完整，如有需要，请查询相关手册*
 
 ---
+
+## 复杂度分析
+
+复杂度分析是指在不运行代码的情况下，使用数学方式计算出一个算法的运行情况。复杂度分析可以帮助开发者编写出性能更优的代码。复杂度分析分为时间复杂度分析和空间复杂度分析，时间复杂度分析主要考虑代码的执行耗时，一般用循环次数来表示；空间复杂度分析主要考虑代码执行时的内存占用
+
+### 时间复杂度
+
+分析如下算法的时间复杂度
+
+```java
+public static int accumulation(int n) {
+    int sum = 0;
+    for (int i = 1; i <= n; i++)
+        sum += i;
+    return sum;
+}
+```
+
+这是一个累加算法，输入累加次数n，输出从1累加到n的和。这段代码中，假设每次操作耗时1ms，循环外部耗时恒定3ms，循环内部每次循环耗时3ms，总计耗时3n + 3ms。但是直接假设每段代码耗时非常不专业，直接将循环拆分为多步执行也并不合理，并且如果代码更复杂，那么最后得到的数学公式也就越复杂。因此为了更直观地展示一个算法的时间复杂度，一般采用大O表示法，不具体表示代码的真正耗时，而是表示代码执行时间随数据规模增长的变化趋势
+
+在数学中，不同的数据变化趋势都有不同的代表函数，例如线性趋势，代码执行时间随数据规模线性增大，那么就可以用正比例函数来表示，最具有代表性的正比例函数是$x=y$，使用大O表示法表示为$O(n)$
+
+同理，如果数据规小的时候执行非常快，数据规模越大，执行时长增加不明显，这就符合对数函数的特征，使用对数函数来表示为$O(\log{n})$；如果数据规模小的时候代码执行快，随着数据规模增长，代码执行时长增加非常明显，这就符合二次函数的特征，使用二次函数来表示为$O(n^2)$
+
+常用的时间复杂度表示形式可以按照效率降序排序为
+
+| 描述     | 表示形式              |
+| -------- | --------------------- |
+| 常数     | $O(1)$                |
+| 对数     | $O(\log{n})$          |
+| 线性     | $O(n)$                |
+| 线性对数 | $O(n \times \log{n})$ |
+| 平方     | $O(n^2)$              |
+| 立方     | $O(n^{3})$            |
+| k次方    | $O(n^k)$              |
+| 指数(幂) | $O(2^n)$              |
+| 阶乘     | $O(n!)$               |
+
+> ![](img3/66.png)
+
+*注：在小尺度上n\^3比n!和2\^n都大，但是当n>5.0367时，n!比任何多项式都大，当n>9.94时，2\^n大于n\^3*
+
+### 空间复杂度
+
+空间复杂度全称渐进空间复杂度，表示算法占用的额外存储空间与数据规模之间的增长关系。常见的空间复杂度有$O(1)、O(n)、O(n^2)$，其他的对数阶的复杂度几乎用不到，而且现代计算的内存一般都非常大，所以现在的算法对内存要求并不苛刻，空间复杂度分析也比时间复杂度简单
+
+例如如下代码
+
+```java
+public static int accumulation(int n) {
+    int sum = 0;
+    for (int i = 1; i <= n; i++)
+        sum += i;
+    return sum;
+}
+```
+
+上文我们知道这个方法的时间复杂度为$O(n)$，而它的空间复杂度为$O(1)$，因为方法中没有额外定义新的变量
+
+```java
+public static int[] getArray(int n) {
+    int[] arr = new int[n];
+    for (int i = 1; i <= n; i++)
+        arr[i] = i;
+    return arr;
+}
+```
+
+因为arr的长度取决于n，所以这个方法的空间复杂度为$O(n)$
 
 ## 二分查找
 
@@ -494,7 +563,16 @@ private static int partition_v2(int[] arr, int left, int right) {
 
 ## 集合
 
-### ArrayList扩容
+### ArrayList
+
+#### 概述
+
+- ArrayList底层使用的是动态数组实现的
+- ArrayList初始容量为0，当第一次添加数据时才会初始化容量为10
+- ArrayList进行扩容的时候是原来容量的1.5倍，每次扩容都需要拷贝数组
+- ArrayList在添加数据的时候需要确保已使用长度加1之后足够存下下一个数据；然后计算数组的容量，如果当前数组已使用长度+1大于当前数组允许的最大长度，则调用grow()方法扩容；确认新增的数据有地方存储之后，将新元素添加到size对应的位置上，并返回布尔值true
+
+#### ArrayList扩容原理
 
 使用ArrayList的无参构造器默认创建的是一个长度为0的数组
 
@@ -539,7 +617,7 @@ public ArrayList(Collection<? extends E> c) {
 }
 ```
 
-#### add扩容
+##### add扩容
 
 向ArrayList中插入第一个数据时，就会触发其扩容机制
 
@@ -638,7 +716,7 @@ add扩容方式得到的数组长度可以形成一个特定列表
 0, 10, 15, 22, 33, 49, 73, 109, 163, 244, 366, 549, 823, 1234, 1851, 2776, 4164, 6246, 9369, 14053, 21079...
 ```
 
-#### addAll扩容
+##### addAll扩容
 
 addAll与add方法的扩容有些不同
 
@@ -706,6 +784,88 @@ public static void main(String[] args) throws Exception {
 ```
 
 > ![](img4/82.png)
+
+#### 面试问题
+
+1. 如果实现数组和List之间的转换
+
+数组转List，使用JDK中的java.util.Arrays工具类的asList()方法；同理，List转数组，直接调用List自己的toArray()方法，无参的toArray()会返回Object数组，如果传入数组类型和长度，则会返回对应类型的数组
+
+2. 如果数组转换为List之后，修改数组的数据，List会受影响吗？反过来呢？
+
+如果将数组转换为List，并修改数组的内容，那么List也会改变；但是如果List转换为数组，再修改List的内容，数组并不受影响，这里可以通过两个方法的源码来分析，先来看Arrays.asList()
+
+```java
+@SafeVarargs
+@SuppressWarnings("varargs")
+public static <T> List<T> asList(T... a) {
+    return new ArrayList<>(a);
+}
+```
+
+ 直接调用了ArrayList的构造器，并传入了a，不过这里的ArrayList其实并不是java.util.ArrayList，而是Arrays自己的静态内部类java.util.Arrays\$ArrayList。这两个ArrayList从设计上来说是完全不同，java.util.Arrays\$ArrayList的设计目的是数组的List视图，而不是真正的ArrayList，所以java.util.Arrays\$ArrayList只支持get和set，并不支持add和remove
+
+```java
+public static void main(String[] args) {
+    String[] arr = {"aaa", "bbb", "ccc"};
+    List<String> list = Arrays.asList(arr);
+    list.add("ddd");
+}
+```
+
+> ![](img3/67.png)
+
+java.util.Arrays$ArrayList定义如下
+
+```java
+private static class ArrayList<E> extends AbstractList<E>
+    implements RandomAccess, java.io.Serializable
+{
+    @java.io.Serial
+    private static final long serialVersionUID = -2764017481108945198L;
+    @SuppressWarnings("serial") // Conditionally serializable
+    private final E[] a;
+
+    ArrayList(E[] array) {
+        a = Objects.requireNonNull(array);
+    }
+    ...
+}
+```
+
+仅有一个有参构造器，传入一个array，然后直接赋值给a，注意在java中，对象的赋值都是引用赋值，所以当我们将arr传入Arrays.asList()时，就等于java.util.Arrays\$ArrayList.E[] = arr，所以修改arr，list的内容也会跟着修改，其实这正是java.util.Arrays\$ArrayList的特殊设计
+
+那么List自己的toArray呢？
+
+```java
+public Object[] toArray() {
+    return Arrays.copyOf(elementData, size);
+}
+```
+
+调用了Arrays的copyOf，并且传入了size
+
+```java
+@SuppressWarnings("unchecked")
+public static <T> T[] copyOf(T[] original, int newLength) {
+    return (T[]) copyOf(original, newLength, original.getClass());
+}
+```
+
+```java
+@IntrinsicCandidate
+public static <T,U> T[] copyOf(U[] original, int newLength, Class<? extends T[]> newType) {
+    @SuppressWarnings("unchecked")
+    T[] copy = ((Object)newType == (Object)Object[].class)
+        ? (T[]) new Object[newLength]
+        : (T[]) Array.newInstance(newType.getComponentType(), newLength);
+    System.arraycopy(original, 0, copy, 0,
+                     Math.min(original.length, newLength));
+    return copy;
+}
+```
+
+实际就是通过Array.newInstance()方法创建了一个对应类型的新数组，然后使用System.arraycopy()方法将数组内容复制一份，所以List的toArray()是创建了一个新的数组对象，无论List是否修改，都不会影响单独的数组对象
 
 ### fail_fast和fail_safe
 
@@ -3860,13 +4020,13 @@ Mybatis为了提高数据库查询性能，也设计了缓存机制，分为两�
 - 服务熔断与降级：依赖服务故障时，快速失败，防止雪崩；主逻辑不可用时，返回兜底数据或友好提示；避免一个服务挂掉导致整条调用链崩溃。常见的有Hystrix、Sentinel和Resilience4j
 - 服务网关：所有请求的入口，负责路由、鉴权、限流、日志、跨域等。统一入口，避免每个服务都做安全、监控等通用逻辑。主流的是Zuul和Spring Cloud Gateway
 
-### 服务注册与发现
+#### 服务注册与发现
 
 - 服务注册：服务提供者需要把自己的信息注册到注册中心，由注册中心来保存这些信息，比如服务名称、ip、端口等等
 - 服务发现：消费者向注册中心拉取服务列表信息，如果服务提供者有集群，则消费者会利用负载均衡算法，选择一个发起调用
 - 服务监控：服务提供者会每隔30秒向注册中心发送心跳，报告健康状态，如果注册中心没接收到心跳，则认为该服务下线，将其从服务列表剔除
 
-#### Eureka与Nacos
+##### Eureka与Nacos
 
 **核心定位**
 
@@ -3879,9 +4039,9 @@ Mybatis为了提高数据库查询性能，也设计了缓存机制，分为两�
 
 在集群方面，Nacos默认采用AP模式，Eureka默认也采用AP模式，但是如果存在非临时实例，Nacos会改用CP模式，优先保证一致性。Nacos的配置中心也采用CP模式
 
-### 负载均衡
+#### 负载均衡
 
-#### Ribbon负载均衡流程
+##### Ribbon负载均衡流程
 
 假设一个服务通过OpenFeign向另一个服务发起远程调用，但另一个服务是由一个集群组成的，这就需要Ribbon来进行负载均衡。Ribbon首先从注册中心拉取对应服务的服务列表，Ribbon再根据负载均衡策略去选择其中一个服务实例，然后通过Feign发起远程调用
 
@@ -3899,5 +4059,35 @@ Mybatis为了提高数据库查询性能，也设计了缓存机制，分为两�
 
 如果想要自定义一个负载均衡策略，可以编写一个类，实现IRule接口，然后通过配置类声明为一个Bean。这种方式是全局生效的，如果仅需某一类型的服务使用自定义策略，可以在application.yml配置文件中设置\<service-name​\>​\:ribbon:NFLoadBalancerRuleClassName
 
-### 服务雪崩
+#### 服务雪崩
+
+雪崩问题是指当某个微服务不可用时，从而引发的其他微服务也不可用，最后导致整个微服务链都不可用的连锁问题。雪崩问题是微服务的常见问题，也是对微服务项目损害极大的问题
+
+**服务降级**
+
+服务降级是服务自我保护的一种方式，或者保护下游服务的一种方式，用于确保服务不会受请求突增影响变得不可用，确保服务不会崩溃。服务降级的实现一般是通过Feign设置Fallback路径，然后在Fallback中返回一些用户友好型信息，例如“服务暂不可用”、“请求失败，请联系管理员”等等
+
+**服务熔断**
+
+这里专指Hystrix熔断机制，用于监控微服务调用情况，默认是关闭的，如果需要开启则应在引导类上添加注解@EnableCircuitBreaker，如果检测到10秒内请求的失败率超过50%，就触发熔断机制。之后每隔5秒重新尝试请求微服务，如果微服务不能响应，继续走熔断机制。如果微服务可达，则关闭熔断机制，恢复正常请求
+
+#### 服务监控
+
+服务监控是指能在微服务项目集群中提供问题定位、性能分析、服务关系划分、服务异常告警的服务，目前主流的有Springboot-admin、prometheus + Grafana、zipkin和skywalking
+
+**skywalking**
+
+skywalking是一个分布式系统的应用程序性能监控工具 Application Performance Management，提供了完善的链路追踪能力，是目前Apache的顶级项目。其核心能力有分布式链路追踪，一次请求跨多个服务，自动生成 Trace 和 Span，定位慢调用、慢 SQL、异常节点。指标监控，QPS、响应时间、错误率、JVM/GC、服务健康度等。日志关联，日志自动绑定 TraceID，和调用链联动排查。服务拓扑与依赖分析，自动画出服务调用关系图。性能剖析，CPU、线程、代码级瓶颈分析。告警，基于规则对指标/链路异常报警
+
+skywalking挂载在应用侧，无侵入采集数据。可插拔存储，支持 Elasticsearch、BanyanDB、MySQL、PostgreSQL 等，对 Java 生态支持极好，字节码增强、基本零代码改造，兼容 OpenTelemetry、Zipkin、Prometheus 等协议，能当统一可观测性后端
+
+其中告警规则如下
+
+- 在过去10分钟的3分钟内服务平均响应时间超过1秒达到3次
+- 在过去10分钟内服务成功率低于80%达到2次
+- 在过去10分钟内服务90%响应时间低于1秒达到3次
+- 在过去10分钟内服务的响应时间超过1秒达到2次
+- 在过去10分钟内端点的响应时间超过1秒达到2次
+
+
 
