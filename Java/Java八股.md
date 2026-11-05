@@ -1,6 +1,6 @@
 # Java八股
 
-`更新时间：2026-11-02`
+`更新时间：2026-11-05`
 
 注释解释：
 
@@ -13,6 +13,558 @@
 *注：该笔记内的可选项和参数均不完整，如有需要，请查询相关手册*
 
 ---
+
+## 数据类型
+
+### 基本数据类型内存存储区域
+
+Java基本数据类型并不一定存储在栈中，而是根据定义位置与修饰符的不同，存储在不同的内存区域。如以下代码
+
+```java
+public class Test {
+    int a = 10;
+    static int b = 20;
+    
+    public int addC(int num) {
+        int c = 10;
+        return num + c;
+    }
+}
+```
+
+分别定义了a、b、c三个基本类型的变量，其中a和b定义在类中，c定义在方法中。对于c，因为定义在方法中，所以属于方法栈帧的一部分，存储位置在栈；对于a和b，两者不同的是b有static修饰符，属于类变量。JVM规定类的相关信息需要存储在方法区中，因此b存储的位置在java8之前是永久代，java8之后是元空间。a属于对象属性，因此随对象创建存储在堆中，具体是Eden、Survivor还是Old按照当前内存占用情况决定
+
+### 包装类缓存
+
+Java为一些基本类型的包装类设置了常用缓存，在使用包装类时，优先从缓存中取出，避免创建额外的对象，节省内存
+
+Ingeter、Byte、Short和Long的缓存值默认均为-128到127
+
+```java
+private static final class IntegerCache {
+    static final int low = -128;
+    static final int high;
+
+    @Stable
+    static final Integer[] cache;
+    static Integer[] archivedCache;
+
+    static {
+        // high value may be configured by property
+        int h = 127;
+        String integerCacheHighPropValue =
+            VM.getSavedProperty("java.lang.Integer.IntegerCache.high");
+        if (integerCacheHighPropValue != null) {
+            try {
+                h = Math.max(parseInt(integerCacheHighPropValue), 127);
+                // Maximum array size is Integer.MAX_VALUE
+                h = Math.min(h, Integer.MAX_VALUE - (-low) -1);
+            } catch( NumberFormatException nfe) {
+                // If the property cannot be parsed into an int, ignore it.
+            }
+        }
+        high = h;
+
+        // Load IntegerCache.archivedCache from archive, if possible
+        CDS.initializeFromArchive(IntegerCache.class);
+        int size = (high - low) + 1;
+
+        // Use the archived cache if it exists and is large enough
+        if (archivedCache == null || size > archivedCache.length) {
+            Integer[] c = new Integer[size];
+            int j = low;
+            for(int i = 0; i < c.length; i++) {
+                c[i] = new Integer(j++);
+            }
+            archivedCache = c;
+        }
+        cache = archivedCache;
+        // range [-128, 127] must be interned (JLS7 5.1.7)
+        assert IntegerCache.high >= 127;
+    }
+
+    private IntegerCache() {}
+}
+```
+
+```java
+private static final class ByteCache {
+    private ByteCache() {}
+
+    @Stable
+    static final Byte[] cache;
+    static Byte[] archivedCache;
+
+    static {
+        final int size = -(-128) + 127 + 1;
+
+        // Load and use the archived cache if it exists
+        CDS.initializeFromArchive(ByteCache.class);
+        if (archivedCache == null || archivedCache.length != size) {
+            Byte[] c = new Byte[size];
+            byte value = (byte)-128;
+            for(int i = 0; i < size; i++) {
+                c[i] = new Byte(value++);
+            }
+            archivedCache = c;
+        }
+        cache = archivedCache;
+    }
+}
+```
+
+```java
+private static final class ShortCache {
+    private ShortCache() {}
+
+    @Stable
+    static final Short[] cache;
+    static Short[] archivedCache;
+
+    static {
+        int size = -(-128) + 127 + 1;
+
+        // Load and use the archived cache if it exists
+        CDS.initializeFromArchive(ShortCache.class);
+        if (archivedCache == null || archivedCache.length != size) {
+            Short[] c = new Short[size];
+            short value = -128;
+            for(int i = 0; i < size; i++) {
+                c[i] = new Short(value++);
+            }
+            archivedCache = c;
+        }
+        cache = archivedCache;
+    }
+}
+```
+
+```java
+private static final class LongCache {
+    private LongCache() {}
+
+    @Stable
+    static final Long[] cache;
+    static Long[] archivedCache;
+
+    static {
+        int size = -(-128) + 127 + 1;
+
+        // Load and use the archived cache if it exists
+        CDS.initializeFromArchive(LongCache.class);
+        if (archivedCache == null || archivedCache.length != size) {
+            Long[] c = new Long[size];
+            long value = -128;
+            for(int i = 0; i < size; i++) {
+                c[i] = new Long(value++);
+            }
+            archivedCache = c;
+        }
+        cache = archivedCache;
+    }
+}
+```
+
+对于Character也设置了0到127的缓存
+
+```java
+private static final class CharacterCache {
+    private CharacterCache(){}
+
+    @Stable
+    static final Character[] cache;
+    static Character[] archivedCache;
+
+    static {
+        int size = 127 + 1;
+
+        // Load and use the archived cache if it exists
+        CDS.initializeFromArchive(CharacterCache.class);
+        if (archivedCache == null || archivedCache.length != size) {
+            Character[] c = new Character[size];
+            for (int i = 0; i < size; i++) {
+                c[i] = new Character((char) i);
+            }
+            archivedCache = c;
+        }
+        cache = archivedCache;
+    }
+}
+```
+
+Boolean则是定义常量对象
+
+```java
+public final class Boolean implements java.io.Serializable,
+                                      Comparable<Boolean>, Constable
+{
+    /**
+     * The {@code Boolean} object corresponding to the primitive
+     * value {@code true}.
+     */
+    public static final Boolean TRUE = new Boolean(true);
+
+    /**
+     * The {@code Boolean} object corresponding to the primitive
+     * value {@code false}.
+     */
+    public static final Boolean FALSE = new Boolean(false);
+}
+```
+
+浮点型的包装类并没有设置缓存，因为浮点类型本身变化大，计算时存在误差。包装类对象之间的比较应当使用equals方法，因为包装类本质仍是对象，使用双等号比较是地址比较，如果值相同但对象地址不同，仍会返回false
+
+```java
+Integer a = 10;
+Integer b = new Integer(10);
+System.out.println(a == b);
+```
+
+> ![](img/34.png)
+
+### 自动装箱与拆箱
+
+自动装箱是指在定义包装类时，如果赋值的字面量是一个基本类型，自动调用包装类的valueOf()方法来封装为一个包装对象。同理，自动拆箱是指将一个包装类赋值给一个基本类型的变量，自动调用对象的xxxValue()方法
+
+> ![](img/35.png)
+
+> ![](img/36.png)
+
+频繁拆装箱会频繁调用对应方法，造成不必要的性能损失，所以在实际开发中应当合理使用
+
+### BigDecimal
+
+BigDecimal是Java中专门用于处理高精度运算的数值类，位于java.math中，主要用于避免浮点运算中的误差，确保计算的准确性，特别在于涉及金钱的业务中。例如计算两个0.1的值，float天生存在误差
+
+```java
+public static void main(String[] args) {
+    System.out.println(2.0f - 1.9f);
+    System.out.println(1.8f - 1.7f);
+}
+```
+
+> ![](img/37.png)
+
+而BigDecimal就可以确保精度，但注意，在定义BigDecimal时必须使用String类型，而不是普通数值类型
+
+```java
+public static void main(String[] args) {
+    BigDecimal a = new BigDecimal("2.0");
+    BigDecimal b = new BigDecimal("1.9");
+    System.out.println(a.subtract(b));
+    a = new BigDecimal("1.8");
+    b = new BigDecimal("1.7");
+    System.out.println(a.subtract(b));
+}
+```
+
+> ![](img/38.png)
+
+BigDecimal的等值比较应使用compareTo而不是equals，equals会比较BigDecimal的精度，如果精度不一致，也会判断为false
+
+```java
+public static void main(String[] args) {
+    BigDecimal a = new BigDecimal("2.00");
+    BigDecimal b = new BigDecimal("1.90");
+    BigDecimal c = a.subtract(b);
+    a = new BigDecimal("1.8");
+    b = new BigDecimal("1.7");
+    BigDecimal d = a.subtract(b);
+
+    System.out.println(c.equals(d));
+    System.out.println(c.compareTo(d));
+}
+```
+
+> ![](img/39.png)
+
+*注：BigDecimal的compareTo返回-1表示小于，0表示等于，1表示大于*
+
+### BigInteger
+
+如果整数数值超过了Long的最大值
+
+```java
+public static final long MAX_VALUE = 0x7fffffffffffffffL;
+```
+
+可以使用BigInteger类来存储，BigInteger底层使用了int数组来存储任意长度的整型，但是计算效率较低，一般也不会使用
+
+### String
+
+#### String、StringBuffer、StringBuilder
+
+**可变性**
+
+String不可变，每次修改都会生成新的对象，并将引用指向新的实例，而StringBuffer和StringBuilder都是可变的，它们在修改字符串时不会创建新对象，而是直接在原有字符数组上进行操作
+
+StringBuilder和StringBuffer都继承自AbstractStringBuilder，在AbstractStringBuilder中使用了字符数组来保存字符串，没有使用final和private关键字修饰，AbstractStringBuilder还提供了很多修改字符串的方法，例如append
+
+**线程安全性**
+
+线程安全性的根源是线程同时修改可变对象，但String是不可变的，也就杜绝了线程安全问题。StringBuffer对方法添加了同步锁，所以也是线程安全的。而StringBuilder没有对方法加锁，所以是线程不安全的
+
+StringBuffer方法在并发下需要添加互斥锁，因此会带来一定的性能开销；StringBuilder没有同步开销，所以在单线程场景下能获得更好的性能表现
+
+#### 为什么String不可变
+
+String底层使用字符数组来存储字符串，并且类使用final修饰，无法被继承，避免子类破坏不可变
+
+```java
+public final class String
+    implements java.io.Serializable, Comparable<String>, CharSequence {
+    /** The value is used for character storage. */
+    private final char value[];
+    ...
+}
+```
+
+String类没有提供或者暴露任何修改这个数组的方法，String不可变在一定程度上确保了Java的安全性，例如类加载时传入的类名，某些网络或者文件地址等等，一旦String可变，攻击者很有可能会利用可变String对Java内部一些关键String进行修改，达到攻击目的
+
+String的不可变让同一个String地址存在确定性，Java的字符串常量池就是依据String的不可变性，只需要在常量池中创建一个String，其他地方就只需要引用这一个地址即可，大大节省了内存占用。同时不可变性让String天生线程安全，无需加锁
+
+但是理论上仍可以使用反射来修改String，final只保证value的地址无法被修改，但是无法保证value的内容无法被修改
+
+```java
+public static void main(String[] args) throws Exception {
+    String str = "Hello, World!";
+    Field value = str.getClass().getDeclaredField("value");
+    value.setAccessible(true);
+    char[] arr = (char[]) value.get(str);
+    arr[0] = 'A';
+    System.out.println(str);
+}
+```
+
+> ![](img/42.png)
+
+#### 字符串拼接
+
+在Java中，可以直接使用加号运算符拼接字符串，如下
+
+```java
+String a = "a" + "b";
+String b = "c";
+String c = "d";
+String d = b + c;
+```
+
+但是对于字面量和变量的拼接，在底层实现上是不同的，而且Java8和Java9也有所不同
+
+**字面量拼接**
+
+如果拼接全部由字面量构成，那么编译器会将其直接优化为拼接后的字符串，如下
+
+```java
+String str = "a" + "b" + "c";
+// 等价于
+String str = "abc"
+```
+
+**变量拼接**
+
+如果在拼接时有任一变量，则需要调用其他方法来完成，调用的方法在Java8和Java9不同
+
+```java
+String a = "a";
+String str = a + "b" + "c";
+```
+
+- Java8
+
+在Java8及其以前，拼接变量String时，需要调用StringBuilder，调用StringBuilder的append方法。首先加载StringBuilder类
+
+> ![](img/43.png)
+
+然后调用构造器创建StringBuilder对象
+
+> ![](img/44.png)
+
+循环调用append方法，传入每个参数
+
+> ![](img/45.png)
+
+> ![](img/46.png)
+
+> ![](img/47.png)
+
+最后调用toString方法，返回拼接好的字符串
+
+> ![](img/48.png)
+
+```java
+// 等价于
+String str = new StringBuilder()
+    .append(a)
+    .append("b")
+    .append("c")
+    .toString();
+```
+
+如果在循环内直接拼接变量字符串，那么就会在每次循环中都创建一个StringBuilder对象，造成一定的性能影响。因此如果需要重复拼接字符串，需要手动创建一个StringBuilder或者StringBuffer，然后在循环中调用append()方法
+
+- Java9
+
+在Java9之后，不再使用StringBuilder，编译后的字节码命令为invokedynamic #xxx；第一次调用时，JVM调用引导方法StringConcatFactory.makeConcatWithConstants()，工厂类根据参数个数、类型生成一个MethodHandle，所以在DEBUG时，入口方法为DirectMethodHandle类的internalMemberName
+
+> ![](img/49.png)
+
+这一步是在解析MethodHandle的真实目标，Java9之后，不同的字符串变量拼接会调用不同的方法来执行。然后通过DirectMethodHandle$Holder.invokeStatic()来转发方法调用
+
+> ![](img/50.png)
+
+在默认的策略下，转发到了方法StringConcatHelper.simpleConcat()，StringConcatHelper.simpleConcat()仅实现拼接两个简单字符串，这也印证了在Java9之后提高拼接性能的目的
+
+> ![](img/51.png)
+
+拼接完成后再通过Invokers$Holder.linkToTargetMethod()将控制权交还给main方法，返回数据。这些都是JVM底层的invokedynamic执行链路，所以我们不需要考虑具体如何实现的。虽然Java9对性能进行了一些优化，但是在循环中仍应该手动进行拼接
+
+#### equals
+
+在Java9中，引入了JEP 254 Compact Strings 紧凑字符串，将String、StringBuffer、StringBuilder底层改用byte[]字节数组存储字符串。JEP全称JDK Enhancement Proposal增强提案，是提出新特性或对现有特性进行改进的正式文档。Oracle分析了大量的String发现，大多数的String实际上每个字符仅使用了1字节的空间，原来的char类型默认占用2字节，每个char会造成1字节的浪费
+
+而新的紧凑字符串使用Latin-1编码，Latin-1每个字符只占用1字节空间，对于大多数情况，空间表现都比原来的UTF-16好得多，而且性能表现两者相差无几。使用Latin-1编码还能进一步提高GC性能，堆里的String类型占比通常在10%到40%，缩小String占用，就能让GC次数减少，停顿更短
+
+Object默认的equals比较的是引用地址，而String需要比较字符串内容是否一致，所以String重写了equals方法。Java9引入了紧凑编码，因此equals方法的编码也发生了变化
+
+ **Java7**
+
+```java
+public boolean equals(Object anObject) {
+    if (this == anObject) {
+        return true;
+    }
+    if (anObject instanceof String) {
+        String anotherString = (String) anObject;
+        int n = value.length;
+        if (n == anotherString.value.length) {
+            char v1[] = value;
+            char v2[] = anotherString.value;
+            int i = 0;
+            while (n-- != 0) {
+                if (v1[i] != v2[i])
+                        return false;
+                i++;
+            }
+            return true;
+        }
+    }
+    return false;
+}
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## OOP面向对象编程
+
+### 深拷贝和浅拷贝
+
+Java的对象拷贝分为深拷贝和浅拷贝两种，注意，等号在Java只是引用赋值，并没有创建新的对象。浅拷贝是指，只复制对象本身，不复制对象内部引用的其他对象，这就属于浅拷贝；而同时复制对象和对象内部引用的其他对象就算作深拷贝
+
+**浅拷贝**
+
+浅拷贝的代表是对象的clone()方法，如果实例类实现Cloneable，重写了clone()方法，就可以在创建新实例时调用clone()得到一个对象拷贝
+
+```java
+import lombok.AllArgsConstructor;
+
+@AllArgsConstructor
+public class Person implements Cloneable{
+    int id;
+    Address address;
+
+    @Override
+    public Person clone() throws CloneNotSupportedException {
+        return (Person) super.clone();
+    }
+}
+
+@AllArgsConstructor
+class Address {
+    String city;
+}
+```
+
+```java
+public static void main(String[] args) throws CloneNotSupportedException {
+    Person p1 = new Person(1, new Address("Beijing"));
+    Person p2 = p1.clone();
+    System.out.println(p2.address.city);
+    p2.address.city = "Shanghai";
+    System.out.println(p1.address.city);
+}
+```
+
+> ![](img/40.png)
+
+因为clone()是浅拷贝，所以当我们更改p2的address，p1也会随之更改
+
+**深拷贝**
+
+深拷贝一般是手动实现，或者实现Serializable并进行反序列化，反序列化得到的对象一定是深拷贝对象
+
+```java
+@Override
+public Person clone() throws CloneNotSupportedException {
+    Person p = (Person) super.clone();
+    p.address = new Address(this.address.city);
+    return p;
+}
+```
+
+> ![](img/41.png)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## 复杂度分析
 
