@@ -299,8 +299,6 @@ public class CustomArrayList<E> {
 }
 ```
 
-
-
 ### 泛型接口
 
 **基本语法**

@@ -1,6 +1,6 @@
 # Java八股
 
-`更新时间：2026-11-05`
+`更新时间：2026-11-07`
 
 注释解释：
 
@@ -419,7 +419,7 @@ String str = new StringBuilder()
 
 拼接完成后再通过Invokers$Holder.linkToTargetMethod()将控制权交还给main方法，返回数据。这些都是JVM底层的invokedynamic执行链路，所以我们不需要考虑具体如何实现的。虽然Java9对性能进行了一些优化，但是在循环中仍应该手动进行拼接
 
-#### equals
+#### equals()
 
 在Java9中，引入了JEP 254 Compact Strings 紧凑字符串，将String、StringBuffer、StringBuilder底层改用byte[]字节数组存储字符串。JEP全称JDK Enhancement Proposal增强提案，是提出新特性或对现有特性进行改进的正式文档。Oracle分析了大量的String发现，大多数的String实际上每个字符仅使用了1字节的空间，原来的char类型默认占用2字节，每个char会造成1字节的浪费
 
@@ -453,41 +453,91 @@ public boolean equals(Object anObject) {
 }
 ```
 
+java7的String比较原理是取出两个字符串的字符数组，然后依次比较每个字符，只要有任意一个不想等，则返回false
 
+**Java9**
 
+```java
+public boolean equals(Object anObject) {
+    if (this == anObject) {
+        return true;
+    }
+    return (anObject instanceof String aString)
+            && (!COMPACT_STRINGS || this.coder == aString.coder)
+            && StringLatin1.equals(value, aString.value);
+}
+```
 
+在Java9引入紧凑编码后，首先判断编码格式是否一致，如果内容一致，但编码格式不一致，也会返回false。然后调用StringLatin1.equals()方法进一步比较
 
+```java
+public static boolean equals(byte[] value, byte[] other) {
+    if (value.length == other.length) {
+        for (int i = 0; i < value.length; i++) {
+            if (value[i] != other[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+    return false;
+}
+```
 
+这一步就和Java7类似，遍历字符数组中每一个元素，如果任意一个字符不等，则返回false
 
+#### intern()
 
+intern()是String中的一个native方法，native方法的实现不由JDK，而是JVM内部实现。intern()的作用是，如果字符串常量池中没有该字符串，则将该字符串加入常量池，然后返回常量池引用；如果字符串常量池中已经存在该字符串，则返回常量池引用
 
+intern()的核心作用是解决两个相同String，但由于地址不同，导致的不等问题。例如将String作为互斥锁，如果不使用intern()，互斥锁会失效
 
+```java
+public static void main(String[] args) {
+    Thread t1 = new Thread(() -> {
+        try {
+            doJob();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    });
+    Thread t2 = new Thread(() -> {
+        try {
+            doJob();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+    });
+    t1.start();
+    t2.start();
+}
 
+public static void doJob() throws InterruptedException {
+    String lock = new String("lock");
+    synchronized (lock) {
+        System.out.println(Thread.currentThread().getName() + " get the lock");
+        Thread.sleep(1000);
+        System.out.println(Thread.currentThread().getName() + " release the lock");
+    }
+}
+```
 
+> ![](img/52.png)
 
+可以看到，线程1在线程0释放之前就获取了互斥锁，互斥锁失效了。而如果为lock添加intern()就可以解决这个问题
 
+```java
+public static void doJob() throws InterruptedException {
+    String lock = new String("lock").intern();
+    synchronized (lock) {
+        System.out.println(Thread.currentThread().getName() + " get the lock");
+        Thread.sleep(1000);
+        System.out.println(Thread.currentThread().getName() + " release the lock");
+    }
+}
+```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+> ![](img/53.png)
 
 ## OOP面向对象编程
 
@@ -548,7 +598,328 @@ public Person clone() throws CloneNotSupportedException {
 
 > ![](img/41.png)
 
+### 异常体系
 
+> ![](img/54.png)
+
+在 Java 中，所有的异常都有一个共同的祖先 java.lang包中的 Throwable类。Throwable类有两个重要的子类：
+
+- Exception：程序本身可以处理的异常，可以通过try-catch块来捕获。Exception又可以分为C hecked Exception和Unchecked Exception
+- Error：Error属于程序无法自行处理的错误，可以通过try-catch捕获，但是不建议这么做。这些异常发生时，JVM一般会选择直接终止线程
+
+#### ClassNotFoundException和NoClassDefFoundError的区别
+
+ClassNotFoundExcetion是Exception，一般发生在反射等动态加载类的时候，是可预期的，可以捕获；NoClassDefFoundError是Error，表示 JVM 或类加载器尝试加载类定义时找不到该定义。除了运行时缺少 JAR，还可能由类初始化失败后再次使用该类等情况触发。它通常会终止当前线程，但不等于整个 JVM 必然无法继续运行
+
+#### Checked Exception和Unchecked Exception的区别
+
+Checked Exception检查异常，是指在开发过程中，可以预期、可以恢复的异常。如果检查异常不作处理，则无法通过编译阶段，编译器会强制开发人员处理检查异常。常见的检查异常一般源于一些外部因素，如文件缺失、网络异常等等，如IOException、FileNotFoundException等
+
+Unchecked Exception则是编译器无法预期的异常，一般出现在程序的运行过程中，如NullPointerException空指针异常、IllegalArgumentException非法参数异常等等。RuntimeException及其子类全部属于非检查异常，同时需要注意，Error也属于非检查异常，准确来说属于Unchecked Throwable
+
+#### try-catch
+
+try-catch-finally是Java中用于异常捕获的语法格式，完整的try-catch-finally将代码分为try、catch、finally三个部分，try用于异常捕获，如果代码可能抛出异常，则应该编写在try块中；catch用于异常处理，catch可以制定需要捕获的异常类型，如果try块中的代码抛出了制定类型的异常，则执行catch块中的代码；finally用于最终处理，无论是否有异常抛出，最后都会执行finally中的代码
+
+##### finally
+
+finally并不一定会被执行，JVM有可能在finally之前退出
+
+```java
+public static void main(String[] args) {
+    try {
+        System.out.println("An Exception thrown!");
+        System.exit(1);
+    } finally {
+        System.out.println("Finally!");
+    }
+}
+```
+
+> ![](img/55.png)
+
+finally中不能包含return语句，因为finally会在return之前执行，如果在try和finally中都使用return语句，则会将return覆盖
+
+```java
+public static void main(String[] args) {
+    System.out.println(sum(1, 1));
+}
+
+public static int sum(int num1, int num2) {
+    try {
+        return num1 + num2;
+    } finally {
+        return 0;
+    }
+}
+```
+
+> ![](img/56.png)
+
+##### try-with-resource
+
+对于一些资源类，如InputStream、Scanner、PrintWriter等，在使用完成后需要手动调用close()方法进行关闭，如果不关闭这些资源，就可能导致内存泄漏。所以对于资源类操作，应当使用try-finally或者完整的try-catch-finally，在finally块中调用close()方法，保证资源最后能够关闭
+
+但是项目中使用的资源非常多，每一个都手动关闭也很容易出现纰漏的情况。所以从Java7开始，引入了try-with-resource块，Java会自动调用资源类的close()方法，即使异常也能正常关闭
+
+```java
+FileInputStream fis = null;
+try {
+    fis = new FileInputStream("a.txt");
+} finally {
+    if (fis != null) fis.close();
+}
+// 等价于
+try (FileInputStream fis = new FileInputStream("a.txt")) {
+    ...
+}
+```
+
+而且try-with-resource也支持异常捕获和多资源访问
+
+```java
+try (FileInputStream fis = new FileInputStream("a.txt");
+     FileInputStream fis1 = new FileInputStream("b.txt")) {
+    
+} catch (Exception e) {
+
+}
+```
+
+### Java值传递
+
+在进行方法传参时，会涉及值传递和引用传递两种传递类型。值传递是指进传递值拷贝，引用传递是指传递地址引用，也就是指针。引用传递的代表是C++，C++参数的传递实际上传递的是参数的地址，实参和形参共用一个地址
+
+```python
+#include <iostream>
+
+void get(int& num) {
+    num++;
+}
+
+int main() {
+    int age = 10;
+    get(age);
+    std::cout << age;
+}
+```
+
+> ![](img/57.png)
+
+而Java、C、Python等都只有值传递。在Java中，基本数据类型的传递是标准值传递，而引用数据类型的传递是引用拷贝传递，但不是引用传递，举个例子，假设存在一个对象object，内容为{1, 2, 3, 4}，需要作为参数传入方法，形参为param
+
+```example
+// Java值传递
+object -> 0x1234 {1, 2, 3, 4}
+param -> 0x1234 {1, 2, 3, 4}
+```
+
+object对象和形参param都指向0x1234的地址，如果修改param指向的地址，object并不会跟着修改
+
+```example
+// Java值传递
+object -> 0x1234 {1, 2, 3, 4}
+param -> 0x5678 {5, 6, 7, 8}
+```
+
+而如果修改param的内容，因为param与object指向同一个地址，所以object的内容也会被修改
+
+```example
+// Java值传递
+object -> 0x1234 {1, 1, 1, 1}
+param -> 0x1234 {1, 1, 1, 1}
+```
+
+而C++的引用传递约等于将object直接交给了param，两个指针的是同一个地址，只是变量名不同
+
+```example
+object, param -> 0x1234
+```
+
+**验证1**
+
+定义一个数组并传入方法，在方法中赋值为另一个数组，但原数组不变
+
+```java
+public static void main(String[] args) {
+    int[] arr = {1, 2, 3, 4, 5};
+    System.out.println(arr);
+    test(arr);
+    System.out.println(arr);
+}
+
+public static void test(int[] arr) {
+    arr = new int[]{1, 1, 1, 1};
+}
+```
+
+> ![](img/58.png)
+
+**验证2**
+
+尝试交换两个对象的引用，但是失败
+
+```java
+public static void main(String[] args) {
+    Object obj1 = new Object(), obj2 = new Object();
+    System.out.println(obj1);
+    System.out.println(obj2);
+    swap(obj1, obj2);
+    System.out.println(obj1);
+    System.out.println(obj2);
+}
+
+public static void swap(Object a, Object b) {
+    Object tmp = a;
+    a = b;
+    b = tmp;
+}
+```
+
+> ![](img/59.png)
+
+
+
+### 泛型
+
+#### 泛型擦除
+
+泛型擦除是指，Java会在编译阶段把泛型类型全部擦除，替换为Object或者制定类型，生成的字节码文件中不包含任何泛型类信息，运行时只保留原始类型
+
+泛型擦除的核心原因是向后兼容，泛型在Java5引入，此时JDK已经提供了大量的核心代码，如果泛型像C++一样在编译阶段生成不同类型，那么很容易造成程序异常。泛型擦除让编译器可以在运行时通过一些手段向泛型类或者方法中添加其他的数据类型，如下
+
+```java
+List<Integer> list = new ArrayList<>();
+
+list.add(12);
+//1.编译期间直接添加会报错
+list.add("a");
+Class<? extends List> clazz = list.getClass();
+Method add = clazz.getDeclaredMethod("add", Object.class);
+//2.运行期间通过反射添加，是可以的
+add.invoke(list, "kl");
+
+System.out.println(list)
+```
+
+那为什么不直接使用Object？
+
+如果使用Object，泛型就失去了意义，开发人员仍需要手动编码实现数据类型检查，并且在获取数据后，手动编码强转为指定格式
+
+#### 桥方法
+
+如果泛型类的子类重写了泛型类中的一个泛型方法，且子类使用了具体类，那么编译器会为其自动生成一个桥方法，用于调用子类的重载方法
+
+```java
+public class A<E> {
+    public void setData(E data) {}
+}
+
+class B extends A<String> {
+    @Override
+    public void setData(String data) {
+        super.setData(data);
+    }
+}
+```
+
+如上，A类为泛型类，设置了泛型E，并且定义了一个泛型方法setData，传入的参数格式也为E。B继承A，但指定了具体类String，重写A类的方法setData，传入的参数类型自然也是String
+
+上文提到，泛型擦除会将未限定的类替换为Object，那么我们尝试将A类进行替换
+
+```java
+public class A<Object> {
+    public void setData(Object data) {}
+}
+```
+
+Java中允许方法重载，方法重载是指方法的方法名相同，但是参数类型、返回值类型不同。换句话说，A类在泛型擦除后，子类B的setData方法其实就没有对应的父方法了，因为B类重写的方法是参数为String的方法，而不是参数为Object的方法。为了保证继承安全，此时就需要编译器在子类中构造一个方法签名与返回值类型均匹配父类的方法，在这个方法中调用自己的方法，这个方法就是桥方法
+
+```java
+class B extends A<String> {
+    
+    public void setData(Object data) {
+        setData((String) data);
+    }
+    
+    public void setData(String data) {
+        super.setData(data);
+    }
+}
+```
+
+#### 泛型限制
+
+泛型的一些限制大多是由泛型擦除机制造成的，擦除后为Object类型，无法进行类型判断
+
+- 无法创建泛型实例
+
+如果类中定义了一个泛型变量，尝试new一个泛型实例，编译器会抛出异常
+
+```java
+public class Box<T> {
+    T value = new T();  // 编译错误
+}
+```
+
+但是可以通过传入类对象，然后调用反射获取实例
+
+```java
+public class Box<T> {
+    T value;
+    public Box(Class<T> clazz) throws Exception {
+        value = clazz.getDeclaredConstructor().newInstance();
+    }
+}
+```
+
+- 泛型不能是基本数据类型
+
+泛型类型不能是基本数据类型，并不是因为泛型设计本身就不支持，而是泛型擦除后类型为Object，但是基本数据类型不是泛型的子类。所以如果需要使用基本数据类型作为泛型，则必须使用包装类
+
+- 不能创建泛型数组
+
+不能创建泛型数组变量，或者为泛型类创建数组
+
+```java
+T[] arr = new T[10];        // 编译错误
+List<String>[] arr2 = new List<String>[10]; // 编译错误
+```
+
+泛型数组在擦除后类型为Object，任何类都可以存储，严重危害了数据类型安全，因此编译器不允许为泛型创建数组。但是可以创建Object数组，然后强转为泛型来绕过
+
+```java
+T[] arr = (T[]) new Object[10];
+```
+
+- 泛型无法使用instanceof
+
+instanceof可以检查类的数据类型，但是无法确定类上的泛型的数据类型，因为擦除后都是Object
+
+```java
+if (obj instanceof List<String>) { }  // 编译错误
+```
+
+- 泛型类不能继承Throwable
+
+catch是运行时机制，擦除后无法区分泛型，也就无法实现精确捕获
+
+```java
+class MyException<T> extends Exception { }  // 编译错误
+```
+
+- 静态成员变量不能使用泛型
+
+静态成员变量，也就是static修饰的属性不能使用泛型，泛型是实例级别，而static是类级别，没有实例就没有泛型
+
+```java
+class Box<T> {
+    static T value;        // 编译错误
+    static void foo(T t) { } // 编译错误
+}
+```
+
+#### 通配符
 
 
 
