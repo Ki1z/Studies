@@ -220,7 +220,7 @@ Integer b = new Integer(10);
 System.out.println(a == b);
 ```
 
-> ![](img/34.png)
+> ![](./img/34.png)
 
 ### 自动装箱与拆箱
 
@@ -920,6 +920,145 @@ class Box<T> {
 ```
 
 #### 通配符
+
+如果泛型需要指定多个类型，就需要使用通配符。Java中，泛型通配符按照约束范围可以分为无界通配符、上界通配符和下界通配符
+
+##### 无界通配符 ?
+
+无界通配符使用`?`，表示可以接收任何泛型类型数据，用于实现不依赖泛型的简单方法，可以捕获参数类型并交由泛型方法执行
+
+```java
+public static void testMethod(Person<?> person) {
+    // 方法体
+}
+```
+
+当无界通配符的意义是某个未知但固定的类型，编译器不知道其准确类型，为了类型安全禁止插入，但null除外，null属于任意类型
+
+```java
+List<?> list = new ArrayList<>();
+list.add(null);
+```
+
+无界通配符一般用于读取数据而不关心插入的情况
+
+```java
+public static void printList(List<?> list) {
+    for (Object elem : list) {
+        System.out.println(elem);
+    }
+}
+```
+
+##### 上界通配符 extends
+
+如果希望泛型可以接收某个类型的子类，那么可以使用上界通配符，上界通配符基于Java继承
+
+```java
+List<? extends Number> list = new ArrayList<>();
+```
+
+上界通配符同样无法插入，编译器只知道上界通配符是Number类型的子类，但是不知道具体类型，Number子类有Integer、Float等等，为了数据安全不能随意插入
+
+```java
+public static void insert(List<? extends Number> list) {
+    Number n = list.getFirst();
+}
+```
+
+上界通配符可以安全读取，因为编译器知道其中的数据一定是Number的子类，所以可以使用Number接收
+
+##### 下界通配符 super
+
+相对地，如果希望泛型接收某个类及其父类，可以使用下界通配符。下界通配符可写，因为编译器知道其最低类型。下界通配符读取时得到的类型是Object，因为Object是继承树最高类型
+
+```java
+public class Test<E> {
+    public static void insert(List<? super MyNumber> list) {
+       list.add(new MyNumber());
+        Object first = list.getFirst();
+    }
+
+    public static void main(String[] args) {
+        insert(new ArrayList<Number>());
+    }
+}
+
+class MyNumber extends Number {}
+```
+
+##### PECS原则
+
+PECS原则是指，获取数据的生产者Producer，应该使用上界通配符Extends；插入数据的消费者Consumer，应该使用下界通配符。例如Collections类中的copy()方法，完整的方法签名为
+
+```java
+Collections.copy(List<? super T> dest, List<? extends T> src)
+```
+
+从src中读取数据，并复制到dest
+
+#### T extends xxx 与 ? extends xxx 的区别
+
+T extends xxx 是泛型类型参数的上界声明，叫做有界类型参数。如果需要操作参数，并且限定参数的上下界，就可以使用有界类型参数
+
+```java
+public static <T extends Number> void test(List<T> list) {}
+```
+
+这里的list在泛型擦除后就会修改为List\<Number>，编译器知道具体类型，所以才允许直接操作泛型元素
+
+### 获取Class对象的四种方式
+
+- 可以使用类名.class
+
+```java
+Class<Target> clazz = Target.class;
+```
+
+- 可以通过Class.forName()传入类全限定名
+
+```java
+Class<?> clazz = Class.forName("com.eiousee.example.Target");
+```
+
+- 通过类实例的getClass()方法
+
+```class
+Target t = new Target();
+Class<Target> clazz = t.getClass()
+```
+
+- 通过类加载器传入类的全限定名
+
+```java
+Class<Target> clazz = ClassLoader.getSystemClassLoader().loadClass("com.eiousee.example.Target");
+```
+
+类加载器加载的类相较于Class.forName()，还没有进行初始化，静态代码块不会执行
+
+```java
+public class A {
+
+    public static final String name = "A";
+
+    static {
+        System.out.println("initialize!");
+    }
+
+    public static void main(String[] args) throws Exception {
+        // Class.forName
+        Class<?> clazz = Class.forName("com.eiousee.exam.A");
+        System.out.println(clazz.getDeclaredField("name").get(null));
+        // ClassLoader
+        Class<?> clazz1 = ClassLoader.getSystemClassLoader().loadClass("com.eiousee.exam.A");
+        System.out.println(clazz1.getDeclaredField("name").get(null));
+    }
+}
+```
+
+> ![](img/60.png)
+
+
 
 
 
