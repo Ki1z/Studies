@@ -1,6 +1,6 @@
 # Java八股
 
-`更新时间：2026-11-07`
+`更新时间：2026-11-13`
 
 注释解释：
 
@@ -2817,13 +2817,176 @@ public static void main(String[] args) throws Exception {
 
 *注：救急线程也会取出等待队列中的任务执行，只有当任务队列为空时，才会开始计算救急线程的生存时间*
 
-### Sleep() vs Wait()
+### sleep() vs wait()
 
 共同点：wait()、wait(long)和sleep(long)的效果都是让当前线程暂时放弃cpu使用权，进入阻塞状态。但是两个方法的归属不同，sleep(long)是Thread线程类的静态方法，可以理解为线程执行的任务调度；而wait()和wait(long)都属于Object对象成员方法，每个对象都有，所以wait()是任务对象主动申请等待，线程被迫等待
 
 sleep(long)和wait(long)的线程都会在等待相应毫秒后醒来，wait(long)和wait()还可以被notify()唤醒，wait()如果不唤醒则会一直保持等待。同时它们均可被打断唤醒
 
 wait()的调用必须先获取wait()对象的锁，而sleep()没有这个限制。wait()方法执行后会释放对象锁，允许其他线程获取该对象锁；而sleep()如果在synchronized代码块中执行，不会释放对象锁，其他线程仍需要等待锁释放
+
+### start() 和 run()
+
+Thread对象在执行任务时一般调用start()方法，start()方法会自动调用run()方法。那如果直接调用run()方法会怎么样？
+
+```java
+public void start() {
+    synchronized (this) {
+        // zero status corresponds to state "NEW".
+        if (holder.threadStatus != 0)
+            throw new IllegalThreadStateException();
+        start0();
+    }
+}
+```
+
+start()方法使用了一个互斥锁，锁对象为线程自己，确保同时只能有一个线程任务运行。然后判断holder.threadStatus是否为0，不为0则表示线程状态异常。holder.threadStatus用于表示线程的生命周期状态，上文提到Java将线程生命周期状态分为六类，分别使用0-5表示，0表示NEW，刚创建的新线程，还未进行初始化
+
+然后调用start0()方法，在Java中以xxxx0命名的方法都是本地方法，使用native修饰，不使用Java，一般使用C或者C++实现。本地方法通常是一些系统底层调用
+
+```java
+private native void start0();
+```
+
+再来看看run()方法细节
+
+```java
+@Override
+public void run() {
+    Runnable task = holder.task;
+    if (task != null) {
+        Object bindings = scopedValueBindings();
+        runWith(bindings, task);
+    }
+}
+```
+
+首先获得了任务对象，在任务对象不为空的情况下，调用scopedValueBindings()获取作用域中绑定的其他参数，然后使用runWith(bindings, task)方法将任务与scopedValue一同执行
+
+```java
+@Hidden
+@ForceInline
+final void runWith(Object bindings, Runnable op) {
+    ensureMaterializedForStackWalk(bindings);
+    op.run();
+    Reference.reachabilityFence(bindings);
+}
+```
+
+这里只注重op.run()方法，该方法直接调用了Runnable借口的run方法，我们知道Runnable op就是传入的task任务对象，所以就是直接执行任务
+
+从代码中可以看出，run()方法完全没有创建新线程，仅仅是执行了任务，所以如果在主线程中直接调用Thread的run()方法，实际是由主线程执行
+
+```java
+public static void main(String[] args) throws Exception {
+    Thread t1 = new Thread(() -> System.out.println(Thread.currentThread().getName()));
+    t1.start();
+    Thread.sleep(100);
+    t1.run();
+}
+```
+
+> ![](img/61.png)
+
+### 死锁
+
+死锁是指，两个或者多个线程均持有对方所需要的资源，但需要对方的资源才能释放资源，从而导致的无限等待问题。死锁会严重危害系统性能与稳定性
+
+```java
+public static void main(String[] args) throws Exception {
+    Object lock1 = new Object();
+    Object lock2 = new Object();
+
+    new Thread(() -> {
+        synchronized (lock1) {
+            System.out.println(Thread.currentThread().getName() + " get lock1");
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            synchronized (lock2) {
+                System.out.println(Thread.currentThread().getName() + " get lock2");
+            }
+        }
+    }).start();
+    new Thread(() -> {
+        synchronized (lock2) {
+            System.out.println(Thread.currentThread().getName() + " get lock2");
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            synchronized (lock1) {
+                System.out.println(Thread.currentThread().getName() + " get lock1");
+            }
+        }
+    }).start();
+}
+```
+
+> ![](img/62.png)
+
+死锁产生一般有四个必要条件
+
+- 互斥：该资源任意一个时刻只由一个线程占用
+- 请求与保持：一个线程因请求资源而阻塞时，对已获得的资源保持不放
+
+- 不剥夺：线程已获得的资源在未使用完之前不能被其他线程强行剥夺，只有自己使用完毕后才释放资源
+- 循环等待：若干线程之间形成一种头尾相接的循环等待资源关系
+
+避免死锁的发生，就是破坏死锁产生的四个必要条件
+
+- 破坏请求与保持：一次性申请所有的资源
+
+- 破坏不剥夺：占用部分资源的线程进一步申请其他资源时，如果申请不到，可以主动释放它占有的资源
+
+- 破坏循环等待：靠按序申请资源来预防。按某一顺序申请资源，释放资源则反序释放。破坏循环等待条件
+
+那么我们对上文的代码进行改造，使用支持重试的ReentrantLock，并设置等待重试机制
+
+```java
+public static void main(String[] args) throws Exception {
+    Lock lock1 = new ReentrantLock();
+    Lock lock2 = new ReentrantLock();
+
+    new Thread(() -> {
+        if (lock1.tryLock()) {
+            System.out.println(Thread.currentThread().getName() + " get lock1");
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            if (lock2.tryLock()) {
+                System.out.println(Thread.currentThread().getName() + " get lock2");
+            } else {
+                lock1.unlock();
+            }
+        }
+    }).start();
+    new Thread(() -> {
+        if (lock2.tryLock()) {
+            System.out.println(Thread.currentThread().getName() + " get lock2");
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            if (lock1.tryLock()) {
+                System.out.println(Thread.currentThread().getName() + " get lock1");
+            } else {
+                lock2.unlock();
+            }
+        }
+    }).start();
+}
+```
+
+在获取失败后，线程主动释放自己的锁，其他线程就能成功获取锁并继续执行任务
+
+> ![](img/63.png)
 
 ### Lock vs Synchronized
 
@@ -3150,6 +3313,27 @@ public final int updateAndGet(IntUnaryOperator updateFunction) {
 ```
 
 其底层调用了unsafe的weakCompareAndSetInt方法，这就是一个CAS方法
+
+##### ABA问题
+
+如果一个变量在第一次读取时值为A，第二次读取时值仍为A，那么就可以确保两次读取间值没有发生变化吗？显然不能，因为可能在两次读取间，变量被修改为其他值B，最后又被修改为了A。这个问题就被称为CAS的ABA问题
+
+ABA问题的解决思路是在变量中引入一个一定会变化的值，一般是时间戳或者版本号，每次更新必定发生变化，不允许重复。JDK1.5以后的AtomicStampedReference类就是来解决ABA问题的，其中的 compareAndSet() 方法就是首先检查当前引用是否等于预期引用，并且当前标志是否等于预期标志，如果全部相等，则以原子方式将该引用和该标志的值设置为给定的更新值
+
+```java
+public boolean compareAndSet(V   expectedReference,
+                             V   newReference,
+                             int expectedStamp,
+                             int newStamp) {
+    Pair<V> current = pair;
+    return
+        expectedReference == current.reference &&
+        expectedStamp == current.stamp &&
+        ((newReference == current.reference &&
+          newStamp == current.stamp) ||
+         casPair(current, Pair.of(newReference, newStamp)));
+}
+```
 
 ### Hashtable vs ConcurrentHashMap
 
